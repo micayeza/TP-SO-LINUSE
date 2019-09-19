@@ -16,4 +16,12 @@
 #include <time.h>
 
 
+const unsigned long TamBloque = 4096;
+const unsigned long CantidadBloques = 0;
+const unsigned long CantidadMaxArchivos = 1024;
+const unsigned long CaracteresMaximosNombre = 71;
+
+
+
+
 #endif /* SACSERVER_H_ */
