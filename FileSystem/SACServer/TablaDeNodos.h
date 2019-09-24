@@ -11,6 +11,7 @@
 #include "Bloques.h"
 
 
+
 typedef struct GFile{
 	int Estado;
 	char NombreArchivo[71];
@@ -26,6 +27,7 @@ typedef struct TablaNodos{
 
 }TablaNodos;
 
+static TablaNodos * TablaDeNodos;
 
 
 #endif /* TABLADENODOS_H_ */

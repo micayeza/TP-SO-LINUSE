@@ -14,13 +14,14 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <time.h>
+#include <commons/log.h>
 
 
 const unsigned long TamBloque = 4096;
 const unsigned long CantidadBloques = 0;
 const unsigned long CantidadMaxArchivos = 1024;
 const unsigned long CaracteresMaximosNombre = 71;
-
+t_log * logger;
 
 
 

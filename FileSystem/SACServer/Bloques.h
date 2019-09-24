@@ -15,6 +15,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <time.h>
+#include <string.h>
 
 int BuscarPath(char* path);
 

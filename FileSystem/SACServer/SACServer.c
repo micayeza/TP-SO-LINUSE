@@ -19,42 +19,59 @@ struct t_runtime_options {
 
 
 
-static int fuse_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
-
-	unsigned long IndexPrimerBloque = BuscarPath(path);
+ int fuse_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
+	printf("fuse_read");
+/*	unsigned long IndexPrimerBloque = BuscarPath(path);
 	if(IndexPrimerBloque<0)
 		return -ENOENT;
-
+*/
 	// bloque = BloqueAddr(IndexPrimerBloque)  OBTENER BLOQUE
 	//VALIDAR SI TIENE INFO EN OTRO BLOQUE
 	// size = size - offset ????
 	//memcpy(buf,bloque+offset,size);
 
+
+	//EJEMPLO SO
+
+
 }
 
 
 
-static int fuse_open(const char *path, struct fuse_file_info *fi) {
+ int fuse_open(const char *path, struct fuse_file_info *fi) {
 	//if (strcmp(path, DEFAULT_FILE_PATH) != 0)
 		//return -ENOENT;
-
+	printf("fuse_open");
+	logger = log_create("archivo.txt","FUSE",true,LOG_LEVEL_INFO);
+	log_info(logger,"OPEN");
 	if ((fi->flags & 3) != O_RDONLY)
 		return -EACCES;
 
-	unsigned long IndexPrimerBloque = BuscarPath(path);
+	/*unsigned long IndexPrimerBloque = BuscarPath(path);
 	if(IndexPrimerBloque<0)
 		return -ENOENT;
+*/
+	//return 0;
 
-	return 0;
+
+	//EJEMPLO SO
+
+	/*if(strcmp(path,DEFAULT_FILE_PATH)!=0)
+		return -EACCES;
+
+	if((fi->flags & 3) !=O_RDONLY)
+		return -EACCES;
+
+	return 0;*/
 }
 
 static int fuse_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi){
 
 
-	unsigned long IndexPrimerBloque = BuscarPath(path);
+	/*unsigned long IndexPrimerBloque = BuscarPath(path);
 	    if (IndexPrimerBloque < 0) {
 	    	return -EISDIR;
-	    		}
+	    		} */
 	 //DEBERIA IR TODO ADENTRO DE UN FOR PARA CUANDO
 	    //la long sea mayor que 4096(un bloque)
 	    //bloque = BlockAddr(IndexPrimerBloque);
@@ -65,16 +82,25 @@ static int fuse_write(const char *path, const char *buf, size_t size, off_t offs
 
 	//inode *cur_inode = InodoAddr(IndexPrimerBloque); ??
 //	cur_inode->size_of = size;
-	    return size;
+	  //  return size;
 
 }
 
-static int fuse_mkdir(const char *path, mode_t mode) {
+int fuse_mkdir(const char *path, mode_t mode) {
+	printf("MKDIR");
+	printf("MKDIR");
+	printf("MKDIR");
+	printf("MKDIR");
+	printf("MKDIR");
+	printf("MKDIR");
 
+
+
+	/*
 	unsigned long IndexPrimerBloque = BuscarPath(path);
     if (IndexPrimerBloque >= 0) {
         return -EEXIST;
-    }
+    }*/
     //BUSCAR PROX INODO LIBRE
     //int aval_idx = inode_bitmap_find_next_empty(inode_bitmap_addr());
     //if (aval_idx < 0) {
@@ -113,12 +139,12 @@ static int fuse_mkdir(const char *path, mode_t mode) {
 
 
 //BORRAR ARCHIVO
-static int fuse_unlink(const char *path) {
-
-	unsigned long IndexPrimerBloque = BuscarPath(path);
+ int fuse_unlink(const char *path) {
+	printf("UNLINK");
+	/*unsigned long IndexPrimerBloque = BuscarPath(path);
     if (IndexPrimerBloque < 0) {
         return -ENOENT;
-    }
+    }*/
 
     //inode *cur_inode = InodoAddr(IndexPrimerBloque);
   //  if (!cur_inode->is_file) {
@@ -134,16 +160,16 @@ static int fuse_unlink(const char *path) {
     inode_bitmap_addr()[index] = 0;
     iblock_bitmap_addr()[index] = 0;
    */  //SETEAR LOS BLOQUES EN EL BITMAP COMO LIBRES
-    return rv;
+   // return rv;
 }
 
 static int fuse_rmdir(const char *path) {
 
-	unsigned long IndexPrimerBloque = BuscarPath(path);
+	/*unsigned long IndexPrimerBloque = BuscarPath(path);
     if (IndexPrimerBloque < 0) {
         return IndexPrimerBloque; // ENOENT: path doesn't exist
     }
-
+*/
     //inode *cur_inode = InodoAddr(IndexPrimerBloque);
    // if (cur_inode->is_file) {
      //   return -ENOTDIR;
@@ -156,7 +182,7 @@ static int fuse_rmdir(const char *path) {
     inode_bitmap_addr()[index] = 0;
     iblock_bitmap_addr()[index] = 0;
     */
-    return rv;
+    //return rv;
 }
 
 
@@ -173,12 +199,30 @@ static struct fuse_operations operations = {
 
 };
 
+enum {
+	KEY_VERSION,
+	KEY_HELP,
+};
 
+struct fuse_opt fuse_options[]= {
+		FUSE_OPT_KEY("-V",KEY_VERSION),
+		FUSE_OPT_KEY("--version",KEY_VERSION),
+		FUSE_OPT_KEY("-h","KEY_HELP"),
+		FUSE_OPT_END,
+
+};
 
 
 
 int main(int argc, char*argv[]){
-return fuse_main(argc,argv,&operations,NULL);
+	printf("______","%s");
+	struct fuse_args args = FUSE_ARGS_INIT(argc,argv);
+
+	if(fuse_opt_parse(&args,&runtime_options,fuse_options,NULL)==-1){
+		perror("Argumentos invalidos");
+		return EXIT_FAILURE;
+	}
+return fuse_main(args.argc,args.argv,&operations,NULL);
 }
 
 
