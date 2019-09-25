@@ -1,9 +1,10 @@
 LIBS =  -lcommons
 CFLAGS = -g -Wall
+TARGET= SUSE
 
 .PHONY: default all clean
 
-default: SUSE
+default: $(TARGET)
 all: default
 
 OBJECTS = $(patsubst %.c, %.o, $(wildcard *.c))
@@ -12,8 +13,8 @@ HEADERS = $(wildcard *.h)
 %.o: %.c $(HEADERS)
 	gcc $(CFLAGS) -c $< -o $@
 
-SUSE: $(OBJECTS) 
-	gcc $(OBJECTS) $(CFLAGS) $(LIBS) -o $@
+$(TARGET): $(OBJECTS) 
+	gcc ../libs/*.c $(OBJECTS) $(CFLAGS) $(LIBS) -o $@
 
 clean: 
 	-rm -f *.o
