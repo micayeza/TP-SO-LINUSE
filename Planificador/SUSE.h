@@ -5,6 +5,9 @@
 //Librerias generales
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
+#include <string.h>
+#include <unistd.h>
 
 //Librerias COMMONS
 #include <commons/string.h>
@@ -16,6 +19,9 @@
 
 
 // -------------------------- SECCIÓN PLANIFICACIÓN --------------------------
+pthread_t mainThread;
+pthread_mutex_t mutexColaEjecucion;
+
 t_queue* colaNew;
 
 void encolarEnNew(int idSocket);

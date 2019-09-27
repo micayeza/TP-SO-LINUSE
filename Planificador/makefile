@@ -1,4 +1,4 @@
-LIBS =  -lcommons
+LIBS = -lcommons -lpthread
 CFLAGS = -g -Wall
 TARGET= SUSE
 
