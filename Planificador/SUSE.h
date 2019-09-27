@@ -9,9 +9,18 @@
 //Librerias COMMONS
 #include <commons/string.h>
 #include <commons/config.h>
+#include <commons/collections/queue.h>
 
 //Librerias propias
 #include "../libs/libs.h"
+
+
+// -------------------------- SECCIÓN PLANIFICACIÓN --------------------------
+t_queue* colaNew;
+
+void encolarEnNew(int idSocket);
+// ------------------------ FIN SECCIÓN PLANIFICACIÓN ------------------------
+
 
 // -------------------------- SECCIÓN CONFIG --------------------------
 
