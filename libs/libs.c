@@ -30,9 +30,9 @@ int crearSocketEscucha(int puerto) {
 		valorListen = listen(socketDeEscucha, SOMAXCONN);/*
 					SOMAXCONN como segundo parámetro, y significaría el máximo tamaño de la cola*/
 		if(valorListen == ERROR) {
-			puts("El servidor no pudo recibir escuchar conexiones de clientes.\n");
+			printf("Ocurrió un error, no se pueden escuchar conexiones\n");
 		} else	{
-			puts("¡Hola, estoy escuchando!");
+			printf("Esperando conexiones en el puerto %d\n", puerto);
 		}
 
 	// Hasta que no salga del listen, nunca va a retornar el socket del servidor ya que el listen es bloqueante
@@ -45,16 +45,16 @@ int aceptarCliente(int fd_socket){
 
 	struct sockaddr_in unCliente;
 	memset(&unCliente, 0, sizeof(unCliente));
-	unsigned int addres_size = sizeof(unCliente);
+	unsigned int address_size = sizeof(unCliente);
 
-	int fd_Cliente = accept(fd_socket, (struct sockaddr*) &unCliente, &addres_size);
-	if(fd_Cliente == ERROR)  {
-		puts("El servidor no pudo aceptar la conexión entrante.\n");
+	int fdCliente = accept(fd_socket, (struct sockaddr*) &unCliente, &address_size);
+	if(fdCliente == ERROR)  {
+		printf("El servidor no pudo aceptar la conexión entrante\n");
 	} else	{
-		puts("¡Estamos conectados!");
+		printf("Nueva conexión establecida - ID %d\n", fdCliente);
 	}
 
-	return fd_Cliente;
+	return fdCliente;
 
 }
 
