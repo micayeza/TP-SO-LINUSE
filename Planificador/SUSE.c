@@ -16,19 +16,19 @@ void finalizacion(){
 
 void aceptarClientes(){
 
-	configSUSE* config = getConfigSUSE(configPath);
+	t_configSUSE* config = getConfigSUSE(configPath);
 	int socket_escucha = crearSocketEscucha(config->listenPort);
 
 	int cliente = 0;
 	while((cliente = aceptarCliente(socket_escucha)) > 0){
-
-		pthread_t hilo;
-		pthread_create(&hilo, NULL, (void*)encolarEnNew, (void*)cliente);
+		t_PCB* nuevoPCB = create_PCB(cliente);
+		encolarEnNew(nuevoPCB);
 		//No se hace el join porque sino esperaría hasta que termine este para aceptar a otro
 
 	}
 
 }
+
 
 int main(void) {
 	inicializacion();

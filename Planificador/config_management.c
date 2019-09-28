@@ -2,10 +2,10 @@
 
 
 //Hice esta función para que cada vez que tengamos que leer la config nos genere este struct y así actualizar los valores en el momento que los necesitamos.
-configSUSE* getConfigSUSE(char* path){
+t_configSUSE* getConfigSUSE(char* path){
 
 	t_config* config = config_create(path);
-	configSUSE* structConfig = malloc(sizeof(configSUSE));
+	t_configSUSE* structConfig = malloc(sizeof(t_configSUSE));
 
 	structConfig->listenPort = config_get_int_value(config, "LISTEN_PORT"); //int
 	structConfig->metricsTimer = config_get_int_value(config, "METRICS_TIMER"); //int
@@ -20,7 +20,7 @@ configSUSE* getConfigSUSE(char* path){
 	return structConfig;
 }
 
-void freeConfig(configSUSE* config){
+void freeConfig(t_configSUSE* config){
 
 	freeCharArray(config->semId);
 	freeCharArray(config->semInit);
