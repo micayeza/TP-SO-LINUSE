@@ -8,8 +8,9 @@
 #ifndef MUSE_H_
 #define MUSE_H_
 
-#include <commons/log.h>
+#include <commons/collections/list.h>
 #include <commons/config.h>
+#include <commons/log.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,6 +39,21 @@ typedef struct {
 	void* marco;
 } t_inicial;
 
+typedef struct{
+	int   id;
+	char* ip;
+	t_list* segmentos;
+
+} t_procesos;
+typedef struct {
+	int numero;
+	int u; //uso
+	int p; //Presencia
+	int m; //Modificado
+
+
+}t_pagina;
+
 t_inicial* tabla_inicial;
 
 
@@ -56,6 +72,7 @@ int crearConfigMemoria();
 
 
 void inicializarMemoria();
+void inicializarTablas();
 void inicializarSwap();
 
 
