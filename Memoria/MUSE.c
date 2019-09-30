@@ -6,6 +6,42 @@
  */
 #include "MUSE.h"
 
+void inicializarMemoria(){
+
+	cantidad_paginas = config_muse->tamanio_total/config_muse->tamanio_pagina;
+
+//  BIG MALLOC
+	tabla_inicial = malloc(sizeof(t_inicial) * cantidad_paginas);
+
+	for(int i = 0; i < cantidad_paginas; i++){
+
+		tabla_inicial[i].marco = malloc(config_muse->tamanio_pagina);
+	}
+
+
+
+}
+
+
+void inicializarSwap(){
+	remove("archivoSwap.txt");
+	archivoSwap = fopen(rutaSwap,"wb");
+	if(archivoSwap == NULL){ log_error(logMuse, "No se pudo crear el archivo swap" ); exit(1); }
+
+	rewind(archivoSwap);
+	int i = 0;
+	vaciar = malloc(strlen("\n")); //LLeno todo el archivo on \n
+	vaciar = "\n";
+
+	paginas_swap = config_muse->tamanio_swap/config_muse->tamanio_pagina;
+	while(i < paginas_swap){
+		fputs(vaciar, archivoSwap);
+		i++;
+	}
+
+}
+
+
 bool existeArchivoConfig(char* ruta) {
 	FILE * file = fopen(ruta, "r");
 	if (file!=NULL){
@@ -30,7 +66,7 @@ int crearConfigMemoria(){
 	}
 	//Voy a levantar el archivo y guardar los valores en mi work area
 
-	    	t_configuracion *config_muse = malloc(sizeof(t_configuracion));
+	    	config_muse = malloc(sizeof(t_configuracion));
 	        config_ruta = config_create(rutaConfigMuse);
 
 	        if (config_ruta != NULL){
@@ -59,7 +95,9 @@ int crearConfigMemoria(){
 		int v_error = crearConfigMemoria();
 		if(v_error == 0){
 
+		inicializarMemoria();
 
+		inicializarSwap();
 
 
 
