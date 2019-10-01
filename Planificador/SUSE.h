@@ -26,20 +26,24 @@ pthread_mutex_t mutexColaEjecucion;
 typedef struct {
 	int socket;
 	t_dictionary* TCBs;
-	int ultimo_tcb_id;
+	int proximo_tcb_id;
 } t_PCB;
 
 typedef struct {
 	int id;
-	char* funcion;
+	void* funcion;
 } t_TCB;
 
+int proximo_pcb_id;
+t_dictionary* PCBs;
 t_queue* colaNew;
 
+t_TCB* create_TCB_en_PCB(t_PCB* PCB, void* funcion);
+void atenderPrograma(t_PCB* pcb);
 void encolarEnNew(t_TCB* TCB);
 t_PCB* create_PCB(int socket);
 void free_PCB(t_PCB* PCB);
-t_TCB* create_TCB(int id, char* funcion);
+t_TCB* create_TCB(int id, void* funcion);
 void free_TCB(t_TCB* TCB);
 // ------------------------ FIN SECCIÓN PLANIFICACIÓN ------------------------
 

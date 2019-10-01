@@ -1,5 +1,9 @@
 #include "SUSE.h"
 
+void atenderPrograma(t_PCB* pcb){
+	//Me mantengo a la espera de Recibir Mensaje de este PCB->socket
+}
+
 void encolarEnNew(t_TCB* TCB){
 
 	pthread_mutex_lock(&mutexColaEjecucion);
@@ -21,7 +25,7 @@ t_PCB* create_PCB(int socket){
 	t_PCB* PCB = malloc(sizeof(t_PCB));
 	PCB->socket = socket;
 	PCB->TCBs = dictionary_create();
-	PCB->ultimo_tcb_id = 0;
+	PCB->proximo_tcb_id = 0;
 	return PCB;
 }
 
@@ -30,10 +34,12 @@ void free_PCB(t_PCB* PCB){
 	free(PCB);
 }
 
-t_TCB* create_TCB(int id, char* funcion){
+t_TCB* create_TCB_en_PCB(t_PCB* PCB, void* funcion){
 	t_TCB* TCB = malloc(sizeof(t_TCB));
-	TCB->id = id;
+	TCB->id = PCB->proximo_tcb_id;
 	TCB->funcion = funcion;
+	dictionary_put(PCB->TCBs,string_itoa(TCB->id),TCB);
+	(PCB->proximo_tcb_id)++;
 	return TCB;
 }
 void free_TCB(t_TCB* TCB){
