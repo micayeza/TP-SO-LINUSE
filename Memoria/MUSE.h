@@ -43,19 +43,24 @@ typedef struct{
 	int   id;
 	char* ip;
 	t_list* segmentos;
-
 } t_procesos;
+
 typedef struct {
 	int numero;
 	int u; //uso
 	int p; //Presencia
 	int m; //Modificado
-
-
 }t_pagina;
 
-t_inicial* tabla_inicial;
+typedef struct {
+	char* nombre;
+	int   flag;
+	void* puntero_a_pag;
+}t_archivos;
 
+t_inicial* tabla_inicial;
+t_list*    tabla_archivos;
+t_list*    tabla_procesos;
 
 int  cantidad_paginas;
 int  paginas_swap;

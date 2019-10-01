@@ -19,6 +19,8 @@ void inicializarMemoria(){
 	}
 
 
+	tabla_archivos = list_create();
+	tabla_procesos = list_create();
 
 }
 
