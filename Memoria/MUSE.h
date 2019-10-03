@@ -11,15 +11,20 @@
 #include <commons/collections/list.h>
 #include <commons/config.h>
 #include <commons/log.h>
+#include <arpa/inet.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <netdb.h>
+#include <errno.h>
 #include <time.h>
 
 
 #define rutaConfigMuse "../configs/muse.cfg"
 #define rutaSwap "swap.txt"
+#define ERROR -1
 
 typedef struct {
 	int puerto;
@@ -41,10 +46,15 @@ typedef struct {
 
 typedef struct{
 	int   id;
+	int   cliente;
 	char* ip;
 	t_list* segmentos;
 } t_procesos;
 
+typedef struct{
+	int id;
+	t_list* paginas;
+} t_segmento;
 typedef struct {
 	int numero;
 	int u; //uso
@@ -62,6 +72,7 @@ t_inicial* tabla_inicial;
 t_list*    tabla_archivos;
 t_list*    tabla_procesos;
 
+int  socket_escucha;
 int  cantidad_paginas;
 int  paginas_swap;
 char* vaciar;
@@ -79,8 +90,13 @@ int crearConfigMemoria();
 void inicializarMemoria();
 void inicializarTablas();
 void inicializarSwap();
+void crearHiloParalelos();
 
-
+int aceptarCliente(int);
+int crearSocket();
+int crearSocketEscucha (int) ;
+int crearSocketServidor(int);
+void atenderConexiones();
 
 // Para swap tengo al funcion rewind que devuelve el cursor al inicio del archivo
 //Esta char *fgets(char *buffer, int tamaño, FILE *archivo); buffer donde lo guarda, tamaño es el maximio
