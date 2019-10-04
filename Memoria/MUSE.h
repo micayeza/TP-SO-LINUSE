@@ -11,6 +11,7 @@
 #include <commons/collections/list.h>
 #include <commons/config.h>
 #include <commons/log.h>
+#include <sys/socket.h>
 #include <arpa/inet.h>
 #include <pthread.h>
 #include <stdbool.h>
@@ -96,7 +97,8 @@ int aceptarCliente(int);
 int crearSocket();
 int crearSocketEscucha (int) ;
 int crearSocketServidor(int);
-void atenderConexiones();
+void atenderConexiones(int);
+char* ip_de_programa(int);
 
 // Para swap tengo al funcion rewind que devuelve el cursor al inicio del archivo
 //Esta char *fgets(char *buffer, int tamaño, FILE *archivo); buffer donde lo guarda, tamaño es el maximio
