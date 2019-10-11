@@ -18,8 +18,8 @@ void finalizacion(){
 
 void aceptarClientes(){
 
-	t_configSUSE* config = getConfigSUSE(configPath);
-	int socket_escucha = crearSocketEscucha(config->listenPort);
+	//t_configSUSE* config = getConfigSUSE(configPath);
+	//int socket_escucha = crearSocketEscucha(config->listenPort);
 
 	int cliente = 0;
 	//while((cliente = aceptarCliente(socket_escucha)) > 0){
