@@ -10,7 +10,13 @@ void freeCharArray(char** charArray){
 	free(charArray);
 }
 
-int crearSocket() {
+int pesoString(char *string) {
+    return string == NULL ? 0 : sizeof(char) * (strlen(string) + 1);
+}
+
+//-----------SOCKETS-----------------
+
+/*int crearSocket() {
 	int fileDescriptor = socket(AF_INET, SOCK_STREAM, 0);//usa protocolo TCP/IP
 	if (fileDescriptor == ERROR) {
 		perror("No se pudo crear el file descriptor.\n");
@@ -27,8 +33,8 @@ int crearSocketEscucha(int puerto) {
 
 	//Escuchar conexiones
 		int valorListen;
-		valorListen = listen(socketDeEscucha, SOMAXCONN);/*
-					SOMAXCONN como segundo parámetro, y significaría el máximo tamaño de la cola*/
+		valorListen = listen(socketDeEscucha, SOMAXCONN);
+					//SOMAXCONN como segundo parámetro, y significaría el máximo tamaño de la cola
 		if(valorListen == ERROR) {
 			printf("Ocurrió un error, no se pueden escuchar conexiones\n");
 		} else	{
@@ -117,4 +123,4 @@ int crearSocketServidor(int puerto)	{
 	}
 
 	return socketDeEscucha;
-}
+}*/
