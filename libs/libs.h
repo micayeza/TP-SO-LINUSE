@@ -11,7 +11,7 @@
 
 
 typedef enum{
-	HANDSHAKE
+	HAND
 }operacion;
 
 typedef struct {
@@ -26,17 +26,14 @@ typedef struct {
 
 
 void freeCharArray(char** charArray);
-int crearSocket();
-int crearSocketEscucha(int);
-int aceptarCliente(int);
-int crearSocketCliente(char*, int);
-void cerrarSocket(int);
-int crearSocketServidor(int);
-
+int pesoString(char *string);
 
 
 void freeMensaje(mensaje* mensaje);
 mensaje* recibirMensaje(int socket);
 int enviarMensaje(int socket, mensaje* msj);
 mensaje* armarMensaje(operacion operacion, int size, void* contenido);
+
+
+//int crearSocketServidor(int);
 

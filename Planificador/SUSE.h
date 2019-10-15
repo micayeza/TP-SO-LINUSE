@@ -12,11 +12,13 @@
 //Librerias COMMONS
 #include <commons/string.h>
 #include <commons/config.h>
+#include <commons/log.h>
 #include <commons/collections/queue.h>
 #include <commons/collections/dictionary.h>
 
 //Librerias propias
 #include "../libs/libs.h"
+#include "../libs/sockets.h"
 
 
 // -------------------------- SECCIÓN PLANIFICACIÓN --------------------------
@@ -48,7 +50,7 @@ void free_TCB(t_TCB* TCB);
 // ------------------------ FIN SECCIÓN PLANIFICACIÓN ------------------------
 
 
-// -------------------------- SECCIÓN CONFIG --------------------------
+// -------------------------- SECCIÓN CONFIG y LOG --------------------------
 
 char* configPath;
 
@@ -65,6 +67,9 @@ typedef struct {
 t_configSUSE* getConfigSUSE(char* configPath);
 void freeConfig(t_configSUSE* config);
 
-// ------------------------ FIN SECCIÓN CONFIG ------------------------
+t_log* log_resultados;
+t_log* log_interno;
+
+// ------------------------ FIN SECCIÓN CONFIG y LOG ------------------------
 
 #endif /* SUSE_H_ */
