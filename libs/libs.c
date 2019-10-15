@@ -19,7 +19,9 @@ int crearSocket() {
 	//Hay que mejorarlo para el caso en el que escucha muchas conexiones
 
 	return fileDescriptor;
-}
+	}
+
+
 
 int crearSocketEscucha(int puerto) {
 
@@ -118,3 +120,69 @@ int crearSocketServidor(int puerto)	{
 
 	return socketDeEscucha;
 }
+
+
+//Mensaje para memoria
+
+//int enviarMensaje(int socket, Mensaje msg) { // Devuelve la cantidad de bits leidos
+//
+//	//Verifico la existencia del socket y que el mensaje tenga contenido
+//	if(socket == -1 || msg.contenido == NULL || msg.header == NULL) return -1;
+//
+//	//Calculo el tamaño total
+//	int size = sizeof(ContentHeader) + msg.header->size;
+//
+//	//Creo y relleno un buffer
+//	void * buffer = malloc(size);
+//	memcpy(buffer, msg.header, sizeof(ContentHeader));
+//	memcpy(buffer + sizeof(ContentHeader), msg.contenido, msg.header->size);
+//
+//	//Envio y registro el resultado que es el tamaño de lo que devolvio o -1 en caso de error
+//	int resultado = send(socket, buffer, size, 0);
+//
+//	free(buffer);
+//
+//	return resultado;
+//}
+
+mensaje* armarMensaje(operacion operacion, int size, void* contenido){
+	mensaje* mensaje   = malloc(sizeof(mensaje));
+	mensaje->header.operacion = operacion;
+	mensaje->header.size      = size;
+
+//	memcpy(mensaje->header, &header, sizeof(header) );
+	mensaje->contenido = malloc(size);
+	memcpy(mensaje->contenido , contenido , mensaje->header.size);
+	return mensaje;
+}
+
+int enviarMensaje(int socket, mensaje* msj){
+
+	int resultado = send(socket, &(msj->header), sizeof(header), 0);
+		if(resultado < 0){ return -1; };
+
+	resultado = send(socket, msj->contenido, msj->header.size, 0);
+		if(resultado < 0){return -1; };
+
+	return 0;
+
+}
+
+
+mensaje* recibirMensaje(int socket){
+	mensaje* mensaje = malloc(sizeof(mensaje));
+	if (recv(socket, &(mensaje->header), sizeof(header),MSG_WAITALL) < 1){ return NULL;  };
+
+	mensaje->contenido = malloc(mensaje->header.size);
+	if( recv(socket, mensaje->contenido, mensaje->header.size, MSG_WAITALL) < 1){ return NULL;}
+
+ return mensaje;
+}
+
+void freeMensaje(mensaje* mensaje){
+
+	free(mensaje->contenido);
+	free(mensaje);
+}
+
+
