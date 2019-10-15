@@ -7,10 +7,14 @@
 #include "MUSE.h"
 
 void atenderConexiones(int parametros){
+
 	int cliente = parametros;
 
-
 	char* ip_cliente = ip_de_programa(cliente);
+
+	mensaje* msj = recibirMensaje(cliente);
+
+	int id = (int)msj->contenido;
 
 	while(1){
 
@@ -45,7 +49,7 @@ char* ip_de_programa(int s){
 	return ipstr;
 }
 
-int crearSocket() {
+int crearSocketMEmoria() {
 	int fileDescriptor = socket(AF_INET, SOCK_STREAM, 0);//usa protocolo TCP/IP
 	if (fileDescriptor == ERROR) {
 		perror("No se pudo crear el file descriptor.\n");
@@ -54,9 +58,9 @@ int crearSocket() {
 	return fileDescriptor;
 }
 
-int crearSocketServidor(int puerto)	{
+int crearSocketServidorMemoria(int puerto)	{
 	struct sockaddr_in miDireccionServidor;
-	int socketDeEscucha = crearSocket();
+	int socketDeEscucha = crearSocketMEmoria();
 
 	miDireccionServidor.sin_family = AF_INET;			//Protocolo de conexion
 	miDireccionServidor.sin_addr.s_addr = INADDR_ANY;	//INADDR_ANY = 0 y significa que usa la IP actual de la maquina
@@ -83,9 +87,9 @@ int crearSocketServidor(int puerto)	{
 	return socketDeEscucha;
 }
 
-int crearSocketEscucha (int puerto) {
+int crearSocketEscuchaMemoria (int puerto) {
 
-	int socketDeEscucha = crearSocketServidor(puerto);
+	int socketDeEscucha = crearSocketServidorMemoria(puerto);
 
 	//Escuchar conexiones
 		int valorListen;
@@ -103,7 +107,7 @@ int crearSocketEscucha (int puerto) {
 }
 
 
-int aceptarCliente(int fd_socket){
+int aceptarClienteMemoria(int fd_socket){
 
 	struct sockaddr_in unCliente;
 	memset(&unCliente, 0, sizeof(unCliente));
@@ -124,12 +128,12 @@ int aceptarCliente(int fd_socket){
 
 void crearHiloParalelos(){
 
-	socket_escucha = crearSocketEscucha(config_muse->puerto);
+	socket_escucha = crearSocketEscuchaMemoria(config_muse->puerto);
 
 	if(socket_escucha > 0){
 	int cliente = 0;
 
-		while(( cliente = aceptarCliente(socket_escucha)) > 0 ){
+		while(( cliente = aceptarClienteMemoria(socket_escucha)) > 0 ){
 
 			pthread_t hilo;
 			pthread_create(&hilo, NULL, (void*)atenderConexiones, (void*)cliente );
@@ -231,7 +235,7 @@ int crearConfigMemoria(){
 
 }
 
-	int main(void) {
+	int main() {
 
 		remove("MUSE.txt");
 		int v_error = crearConfigMemoria();

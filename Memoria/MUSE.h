@@ -21,6 +21,7 @@
 #include <netdb.h>
 #include <errno.h>
 #include <time.h>
+#include "../libs/libs.h"
 
 
 #define rutaConfigMuse "../configs/muse.cfg"
@@ -93,10 +94,10 @@ void inicializarTablas();
 void inicializarSwap();
 void crearHiloParalelos();
 
-int aceptarCliente(int);
-int crearSocket();
-int crearSocketEscucha (int) ;
-int crearSocketServidor(int);
+int aceptarClienteMemoria(int);
+int crearSocketMemoria();
+int crearSocketEscuchaMemoria (int) ;
+int crearSocketServidorMemoria(int);
 void atenderConexiones(int);
 char* ip_de_programa(int);
 

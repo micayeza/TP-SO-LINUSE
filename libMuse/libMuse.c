@@ -30,6 +30,7 @@ int muse_init(int id, char* ip, int puerto){
 			}
 		else {
 	//		//Enviar a MUSE el id para que lo guarde en algun lado
+			//mensaje* mensaje = armarMensaje(HANDSHAKE,sizeof(int), &id);
 			return 0;
 		}
 
