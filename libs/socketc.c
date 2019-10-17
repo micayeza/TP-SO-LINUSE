@@ -1,6 +1,9 @@
 #include "sockets.h"
 
 //Creamos un socket!
+int pesoString(char *string) {
+    return string == NULL ? 0 : sizeof(char) * (strlen(string) + 1);
+}
 
 int crearSocket(t_log* logger) {
     int fileDescriptor = socket(AF_INET, SOCK_STREAM, 0);//usa protocolo TCP/IP

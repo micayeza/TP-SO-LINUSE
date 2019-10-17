@@ -19,7 +19,7 @@
 #include <commons/collections/list.h>
 #include <commons/string.h>
 #include <stdarg.h>
-#include "libs.h"
+//#include "libs.h"
 
 typedef struct  {
     int descriptorMaximo;
@@ -69,7 +69,7 @@ typedef enum {
     MEMORIA,
     LISSANDRA
 } Componente;
-
+int pesoString(char *string);
 int crearSocketServidor(int, t_log*);
 int crearSocketEscucha (int, t_log*);
 void escucharSocketsEn(int, t_log*);

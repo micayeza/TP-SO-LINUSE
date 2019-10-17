@@ -10,9 +10,7 @@ void freeCharArray(char** charArray){
 	free(charArray);
 }
 
-int pesoString(char *string) {
-    return string == NULL ? 0 : sizeof(char) * (strlen(string) + 1);
-}
+
 
 //Mensaje para memoria
 
