@@ -177,15 +177,17 @@ void eliminarFdDeListaDeConexiones(int fdCliente, GestorConexiones* unaConexion)
     unaConexion->descriptorMaximo = getFdMaximo(unaConexion);
 }
 
-void enviarPaquete(int fdDestinatario, TipoMensaje tipoMensaje, TipoRequest tipoRequest, char* mensaje, int pid)  {
+int enviarPaquete(int fdDestinatario, TipoMensaje tipoMensaje, TipoRequest tipoRequest, char* mensaje, int pid)  {
     int pesoMensaje = pesoString(mensaje);
     Header header = armarHeader(fdDestinatario, pesoMensaje, tipoMensaje, tipoRequest, pid);
     void* headerSerializado = serializarHeader(header);
     int pesoPaquete = sizeof(Header) + pesoMensaje;
     void* paquete = empaquetar(headerSerializado, mensaje);
-    send(fdDestinatario, paquete, pesoPaquete, MSG_WAITALL);
+    int res = send(fdDestinatario, paquete, pesoPaquete, MSG_WAITALL);
     free(headerSerializado);
     free(paquete);
+
+    return res;
 }
 
 void hacerHandshake(int fdDestinatario, Componente componente)  {

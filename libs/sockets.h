@@ -83,7 +83,7 @@ Header armarHeader(int fdDestinatario, int tamanioDelMensaje, TipoMensaje tipoMe
 void* serializarHeader(Header header);
 Header deserializarHeader(void* headerSerializado);
 void* empaquetar(void* headerSerializado, char* mensaje);
-void enviarPaquete(int fdDestinatario, TipoMensaje tipoMensaje, TipoRequest tipoRequest, char* mensaje, int pid);
+int enviarPaquete(int fdDestinatario, TipoMensaje tipoMensaje, TipoRequest tipoRequest, char* mensaje, int pid);
 
 void desconectarCliente(int fdCliente, GestorConexiones* unaConexion, t_log* logger);
 

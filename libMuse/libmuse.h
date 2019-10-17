@@ -27,7 +27,8 @@
 	#include <arpa/inet.h>
 	#include <string.h>
 	#include <stdio.h>
-	#include "../libs/libs.h"
+	#include <libs.h>
+	#include <sockets.h>
 
     /**
      * Inicializa la biblioteca de MUSE.
