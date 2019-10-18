@@ -21,10 +21,11 @@
 #include <netdb.h>
 #include <errno.h>
 #include <time.h>
-#include "../libs/libs.h"
+#include <libs.h>
+#include <sockets.h>
 
 
-#define rutaConfigMuse "../configs/muse.cfg"
+#define rutaConfigMuse "../../configs/muse.cfg"
 #define rutaSwap "swap.txt"
 #define ERROR -1
 

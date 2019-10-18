@@ -26,7 +26,7 @@ typedef struct {
 
 
 void freeCharArray(char** charArray);
-int pesoString(char *string);
+
 
 
 void freeMensaje(mensaje* mensaje);

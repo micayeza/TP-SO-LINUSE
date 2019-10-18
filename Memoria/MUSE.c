@@ -12,9 +12,7 @@ void atenderConexiones(int parametros){
 
 	char* ip_cliente = ip_de_programa(cliente);
 
-	mensaje* msj = recibirMensaje(cliente);
-
-	int id = (int)msj->contenido;
+//	mensaje* msj = recibirMensaje(cliente);
 
 	while(1){
 
@@ -43,8 +41,7 @@ char* ip_de_programa(int s){
 
 		inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof ipstr);
 	}
-
-	printf("Peer IP address: %s\n", ipstr);
+	log_info(logMuse, "Peer IP address: %s \n");
 
 	return ipstr;
 }
@@ -52,7 +49,7 @@ char* ip_de_programa(int s){
 int crearSocketMEmoria() {
 	int fileDescriptor = socket(AF_INET, SOCK_STREAM, 0);//usa protocolo TCP/IP
 	if (fileDescriptor == ERROR) {
-		perror("No se pudo crear el file descriptor.\n");
+		log_error(logMuse, "No se pudo crear el file descriptor \n");
 	}
 
 	return fileDescriptor;
@@ -71,7 +68,7 @@ int crearSocketServidorMemoria(int puerto)	{
 	int puertoYaAsociado = setsockopt(socketDeEscucha, SOL_SOCKET, SO_REUSEADDR, (char*) &puertoEnUso, sizeof(puertoEnUso));
 
 	if (puertoYaAsociado == ERROR) {
-		perror("El puerto asignado ya está siendo utilizado.\n");
+		log_error(logMuse, "El puerto asignado ya está siendo utilizado \n");
 	}
 		//Turno del bind
 	int activado = 1;
@@ -80,7 +77,8 @@ int crearSocketServidorMemoria(int puerto)	{
 	int valorBind = bind(socketDeEscucha,(void*) &miDireccionServidor, sizeof(miDireccionServidor));
 
 	if ( valorBind !=0) {
-		perror("El bind no funcionó, el socket no se pudo asociar al puerto");
+
+		log_error(logMuse, "El bind no funcionó, el socket no se pudo asociar al puerto \n");
 		return 1;
 	}
 
@@ -96,9 +94,11 @@ int crearSocketEscuchaMemoria (int puerto) {
 		valorListen = listen(socketDeEscucha, SOMAXCONN);/*
 					SOMAXCONN como segundo parámetro, y significaría el máximo tamaño de la cola*/
 		if(valorListen == ERROR) {
-			puts("El servidor no pudo recibir escuchar conexiones de clientes.\n");
+
+			log_error(logMuse, "El servidor no pudo recibir escuchar conexiones de clientes.\n");
 		} else	{
-			puts("¡Hola, estoy escuchando!");
+
+			log_info(logMuse, "¡Hola, estoy escuchando! \n");
 		}
 
 	// hasta que no salga del listen, nunca va a retornar el socket del servidor ya que el listen es bloqueante
@@ -115,9 +115,9 @@ int aceptarClienteMemoria(int fd_socket){
 
 	int fd_Cliente = accept(fd_socket, (struct sockaddr*) &unCliente, &addres_size);
 	if(fd_Cliente == ERROR)  {
-		puts("El servidor no pudo aceptar la conexión entrante.\n");
+		log_error(logMuse, "El servidor no pudo aceptar la conexión entrante \n");
 	} else	{
-		puts("¡Estamos conectados!");
+		log_info(logMuse, "Se conectó un proceso \n");
 	}
 
 	return fd_Cliente;

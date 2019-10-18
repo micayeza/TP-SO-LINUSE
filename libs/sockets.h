@@ -19,7 +19,7 @@
 #include <commons/collections/list.h>
 #include <commons/string.h>
 #include <stdarg.h>
-#include "libs.h"
+//#include "libs.h"
 
 typedef struct  {
     int descriptorMaximo;
@@ -69,7 +69,7 @@ typedef enum {
     MEMORIA,
     LISSANDRA
 } Componente;
-
+int pesoString(char *string);
 int crearSocketServidor(int, t_log*);
 int crearSocketEscucha (int, t_log*);
 void escucharSocketsEn(int, t_log*);
@@ -83,7 +83,7 @@ Header armarHeader(int fdDestinatario, int tamanioDelMensaje, TipoMensaje tipoMe
 void* serializarHeader(Header header);
 Header deserializarHeader(void* headerSerializado);
 void* empaquetar(void* headerSerializado, char* mensaje);
-void enviarPaquete(int fdDestinatario, TipoMensaje tipoMensaje, TipoRequest tipoRequest, char* mensaje, int pid);
+int enviarPaquete(int fdDestinatario, TipoMensaje tipoMensaje, TipoRequest tipoRequest, char* mensaje, int pid);
 
 void desconectarCliente(int fdCliente, GestorConexiones* unaConexion, t_log* logger);
 
