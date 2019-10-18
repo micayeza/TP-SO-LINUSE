@@ -1,0 +1,32 @@
+/*
+ * CommonsFUSE.h
+ *
+ *  Created on: 18 oct. 2019
+ *      Author: utnso
+ */
+
+#ifndef FILESYSTEM_COMMONSFUSE_H_
+#define FILESYSTEM_COMMONSFUSE_H_
+
+
+typedef enum {
+    write,
+    open,
+	read,
+    rmdir,
+	unlink,
+	mkdir
+
+}Syscall;
+
+//AGREGAR LO QUE FALTA
+typedef struct{
+	char* path;
+	char* buff;
+	size_t size;
+	Syscall syscall;
+
+
+}MensajeFUSE;
+
+#endif /* FILESYSTEM_COMMONSFUSE_H_ */

@@ -12,11 +12,15 @@
  *  Created on: 16 sep. 2019
  *      Author: utnso
  */
-#include "sockets.h"
+#include "SacCLI.h"
+
 
 #define DEFAULT_FILE_CONTENT "Hello World!\n"
 #define DEFAULT_FILE_NAME "hello"
 #define DEFAULT_FILE_PATH "/" DEFAULT_FILE_NAME
+
+int g_socketSAC = 0;
+t_log* g_logger;
 
 struct t_runtime_options {
 	char* welcome_msg;
@@ -28,6 +32,14 @@ struct t_runtime_options {
 
 
  int fuse_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
+	 MensajeFUSE* mensaje;
+	 mensaje->syscall = 3;
+	 strcpy(mensaje->path,path);
+	 free(path);
+	 mensaje->buff = buf;
+	 memcpy(mensaje->size,size);
+
+
 
 
 }
@@ -86,9 +98,12 @@ struct fuse_opt fuse_options[]= {
 
 
 int conexionInicial(){
-	GestorConexiones * gestor =InicializarConexion();
-	conectarseAServidor("IP",8080,gestor);
+	g_logger = log_create("log.h","SACCLI",true,LOG_LEVEL_INFO);
+
+	g_socketSAC = crearSocketCliente("IP",8080,g_logger);
 }
+
+
 
 
 
@@ -100,6 +115,7 @@ int main(int argc, char*argv[]){
 		perror("Argumentos invalidos");
 		return EXIT_FAILURE;
 	}
+
 return fuse_main(args.argc,args.argv,&operations,NULL);
 }
 

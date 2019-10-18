@@ -15,28 +15,8 @@
 #include <fcntl.h>
 #include <time.h>
 #include <commons/log.h>
+#include "CommonsFUSE.h"
 
-
-typedef enum {
-    write,
-    open,
-	read,
-    rmdir,
-	unlink,
-	mkdir
-
-} Syscall;
-
-//AGREGAR LO QUE FALTA
-typedef struct{
-	char* path;
-	char* buff;
-	size_t size;
-	Syscall syscall1;
-	Syscall syscall2;
-	Syscall syscall3;
-
-}MensajeFUSE;
 
 
 
