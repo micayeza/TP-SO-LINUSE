@@ -29,4 +29,7 @@ typedef struct{
 
 }MensajeFUSE;
 
+int enviarPaqueteFUSE(int fdDestinatario,void* mensajeSerializado);
+void* SerializarMensajeFUSE(MensajeFUSE* mensaje, int tamPath, int tamBuff);
+MensajeFUSE DesserializarMensajeFUSE(void* serializado);
 #endif /* FILESYSTEM_COMMONSFUSE_H_ */

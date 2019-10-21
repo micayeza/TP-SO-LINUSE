@@ -231,12 +231,8 @@ int cliente = aceptarCliente(socket_escucha);
 
 while((cliente=aceptarCliente(socket_escucha))>0){
 
-
-	mensaje*msj =malloc(sizeof(mensaje));
-	msj = recibir_mensaje(cliente);
-
 	enviar_mensaje(cliente,HANDSHAKE,sizeof(int),0);
-	free(msj);
+
 
 	//mensaje* msjl = malloc(sizeof(mensaje));
 	//msjl = recibir_mensaje(cliente);
@@ -245,7 +241,7 @@ while((cliente=aceptarCliente(socket_escucha))>0){
 	msjl = recibirMensajeFUSE(cliente);
 	//char* contenido = contenido_toString(msj);
 
-	switch(msjl->syscall1){
+	switch(msjl->syscall){
 
 	case write:{
 
