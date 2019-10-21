@@ -18,21 +18,21 @@
 
 
 typedef enum {
-	HANDSHAKE
-} operacion;
+	SALUDO
+} museOperacion;
 
 typedef enum{
 	PEDIDO
-}tipoMensaje;
+}museTipoMensaje;
 
 typedef struct {
     int tamanioMensaje;
-    tipoMensaje tipoMensaje;
-    operacion   operacion;
+    museTipoMensaje tipoMensaje;
+    museOperacion   operacion;
 } __attribute__((packed)) HeaderMuse;
 
 
-int   enviarPaqueteInt(int destinatario,   tipoMensaje tipoMensaje, operacion operacion, int loQueEnvio);
-void* armarHeaderMuse (int tamanioMensaje, tipoMensaje tipoMensaje, operacion operacion);
+int   enviarPaqueteInt(int destinatario,   museTipoMensaje tipoMensaje, museOperacion operacion, int loQueEnvio);
+void* armarHeaderMuse (int tamanioMensaje, museTipoMensaje tipoMensaje, museOperacion operacion);
 
 #endif /* MENSAJES_H_ */

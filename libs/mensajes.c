@@ -7,7 +7,7 @@
 
 #include "mensajes.h"
 
-void* armarHeaderMuse(int tamanioMensaje, tipoMensaje tipoMensaje, operacion operacion) {
+void* armarHeaderMuse(int tamanioMensaje, museTipoMensaje tipoMensaje, museOperacion operacion) {
     HeaderMuse header = {.tamanioMensaje = tamanioMensaje , .tipoMensaje = tipoMensaje, .operacion = operacion};
     	void* headerSerializado = malloc(sizeof(HeaderMuse));
         void* puntero = headerSerializado;
@@ -26,7 +26,7 @@ void* armarHeaderMuse(int tamanioMensaje, tipoMensaje tipoMensaje, operacion ope
 }
 
 
-int enviarPaqueteInt(int destinatario, tipoMensaje tipoMensaje, operacion operacion, int loQueEnvio)  {
+int enviarPaqueteInt(int destinatario, museTipoMensaje tipoMensaje, museOperacion operacion, int loQueEnvio)  {
     int tamanioMensaje = sizeof(int);
     void* headerSerializado = armarHeaderMuse(tamanioMensaje, tipoMensaje, operacion);
     int pesoPaquete = sizeof(HeaderMuse) + tamanioMensaje;

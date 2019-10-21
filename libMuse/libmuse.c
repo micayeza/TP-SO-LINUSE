@@ -34,7 +34,7 @@ int muse_init(int id, char* ip, int puerto){
 //			int result = enviarMensaje(cliente, mensaje);
 //			printf("result %d", result);
 
-			int res = enviarPaquete(cliente, HANDSHAKE, INVALIDO, "HOLA", id);
+			int res = enviarPaqueteInt(cliente, PEDIDO, SALUDO ,puerto );
 			if(res < 0){
 				return -1;
 			}

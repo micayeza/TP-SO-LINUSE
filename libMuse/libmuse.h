@@ -28,6 +28,7 @@
 	#include <stdio.h>
 	#include <libs.h>
 	#include <sockets.h>
+	#include <mensajes.h>
 
     /**
      * Inicializa la biblioteca de MUSE.
