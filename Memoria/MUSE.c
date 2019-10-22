@@ -6,25 +6,77 @@
  */
 #include "MUSE.h"
 
+void* recorrerSegmentos(t_list* segmentos){
+	int size = list_size(segmentos);
+	int i = 0;
+	//MUTEX?
+	//uint32_t aux = posicionMemoria;
+
+	while(size > i){
+		t_segmento* segmento = list_get(segmentos,i);
+		uint32_t aux = segmento->base;
+
+	}
+	return NULL;
+}
+
+
+
+
+
+
 void atenderConexiones(int parametros){
 
-	int cliente = parametros;
+	t_proceso* proceso = malloc(sizeof(t_proceso));
 
-	char* ip_cliente = ip_de_programa(cliente);
+	proceso->cliente = parametros;
+	proceso->ip 	 = malloc(INET6_ADDRSTRLEN);
+	ip_de_programa(proceso->cliente, proceso->ip);
 
-//	mensaje* msj = recibirMensaje(cliente);
-	void* mensaje = recibirPaqueteInt(cliente);
+	void* mensaje = recibirPaqueteInt(proceso->cliente);
 	if(mensaje == NULL){ pthread_exit("CHAU");};
 	HeaderMuse primerMsj = desempaquetarHeaderMuse(mensaje);
 
-	int id = contenidoMensajeInt(mensaje);
-
+	proceso->id = contenidoMensajeInt(mensaje);
 
 	free(mensaje);
 
+	proceso->segmentos = list_create();
+	int res = list_add(tabla_procesos, proceso);
 
-	while(1){
+	while(recibirPaqueteInt(proceso->cliente)){
 		switch (primerMsj.operacion) {
+		case CERRAR:{
+			//TEngo queliberar absolutamente todo
+
+			log_info(logMuse,"Se desconecto el proceso: \n");
+			pthread_exit("CHAU");
+		}break;
+		case RESERVAR: {
+			void* espacio = recorrerSegmentos(proceso->segmentos);
+
+		} break;
+		case LIBERAR:{
+
+		} break;
+		case OBTEBER:{
+
+		}break;
+		case COPIAR:{
+
+		}break;
+		case MAPEAR: {
+
+		}break;
+		case SINCRO:{
+
+		} break;
+		case DESMAP:{
+
+		}break;
+		default:{
+
+		}
 
 
 		}
@@ -36,7 +88,7 @@ void atenderConexiones(int parametros){
 
 }
 
-char* ip_de_programa(int s){
+void ip_de_programa(int s, char* ip){
 	socklen_t len;
 	struct sockaddr_storage addr;
 	char ipstr[INET6_ADDRSTRLEN];
@@ -55,12 +107,10 @@ char* ip_de_programa(int s){
 
 		inet_ntop(AF_INET6, &s->sin6_addr, ipstr, sizeof ipstr);
 	}
-	log_info(logMuse, "Peer IP address: %s \n");
 
-	char* ip = malloc(INET6_ADDRSTRLEN);
 	memcpy(ip, &(ipstr), INET6_ADDRSTRLEN);
 
-	return ip;
+	log_info(logMuse, "Peer IP address: %s \n", ip);
 
 }
 
@@ -120,7 +170,7 @@ int crearSocketEscuchaMemoria (int puerto) {
 		}
 
 	// hasta que no salga del listen, nunca va a retornar el socket del servidor ya que el listen es bloqueante
-
+		t_list* segmentos;
 	return socketDeEscucha;
 }
 
@@ -173,12 +223,13 @@ void inicializarMemoria(){
 	cantidad_paginas = config_muse->tamanio_total/config_muse->tamanio_pagina;
 
 //  BIG MALLOC
-	tabla_inicial = malloc(sizeof(t_inicial) * cantidad_paginas);
-
-	for(int i = 0; i < cantidad_paginas; i++){
-
-		tabla_inicial[i].marco = malloc(config_muse->tamanio_pagina);
-	}
+	punteroMemoria = malloc(config_muse->tamanio_total);
+//	tabla_inicial = malloc(sizeof(t_inicial) * cantidad_paginas);
+//
+//	for(int i = 0; i < cantidad_paginas; i++){
+//
+//		tabla_inicial[i].marco = malloc(config_muse->tamanio_pagina);
+//	}
 
 
 	tabla_archivos = list_create();

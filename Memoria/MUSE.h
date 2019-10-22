@@ -48,18 +48,22 @@ typedef struct{
 typedef struct {
 	void* marco;
 } t_inicial;
+void* punteroMemoria;
+void* posicionMemoria;
 
 typedef struct{
 	int   id;
 	int   cliente;
 	char* ip;
 	t_list* segmentos;
-} t_procesos;
+} t_proceso;
 
 typedef struct{
-	int id;
-	t_list* paginas;
+	uint32_t base;
+	int      tamnio;
+	t_list*  paginas;
 } t_segmento;
+
 typedef struct {
 	int numero;
 	int u; //uso
@@ -102,7 +106,10 @@ int crearSocketMemoria();
 int crearSocketEscuchaMemoria (int) ;
 int crearSocketServidorMemoria(int);
 void atenderConexiones(int);
-char* ip_de_programa(int);
+void ip_de_programa(int,char*);
+
+
+void* recorrerSegmentos(t_list*);
 
 // Para swap tengo al funcion rewind que devuelve el cursor al inicio del archivo
 //Esta char *fgets(char *buffer, int tamaño, FILE *archivo); buffer donde lo guarda, tamaño es el maximio

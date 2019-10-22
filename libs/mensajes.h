@@ -18,11 +18,21 @@
 
 
 typedef enum {
-	SALUDO
+	SALUDO,
+	CERRAR,
+	RESERVAR,
+	LIBERAR,
+	OBTEBER,
+	COPIAR,
+	MAPEAR,
+	SINCRO,
+	DESMAP
+
 } museOperacion;
 
 typedef enum{
-	PEDIDO
+	PEDIDO,
+	RESPUESTAMUSE
 }museTipoMensaje;
 
 typedef struct {
