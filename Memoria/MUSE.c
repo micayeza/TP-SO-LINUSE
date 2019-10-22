@@ -13,15 +13,29 @@ void atenderConexiones(int parametros){
 	char* ip_cliente = ip_de_programa(cliente);
 
 //	mensaje* msj = recibirMensaje(cliente);
+	void* mensaje = recibirPaqueteInt(cliente);
+	if(mensaje == NULL){ pthread_exit("CHAU");};
+	HeaderMuse primerMsj = desempaquetarHeaderMuse(mensaje);
+
+	int id = contenidoMensajeInt(mensaje);
+
+
+	free(mensaje);
+
 
 	while(1){
+		switch (primerMsj.operacion) {
+
+
+		}
+
 
 	}
 
 
 
 }
-//No tengo idea de si esto anda
+
 char* ip_de_programa(int s){
 	socklen_t len;
 	struct sockaddr_storage addr;
@@ -43,7 +57,11 @@ char* ip_de_programa(int s){
 	}
 	log_info(logMuse, "Peer IP address: %s \n");
 
-	return ipstr;
+	char* ip = malloc(INET6_ADDRSTRLEN);
+	memcpy(ip, &(ipstr), INET6_ADDRSTRLEN);
+
+	return ip;
+
 }
 
 int crearSocketMEmoria() {

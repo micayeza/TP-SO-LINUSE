@@ -23,9 +23,11 @@
 #include <time.h>
 #include <libs.h>
 #include <sockets.h>
+#include <mensajes.h>
 
 
-#define rutaConfigMuse "../../configs/muse.cfg"
+//#define rutaConfigMuse "../../configs/muse.cfg"
+#define rutaConfigMuse "/home/utnso/workspace/tp-2019-2c-capitulo-2/configs/muse.cfg"
 #define rutaSwap "swap.txt"
 #define ERROR -1
 

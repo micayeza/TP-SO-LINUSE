@@ -34,5 +34,7 @@ typedef struct {
 
 int   enviarPaqueteInt(int destinatario,   museTipoMensaje tipoMensaje, museOperacion operacion, int loQueEnvio);
 void* armarHeaderMuse (int tamanioMensaje, museTipoMensaje tipoMensaje, museOperacion operacion);
-
+HeaderMuse desempaquetarHeaderMuse(void* paquete);
+int contenidoMensajeInt(void* paquete);
+void* recibirPaqueteInt(int destinatario);
 #endif /* MENSAJES_H_ */

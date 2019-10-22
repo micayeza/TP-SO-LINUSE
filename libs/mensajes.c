@@ -43,19 +43,19 @@ int enviarPaqueteInt(int destinatario, museTipoMensaje tipoMensaje, museOperacio
     return res;
 }
 
-int recibirPaqueteInt(int destinatario){
+void* recibirPaqueteInt(int destinatario){
 	int pesoPaquete = sizeof(HeaderMuse) + sizeof(int);
 	void* paquete = malloc(pesoPaquete);
 
 	int res = recv(destinatario, paquete, pesoPaquete, MSG_WAITALL);
-	if(res < 0) { return -1;}
+	if(res < 0) { return NULL;}
 
-	return 0;
+	return paquete;
 
 
 }
 
-HeaderMuse desempaquetarHeader(void* paquete){
+HeaderMuse desempaquetarHeaderMuse(void* paquete){
 
 	HeaderMuse header;
 	int tamanioSize = sizeof(typeof(header.tamanioMensaje));
@@ -76,7 +76,7 @@ HeaderMuse desempaquetarHeader(void* paquete){
 
 }
 
-int contenidoMensaje(void* paquete){
+int contenidoMensajeInt(void* paquete){
 	int contenido = sizeof(int);
 	paquete += sizeof(HeaderMuse);
 	memcpy(&(contenido), paquete, sizeof(int));
