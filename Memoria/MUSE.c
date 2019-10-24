@@ -32,20 +32,23 @@ void atenderConexiones(int parametros){
 	proceso->cliente = parametros;
 	proceso->ip 	 = malloc(INET6_ADDRSTRLEN);
 	ip_de_programa(proceso->cliente, proceso->ip);
+	activo = true;
+	while(activo){
+		HeaderMuse header = recibirHeaderMuse(proceso->cliente);
+		switch (header.operacion) {
+		case SALUDO:{
 
-	void* mensaje = recibirPaqueteInt(proceso->cliente);
-	if(mensaje == NULL){ pthread_exit("CHAU");};
-	HeaderMuse primerMsj = desempaquetarHeaderMuse(mensaje);
+			proceso->id = recibirInt(proceso->cliente);
+			if(proceso->id<0){
+				enviarInt(proceso->cliente, -1);
+				pthread_exit("char");
+			}
+			proceso->segmentos = list_create();
+			list_add(tabla_procesos, proceso);
 
-	proceso->id = contenidoMensajeInt(mensaje);
+			enviarInt(proceso->cliente, 0);
 
-	free(mensaje);
-
-	proceso->segmentos = list_create();
-	int res = list_add(tabla_procesos, proceso);
-
-	while(recibirPaqueteInt(proceso->cliente)){
-		switch (primerMsj.operacion) {
+		}break;
 		case CERRAR:{
 			//TEngo queliberar absolutamente todo
 
@@ -53,7 +56,7 @@ void atenderConexiones(int parametros){
 			pthread_exit("CHAU");
 		}break;
 		case RESERVAR: {
-			void* espacio = recorrerSegmentos(proceso->segmentos);
+			//void* espacio = recorrerSegmentos(proceso->segmentos);
 
 		} break;
 		case LIBERAR:{

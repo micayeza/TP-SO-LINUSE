@@ -91,6 +91,7 @@ t_config *config_ruta;
 t_log *logMuse;
 
 FILE * archivoSwap;
+bool activo;
 
 bool existeArchivoConfig(char*);
 int crearConfigMemoria();

@@ -34,9 +34,15 @@ int muse_init(int id, char* ip, int puerto){
 //			int result = enviarMensaje(cliente, mensaje);
 //			printf("result %d", result);
 
-			int res = enviarPaqueteInt(cliente, PEDIDO, SALUDO ,puerto );
+			int res = enviarHeaderMuse(cliente, LIBMUSE, HANDSHAKE);
 			if(res < 0){
 				return -1;
+			}else{
+				res = enviarInt(cliente, id);
+				if (res<0){
+					return -1;
+				}
+				res = recibirInt(cliente);
 			}
 			return 0;
 		}
