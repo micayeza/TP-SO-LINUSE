@@ -15,7 +15,8 @@ typedef enum {
 	read,
     rmdir,
 	unlink,
-	mkdir
+	mkdir,
+	readdir
 
 }Syscall;
 
@@ -24,6 +25,7 @@ typedef struct{
 	char* path;
 	char* buff;
 	size_t size;
+	off_t offset; //AGREGAR A LA SERIALIZACION
 	Syscall syscall;
 
 

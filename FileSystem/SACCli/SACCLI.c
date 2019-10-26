@@ -101,6 +101,11 @@ int conexionInicial(){
 	g_logger = log_create("log.h","SACCLI",true,LOG_LEVEL_INFO);
 
 	g_socketSAC = crearSocketCliente("IP",8080,g_logger);
+
+
+	//enviar primer mensaje con el tamaño del mensaje serializado
+	//	serializar
+	//enviarmensaje
 }
 
 
