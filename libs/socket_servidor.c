@@ -46,8 +46,8 @@ int enviarPaquete(int fdDestinatario, TipoDato tipoDato, TipoMensaje tipoMensaje
     void* paqueteSerializado = malloc(1);
     int pesoPaquete = empaquetar(headerSerializado, mensajeSerializado, pesoMensaje, tipoDato, paqueteSerializado);
     int res = send(fdDestinatario, paqueteSerializado, pesoPaquete, MSG_WAITALL);
-    free(headerSerializado);
-    free(paqueteSerializado);
+    //free(headerSerializado); //Me da error al hacer free de un void*
+    //free(paqueteSerializado);
 
     return res;
 }
@@ -61,7 +61,7 @@ int enviarPaquete(int fdDestinatario, TipoDato tipoDato, TipoMensaje tipoMensaje
  */
 Mensaje* recibirConexionPaquete(GestorConexiones* conexion, t_log* logger){
 	fd_set* descriptoresLectura = malloc(sizeof(fd_set));
-	Mensaje* mensaje = NULL;
+	Mensaje* mensaje = inicializarMensaje();
 	FD_ZERO (descriptoresLectura);
 	cargarListaClientes(conexion, descriptoresLectura);
 	int resultSelect = select(conexion->descriptorMaximo + 1, descriptoresLectura, NULL, NULL, NULL);
@@ -79,6 +79,8 @@ Mensaje* recibirConexionPaquete(GestorConexiones* conexion, t_log* logger){
 			 }else {
 				list_add(conexion->conexiones,fdNuevoCliente);
 				conexion->descriptorMaximo = getFdMaximo(conexion);
+				mensaje->tipoMensaje = INIT;
+				mensaje->fd_remitente = fdNuevoCliente;
 			 }
 		}else{
 			//Verificar fd de clientes: mensaje nuevo
@@ -113,10 +115,11 @@ Mensaje* recibirConexionPaquete(GestorConexiones* conexion, t_log* logger){
 							else if(bytesRecibidos == 0){
 								desconectarCliente(fdActual, conexion, logger);
 							}else{
-								Mensaje* mensaje = malloc(sizeof(Mensaje));
+
 								mensaje->fd_remitente = fdActual;
 								mensaje->size = pesoMensaje;
 								mensaje->tipoDato = header.tipoDato;
+								mensaje->tipoMensaje = header.tipoMensaje;
 								mensaje->contenido = mensajeBruto;
 							}
 
@@ -125,7 +128,7 @@ Mensaje* recibirConexionPaquete(GestorConexiones* conexion, t_log* logger){
 			} //End for descriptores
 		} //End else not conexion->servidor
 	} // End if resultSelect > 0
-	free(descriptoresLectura);
+
 	return mensaje;
 }
 
@@ -383,4 +386,20 @@ int crearSocketCliente(char *ipServidor, int puerto, t_log* logger) {
 //        log_info(logger, "Se estableció correctamente la conexión con el servidor a través del socket %i.", cliente);
         return cliente;
     }
+}
+
+Mensaje* inicializarMensaje(){
+	Mensaje* mensaje = malloc(sizeof(Mensaje));
+	mensaje->fd_remitente = -1;
+	mensaje->size = 0;
+	mensaje->tipoDato = INDEFINIDO;
+	mensaje->tipoMensaje = VACIO;
+	mensaje->contenido = NULL;
+
+	return mensaje;
+}
+
+void freeMensaje(Mensaje* mensaje){
+	free(mensaje->contenido);
+	free(mensaje);
 }

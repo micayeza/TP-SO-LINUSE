@@ -8,6 +8,9 @@
 #include <pthread.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/time.h>
+#include <errno.h>
+#include <sys/socket.h>
 
 //Librerias COMMONS
 #include <commons/string.h>
@@ -17,11 +20,16 @@
 #include <commons/collections/dictionary.h>
 
 //Librerias propias
-#include "../libs/libs.h"
-#include "../libs/sockets.h"
+#include <libs.h>
+//#include <sockets.h>
+#include <socket_servidor.h>
 
+//------------------------- SECCION CONEXION -------------------------------
 
-// -------------------------- SECCIÓN PLANIFICACIÓN --------------------------
+//------------------------- SECCION CONEXION -------------------------------
+void atenderPedidos();
+
+// -------------------------- FIN SECCIÓN PLANIFICACIÓN --------------------
 pthread_t mainThread;
 pthread_mutex_t mutexColaEjecucion;
 
@@ -36,7 +44,6 @@ typedef struct {
 	void* funcion;
 } t_TCB;
 
-int proximo_pcb_id;
 t_dictionary* PCBs;
 t_queue* colaNew;
 

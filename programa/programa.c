@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-#include "../hilolay/hilolay.h"
+#include <hilolay.h>
 
 void *func1(void *arg) {
 	int a = 1;
@@ -12,4 +12,5 @@ int main(void) {
 	struct hilolay_t th1;
 
 	hilolay_create(&th1, NULL, &func1, NULL);
+	hilolay_join(&th1);
 }

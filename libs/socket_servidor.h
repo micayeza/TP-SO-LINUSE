@@ -22,21 +22,29 @@ typedef struct  {
 } GestorConexiones;
 
 typedef enum  {
+	INDEFINIDO,
     ENTERO,
 	TEXTO
 } TipoDato;
 
+typedef enum {
+	VACIO,
+	INIT,
+    CREATE_HILO,
+	SCHEDULE_NEXT,
+	WAIT,
+	SIGNAL,
+	JOIN,
+	CLOSE
+} TipoMensaje;
+
 typedef struct {
 	TipoDato tipoDato;
+	TipoMensaje tipoMensaje;
 	int size;
 	void* contenido;
 	int fd_remitente;
 } Mensaje;
-
-typedef enum {
-    CREAR_HILO,
-	OTRO
-} TipoMensaje;
 
 typedef struct {
     int tamanioMensaje;
@@ -71,5 +79,6 @@ void desconectarCliente(int fdCliente, GestorConexiones* unaConexion, t_log* log
 int serializarMensaje(void* mensaje, TipoDato tipoDato, void* mensajeSerializado);
 void cerrarSocket(int fd_socket, t_log* logger);
 void eliminarFdDeListaDeConexiones(int fdCliente, GestorConexiones* unaConexion);
+Mensaje* inicializarMensaje();
 
 #endif /* SOCKET_SERVIDOR_H_ */

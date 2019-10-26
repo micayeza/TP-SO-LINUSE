@@ -2,12 +2,13 @@
 
 void inicializacion(){
 	configPath = string_new();
-	string_append(&configPath, "../configs/SUSE.config");
+	string_append(&configPath, "/home/utnso/workspace/tp-2019-2c-capitulo-2/configs/SUSE.config");
 
 	log_resultados = log_create("log_resultados.txt", "LOG-RES", false, LOG_LEVEL_INFO);
+	log_info(log_resultados, "------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
 	log_interno = log_create("log_interno.txt", "LOG-INT", false, LOG_LEVEL_INFO);
+	log_info(log_interno, "------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
 
-	proximo_pcb_id = 0;
 	PCBs = dictionary_create();
 	colaNew = queue_create();
 	pthread_mutex_init(&mutexColaEjecucion, NULL);
@@ -21,7 +22,7 @@ void finalizacion(){
 	pthread_mutex_destroy(&mutexColaEjecucion);
 }
 
-void aceptarClientes(){
+/*void aceptarClientes(){
 
 	t_configSUSE* config = getConfigSUSE(configPath);
 	int socket_escucha = crearSocketEscucha(config->listenPort, log_interno);
@@ -38,18 +39,42 @@ void aceptarClientes(){
 
 	//}
 
-}
+}*/
 
-void probando_select(){
+void atenderPedidos(){
+
+	t_configSUSE* config = getConfigSUSE(configPath);
+
+	GestorConexiones* conexionServidor = inicializarConexion();
+
+	crearInicializarServidor(config->listenPort, conexionServidor, log_interno);
+
+
+	while(1){
+		Mensaje* mensaje = recibirConexionPaquete(conexionServidor, log_interno);
+		switch((int) mensaje->tipoMensaje)  {
+			case VACIO:
+				log_error(log_interno, "Error en recepción de mensaje o conexion");
+				break;
+			case INIT:
+				printf("Resultado: Se conectó el cliente %s \n", string_itoa((char*) mensaje->fd_remitente));
+				break;
+			case CREATE_HILO:
+				printf("Resultado: %s \n", (char*) mensaje->contenido);
+				break;
+			case JOIN:
+				printf("Resultado: %s \n", (char*) mensaje->contenido);
+				break;
+		}
+	}
 
 }
 
 
 int main(void) {
 	inicializacion();
-	probando_select();
-	pthread_create(&mainThread, NULL, (void*)aceptarClientes, NULL);
-	pthread_join(mainThread, NULL);
 
-	finalizacion();
+	atenderPedidos();
+
+	//finalizacion();
 }
