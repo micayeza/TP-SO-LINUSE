@@ -120,7 +120,7 @@ Mensaje* recibirConexionPaquete(GestorConexiones* conexion, t_log* logger){
 								mensaje->size = pesoMensaje;
 								mensaje->tipoDato = header.tipoDato;
 								mensaje->tipoMensaje = header.tipoMensaje;
-								mensaje->contenido = mensajeBruto;
+								mensaje->contenido = deserializarMensaje(mensajeBruto, pesoMensaje, header.tipoDato);
 							}
 
 					} // end switch
@@ -326,6 +326,20 @@ int serializarMensaje(void* mensaje, TipoDato tipoDato, void* mensajeSerializado
 	}
 	mensajeSerializado = NULL;
 	return -1;
+}
+
+void* deserializarMensaje(void* mensajeSerializado, int tamanio, TipoDato tipoDato)	{
+    if(tipoDato == ENTERO){
+    	int* mensaje = malloc(tamanio);
+    	mensaje = memcpy(mensajeSerializado, mensaje, tamanio);
+    	return (void*) mensaje;
+    }
+
+    if(tipoDato == TEXTO){
+    	char* mensaje = malloc(tamanio);
+    	mensaje = memcpy(mensaje,mensajeSerializado,tamanio);
+    	return (void*) mensaje;
+    }
 }
 
 /**

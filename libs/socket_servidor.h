@@ -80,5 +80,6 @@ int serializarMensaje(void* mensaje, TipoDato tipoDato, void* mensajeSerializado
 void cerrarSocket(int fd_socket, t_log* logger);
 void eliminarFdDeListaDeConexiones(int fdCliente, GestorConexiones* unaConexion);
 Mensaje* inicializarMensaje();
+void* deserializarMensaje(void* mensajeSerializado, int tamanio, TipoDato tipoDato);
 
 #endif /* SOCKET_SERVIDOR_H_ */
