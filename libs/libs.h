@@ -19,20 +19,20 @@ typedef struct {
 	int size;
 }header;
 
-typedef struct {
-	header header;
-	void*  contenido;
-}mensaje;
+//typedef struct {
+//	header header;
+//	void*  contenido;
+//}mensaje;
 
 
 void freeCharArray(char** charArray);
 
 
 
-void freeMensaje(mensaje* mensaje);
-mensaje* recibirMensaje(int socket);
-int enviarMensaje(int socket, mensaje* msj);
-mensaje* armarMensaje(operacion operacion, int size, void* contenido);
+//void freeMensaje(mensaje* mensaje);
+//mensaje* recibirMensaje(int socket);
+//int enviarMensaje(int socket, mensaje* msj);
+//mensaje* armarMensaje(operacion operacion, int size, void* contenido);
 
 
 //int crearSocketServidor(int);

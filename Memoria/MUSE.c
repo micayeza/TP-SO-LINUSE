@@ -6,20 +6,73 @@
  */
 #include "MUSE.h"
 
-void* recorrerSegmentos(t_list* segmentos){
-	int size = list_size(segmentos);
-	int i = 0;
-	//MUTEX?
-	//uint32_t aux = posicionMemoria;
+uint32_t mallocMuse(int tamanio, t_list* bloquesLibres, t_list* tabla_segmentos){
 
-	while(size > i){
-		t_segmento* segmento = list_get(segmentos,i);
-		uint32_t aux = segmento->base;
 
+	bool igual_tamanio(t_libres* bloque_libre){
+		return bloque_libre->tamanio == tamanio;
 	}
-	return NULL;
-}
 
+	bool mayor_tamanio(t_libres* bloque_libre){
+		int tamanio_cinco = tamanio + 5;
+		return bloque_libre->tamanio >= tamanio_cinco;
+	}
+
+
+	//Busco si hay lugar justo para el maloc
+	t_libres* valor_libre = list_find(bloquesLibres, (void* )igual_tamanio );
+	if(valor_libre != NULL){
+
+// FUNCION QUE ACTUALIZE EL HEADER DE LA PAGINA, SI NO ESTA EN MEMORIA SWAPPEAR		(1)
+		return valor_libre->posicion + 5;
+	}
+
+	//SI no hay un lugar igual para el maloc,
+
+		//Busco un FREE en donde haya lugar para el maloc + header
+		valor_libre = list_find(bloquesLibres, (void* )mayor_tamanio );
+		if(valor_libre!=NULL){
+
+			// FUNCION QUE ACTUALIZE EL HEADER DE LA PAGINA Y CREE UN NUEVO HEADER ADELANTE, SI NO ESTA EN MEMORIA SWAPPEAR  (2)
+			return valor_libre->posicion + 5;
+		}
+
+//reviso si en el utimo header hay lugar
+		int i = list_size(tabla_segmentos) - 1;
+
+		t_segmento* ult_segmento = list_get(tabla_segmentos, i);
+		//SI el segmento es dinámico, voy a extenderlo (IGual a CERO)
+		if(ult_segmento->dinamico == 0){
+			i = list_size(ult_segmento->paginas) - 1;
+
+			t_pagina* ult_pag = list_get(ult_segmento->paginas, i);
+			if(ult_pag->tamanio_header >= (tamanio + 5)){
+				// FUNCION QUE ACTUALIZE EL HEADER DE LA PAGINA Y CREE UN NUEVO HEADER ADELANTE, SI NO ESTA EN MEMORIA SWAPPEAR(2)
+				return ult_pag->ultimo_header + 5;
+
+			} else {
+
+//---------------------------------------------------------------------------------
+//CREAR NUEVA PAGINA, YA SE QUE ES EXTENSIBLE EL SEGMNTO SOLO HAY QUE VER QUE HAYA LUGAR EN LA MEMORIA, DEVOLVERÁ -1 SI NO HAY MAS LUGAR EN LA MEMORIA
+//				int res = crearPagina();
+//				if (res == -1){
+//					return -1;
+//				}
+//---------------------------------------------------------------------------------
+			}
+		}else{
+
+//---------------------------------------------------------------------------------
+			//CREAR SEGMENTO
+//			int res = crearSegmento();
+//			if(res == -1){
+//				return -1;
+//			}
+//---------------------------------------------------------------------------------
+
+		}
+
+}
 
 
 
@@ -27,12 +80,16 @@ void* recorrerSegmentos(t_list* segmentos){
 
 void atenderConexiones(int parametros){
 
+	t_list* bloquesLibres;
 	t_proceso* proceso = malloc(sizeof(t_proceso));
 
 	proceso->cliente = parametros;
 	proceso->ip 	 = malloc(INET6_ADDRSTRLEN);
+	proceso->segmentos = list_create();
+
 	ip_de_programa(proceso->cliente, proceso->ip);
 	activo = true;
+
 	while(activo){
 		HeaderMuse header = recibirHeaderMuse(proceso->cliente);
 		switch (header.operacion) {
@@ -43,20 +100,23 @@ void atenderConexiones(int parametros){
 				enviarInt(proceso->cliente, -1);
 				pthread_exit("char");
 			}
-			proceso->segmentos = list_create();
+
 			list_add(tabla_procesos, proceso);
+
+			bloquesLibres = list_create();
 
 			enviarInt(proceso->cliente, 0);
 
 		}break;
 		case CERRAR:{
-			//TEngo queliberar absolutamente todo
+			//TEngo que liberar absolutamente todo
 
 			log_info(logMuse,"Se desconecto el proceso: \n");
 			pthread_exit("CHAU");
 		}break;
 		case RESERVAR: {
-			//void* espacio = recorrerSegmentos(proceso->segmentos);
+			int tamanio = recibirInt(proceso->cliente);
+			uint32_t posicion = mallocMuse(tamanio, bloquesLibres, proceso->segmentos);
 
 		} break;
 		case LIBERAR:{

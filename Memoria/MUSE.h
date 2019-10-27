@@ -22,7 +22,6 @@
 #include <errno.h>
 #include <time.h>
 #include <libs.h>
-#include <sockets.h>
 #include <mensajes.h>
 
 
@@ -52,23 +51,29 @@ void* punteroMemoria;
 void* posicionMemoria;
 
 typedef struct{
+	uint32_t base;
+	int      tamnio;
+	int      dinamico;//Si el segmneto esdinamico 0, si es map 1
+	int      shared;  // Si map = 1, 1 es compartido, 0 privado, sino ignorar
+	t_list*  paginas;
+} t_segmento;
+
+typedef struct{
 	int   id;
 	int   cliente;
 	char* ip;
 	t_list* segmentos;
 } t_proceso;
 
-typedef struct{
-	uint32_t base;
-	int      tamnio;
-	t_list*  paginas;
-} t_segmento;
 
 typedef struct {
 	int numero;
 	int u; //uso
 	int p; //Presencia
 	int m; //Modificado
+	int marco; //Presencia = 0, ESTÁ EN TXT; Presencia = 1, ESTÁ EN MEMORIA
+	int tamanio_header;
+	uint32_t ultimo_header;
 }t_pagina;
 
 typedef struct {
@@ -76,6 +81,14 @@ typedef struct {
 	int   flag;
 	void* puntero_a_pag;
 }t_archivos;
+
+typedef struct {
+	int segmento;
+	int pagina;
+	int tamanio;
+	uint32_t posicion;
+} t_libres;
+
 
 t_inicial* tabla_inicial;
 t_list*    tabla_archivos;
@@ -110,7 +123,7 @@ void atenderConexiones(int);
 void ip_de_programa(int,char*);
 
 
-void* recorrerSegmentos(t_list*);
+uint32_t mallocMuse(int, t_list* bloquesLibres, t_list* segmentos);
 
 // Para swap tengo al funcion rewind que devuelve el cursor al inicio del archivo
 //Esta char *fgets(char *buffer, int tamaño, FILE *archivo); buffer donde lo guarda, tamaño es el maximio
