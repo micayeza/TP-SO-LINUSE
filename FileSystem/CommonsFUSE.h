@@ -10,13 +10,13 @@
 
 
 typedef enum {
-    write,
-    open,
-	read,
-    rmdir,
-	unlink,
-	mkdir,
-	readdir
+    writeSYS,
+    openSYS,
+	readSYS,
+    rmdirSYS,
+	unlinkSYS,
+	mkdirSYS,
+	readdirSYS
 
 }Syscall;
 
@@ -30,7 +30,8 @@ typedef struct{
 
 
 }MensajeFUSE;
-
+int recibirTamanio(int fdDestinatario);
+int enviarTamanio(int destinatario, int loQueEnvio);
 int enviarPaqueteFUSE(int fdDestinatario,void* mensajeSerializado);
 void* SerializarMensajeFUSE(MensajeFUSE* mensaje, int tamPath, int tamBuff);
 MensajeFUSE DesserializarMensajeFUSE(void* serializado);

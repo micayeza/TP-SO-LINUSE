@@ -57,3 +57,26 @@ int enviarPaqueteFUSE(int fdDestinatario,void* mensajeSerializado) {
 }
 
 
+int recibirTamanio(int destinatario){
+	void* paquete = malloc(sizeof(int));
+	int res = recv(destinatario, paquete, sizeof(int),MSG_WAITALL );
+	if(res<0) {return -1;}
+		int contenido = sizeof(int);
+
+		memcpy(&(contenido), paquete, sizeof(int));
+		free(paquete);
+		return contenido;
+
+}
+
+int enviarTamanio(int destinatario, int loQueEnvio){
+
+	 void* paquete = malloc(sizeof(int));
+	 void* puntero = paquete;
+	 memcpy(puntero, &(loQueEnvio), sizeof(int));
+	 int res = send(destinatario, paquete, sizeof(int), MSG_WAITALL);
+	 free(paquete);
+	 return res;
+}
+
+
