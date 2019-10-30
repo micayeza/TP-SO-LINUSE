@@ -8,6 +8,21 @@
 #ifndef FILESYSTEM_COMMONSFUSE_H_
 #define FILESYSTEM_COMMONSFUSE_H_
 
+#include <stddef.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <time.h>
+#include <commons/log.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <pthread.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+#include <netdb.h>
+#include <errno.h>
+#include <time.h>
 
 typedef enum {
     writeSYS,
@@ -16,7 +31,7 @@ typedef enum {
     rmdirSYS,
 	unlinkSYS,
 	mkdirSYS,
-	readdirSYS
+	readdirSYS,
 
 }Syscall;
 

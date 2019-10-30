@@ -72,7 +72,7 @@ int SacServerOpen(const char *path) {
 
  int crearSocketEscuchaFUSE(int puerto) {
 
- 	int socketDeEscucha = crearSocketServidorMemoria(puerto);
+ 	int socketDeEscucha = crearSocketSACServidor(puerto);
 
  	//Escuchar conexiones
  		int valorListen;
@@ -115,8 +115,8 @@ void atenderConexiones(int cliente){
 
 	int tam = recibirTamanio(cliente);
 
-	MensajeFUSE* msjl = malloc(sizeof(MensajeFUSE));
-	msjl = recibirMensajeFUSE(cliente);
+	MensajeFUSE* msjl = malloc(tam);
+	//msjl = recibirMensajeFUSE(cliente);
 	//char* contenido = contenido_toString(msj);
 
 	switch(msjl->syscall){
@@ -164,12 +164,13 @@ void crearHiloParalelos(){
 	int socket_escucha = crearSocketEscuchaFUSE(8091);
 
 	if(socket_escucha > 0){
+		log_info(SacServerLog,"levanto");
 	int cliente = 0;
 
 		while(( cliente = aceptarSacCli(socket_escucha)) > 0 ){
-
+			log_info(SacServerLog,"nueva conexion");
 			pthread_t hilo;
-			pthread_create(&hilo, NULL, (void*)atenderConexiones, cliente );
+			pthread_create(&hilo, NULL, (void*)atenderConexiones, (void*)cliente );
 			pthread_join(hilo, NULL);
 
 		}
@@ -182,7 +183,8 @@ void crearHiloParalelos(){
 
 
 int main(){
-	//crearHiloParalelos();
+	SacServerLog = log_create("SACServer.txt", "LOG", true, LOG_LEVEL_INFO);
+	crearHiloParalelos();
 };
 
 

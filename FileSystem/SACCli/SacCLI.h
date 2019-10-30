@@ -17,10 +17,8 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <stdio.h>
-#include <libs.h>
 #include <commons/log.h>
-#include "SACServer.h"
-#include "CommonsFUSE.h"
+#include "../CommonsFUSE.c"
 
 
 

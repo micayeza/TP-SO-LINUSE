@@ -21,7 +21,7 @@
 
 int g_socketSAC = -1;
 t_log* g_logger;
-
+/*
 struct t_runtime_options {
 	char* welcome_msg;
 } runtime_options;
@@ -101,10 +101,10 @@ struct fuse_opt fuse_options[]= {
 
 };
 
-
+*/
 int conexionInicial(){
-	char* ip = "127.0.0.1";
-	int puerto = 8085;
+	char* ip = "172.17.0.1";
+	int puerto = 8091;
 	//leer puerto e ip del config
 	g_logger = log_create("log.h","SACCLI",true,LOG_LEVEL_INFO);
 		int cliente;
@@ -139,17 +139,18 @@ int conexionInicial(){
 
 int main(int argc, char*argv[]){
 
-	struct fuse_args args = FUSE_ARGS_INIT(argc,argv);
-
-	if(fuse_opt_parse(&args,&runtime_options,fuse_options,NULL)==-1){
-		perror("Argumentos invalidos");
-		return EXIT_FAILURE;
-	}
+//	struct fuse_args args = FUSE_ARGS_INIT(argc,argv);
+//
+//	if(fuse_opt_parse(&args,&runtime_options,fuse_options,NULL)==-1){
+//		perror("Argumentos invalidos");
+//		return EXIT_FAILURE;
+//	}
 
 	int sock = conexionInicial();
-	if(sock!=-1){
-		return fuse_main(args.argc,args.argv,&operations,NULL);
-	}
+	enviarTamanio(sock,12);
+//	if(sock!=-1){
+//		return fuse_main(args.argc,args.argv,&operations,NULL);
+//	}
 
 }
 

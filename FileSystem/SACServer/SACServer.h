@@ -12,7 +12,7 @@
 #include <fcntl.h>
 #include <time.h>
 #include <commons/log.h>
-#include "../CommonsFUSE.h"
+#include "../CommonsFUSE.c"
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <pthread.h>
@@ -25,6 +25,7 @@
 #include <time.h>
 
 #define ERROR -1
+t_log *SacServerLog;
 
 
 //const unsigned long TamBloque = 4096;
