@@ -1,6 +1,6 @@
-TARGET = SACServer
-LIBS = -lreadline -lcommons -pthread 
-CFLAGS = -g -Wall   
+TARGET = SacCli
+LIBS = -lreadline -lcommons -pthread -lpthread -lfuse 
+CFLAGS = -g -Wall -D_FILE_OFFSET_BITS=64 -DFUSE_USE_VERSION=27  -std=c11 
 
 .PHONY: default all clean
 

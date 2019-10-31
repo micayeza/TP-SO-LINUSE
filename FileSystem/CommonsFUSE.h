@@ -8,15 +8,30 @@
 #ifndef FILESYSTEM_COMMONSFUSE_H_
 #define FILESYSTEM_COMMONSFUSE_H_
 
+#include <stddef.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <time.h>
+#include <commons/log.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <pthread.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+#include <netdb.h>
+#include <errno.h>
+#include <time.h>
 
 typedef enum {
-    write,
-    open,
-	read,
-    rmdir,
-	unlink,
-	mkdir,
-	readdir
+    writeSYS,
+    openSYS,
+	readSYS,
+    rmdirSYS,
+	unlinkSYS,
+	mkdirSYS,
+	readdirSYS,
 
 }Syscall;
 
@@ -30,7 +45,8 @@ typedef struct{
 
 
 }MensajeFUSE;
-
+int recibirTamanio(int fdDestinatario);
+int enviarTamanio(int destinatario, int loQueEnvio);
 int enviarPaqueteFUSE(int fdDestinatario,void* mensajeSerializado);
 void* SerializarMensajeFUSE(MensajeFUSE* mensaje, int tamPath, int tamBuff);
 MensajeFUSE DesserializarMensajeFUSE(void* serializado);

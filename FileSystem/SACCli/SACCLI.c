@@ -19,9 +19,9 @@
 #define DEFAULT_FILE_NAME "hello"
 #define DEFAULT_FILE_PATH "/" DEFAULT_FILE_NAME
 
-int g_socketSAC = 0;
+int g_socketSAC = -1;
 t_log* g_logger;
-
+/*
 struct t_runtime_options {
 	char* welcome_msg;
 } runtime_options;
@@ -56,7 +56,12 @@ static int fuse_write(const char *path, const char *buf, size_t size, off_t offs
 }
 
 int fuse_mkdir(const char *path, mode_t mode) {
-
+	 MensajeFUSE* mensaje;
+	 mensaje->syscall = 3;
+	 strcpy(mensaje->path,path);
+	 free(path);
+	 mensaje->buff = buf;
+	 memcpy(mensaje->size,size);
 }
 
 
@@ -79,7 +84,7 @@ static struct fuse_operations operations = {
 		.mkdir = fuse_mkdir,
 		.unlink = fuse_unlink,
 		.rmdir = fuse_rmdir,
-		//FALTA EL DESCRIBE
+		//.getattr = fuse_getattr
 
 };
 
@@ -96,16 +101,36 @@ struct fuse_opt fuse_options[]= {
 
 };
 
-
+*/
 int conexionInicial(){
+	char* ip = "172.17.0.1";
+	int puerto = 8091;
+	//leer puerto e ip del config
 	g_logger = log_create("log.h","SACCLI",true,LOG_LEVEL_INFO);
+		int cliente;
+		struct sockaddr_in direccionServidor;
 
-	g_socketSAC = crearSocketCliente("IP",8080,g_logger);
+		direccionServidor.sin_family = AF_INET;				// Ordenación de bytes de la máquina
+		direccionServidor.sin_addr.s_addr = inet_addr(ip);
+		direccionServidor.sin_port = htons(puerto);			// short, Ordenación de bytes de la red
+		memset(&(direccionServidor.sin_zero), '\0', 8); 	// Pone cero al resto de la estructura
 
+		cliente = socket(AF_INET, SOCK_STREAM, 0);//usa protocolo TCP/IP
 
-	//enviar primer mensaje con el tamaño del mensaje serializado
-	//	serializar
-	//enviarmensaje
+		if (cliente == -1) {
+			//perror("No se pudo crear el file descriptor.\n");
+			return -1;
+		}
+
+		int valorConnect = connect(cliente, (struct sockaddr *) &direccionServidor, sizeof(direccionServidor));
+
+		if(valorConnect == -1)  {
+				return -1;
+			}
+		else {
+			g_socketSAC = cliente;
+			return cliente;
+		}
 }
 
 
@@ -114,14 +139,19 @@ int conexionInicial(){
 
 int main(int argc, char*argv[]){
 
-	struct fuse_args args = FUSE_ARGS_INIT(argc,argv);
+//	struct fuse_args args = FUSE_ARGS_INIT(argc,argv);
+//
+//	if(fuse_opt_parse(&args,&runtime_options,fuse_options,NULL)==-1){
+//		perror("Argumentos invalidos");
+//		return EXIT_FAILURE;
+//	}
 
-	if(fuse_opt_parse(&args,&runtime_options,fuse_options,NULL)==-1){
-		perror("Argumentos invalidos");
-		return EXIT_FAILURE;
-	}
+	int sock = conexionInicial();
+	enviarTamanio(sock,12);
+//	if(sock!=-1){
+//		return fuse_main(args.argc,args.argv,&operations,NULL);
+//	}
 
-return fuse_main(args.argc,args.argv,&operations,NULL);
 }
 
 
