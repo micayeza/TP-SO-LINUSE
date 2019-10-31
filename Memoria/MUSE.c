@@ -6,7 +6,134 @@
  */
 #include "MUSE.h"
 
-uint32_t mallocMuse(int tamanio, t_list* bloquesLibres, t_list* tabla_segmentos){
+
+int swap(int pag_swap){
+
+}
+int calcular_paginas_malloc(uint32_t tamanio){
+
+	int cociente   = (tamanio+5)/config_muse->tamanio_pagina;
+	int resto      = (tamanio+5)%config_muse->tamanio_pagina;
+
+	if(resto == 0){
+		return cociente;
+	}
+	if(resto >= 5){
+		return cociente +1;
+	} else{ //	resto < 5
+		return cociente +1; //Significa que no me alcanzo para el nuevo header, LO DESPERDICIO
+	}
+}
+
+int buscar_marco_libre(char* bitmap){
+	if(!string_contains('0', bitmap_marcos)){
+		return -1;}
+	//reviso si hay un marco libre
+	for( int i = 0; i<strlen(bitmap_marcos); i++){
+		if(bitmap_marcos[i] == '0'){
+			return i;
+			}
+	}
+
+}
+
+int crearPaginas(int cant_pag,t_list* paginas, uint32_t tamanio){
+	//Necesito una tabla de marcos libres y swaps libres;
+
+ //Si es la unica pagina significa que entra el header ahi o no necesita
+//Para la primer pagina
+	int size_tabla = sizeof(paginas);
+
+	uint32_t faltante;
+	uint32_t sobrante;
+	tamanio +=5;
+	for(int i = 1; i<=cant_pag; i++){
+		size_tabla++;
+
+		t_pagina* pagina = malloc(sizeof(t_pagina));
+
+		int marco = buscar_marco_libre(bitmap_marcos);
+		pagina->p=1;
+
+		if(marco == -1){
+		   marco  = buscar_marco_libre(bitmap_swap);
+		   pagina->p = 0;
+
+		   	   if(i==cant_pag || i==1){
+					marco = swap(marco);
+					pagina->p=1;
+		   			}
+				}
+		pagina->numero = size_tabla;
+		pagina->marco  = marco;
+
+		if(tamanio>config_muse->tamanio_pagina){
+					faltante = config_muse->tamanio_pagina -tamanio;
+					tamanio  = faltante;
+					}
+				else{
+					sobrante = tamanio - config_muse->tamanio_pagina;
+					if(sobrante >= 5){
+						t_header* cola = punteroMemoria + (marco*config_muse->tamanio_pagina + tamanio);
+						cola->isFree = true;
+						cola->size   = sobrante-5;
+						pagina->ultimo_header = punteroMemoria + (marco*config_muse->tamanio_pagina + tamanio);
+						pagina->tamanio_header = sobrante-5;
+//						list_add(paginas, pagina);
+//						return 0;
+						//Tengo que agrergarlo a mi tabla de bloques libres
+
+					}else{
+						//Voy a desperdiciar si sobra menos de 5 #$%$#
+						char* desperdicio = string_repeat('#', sobrante);
+						memmove(punteroMemoria + (marco*config_muse->tamanio_pagina + tamanio), desperdicio, sobrante);
+						pagina->ultimo_header  = 0;
+						pagina->tamanio_header = 0;
+//						return 0;
+					}
+
+				}
+
+		list_add(paginas, pagina);
+
+
+	}
+
+
+	return 0;
+}
+
+
+
+uint32_t crearSegmentoDinamico(uint32_t tamanio, t_list* tabla_segmentos){
+	t_segmento* seg_nuevo = malloc(sizeof(t_segmento));
+	int ind = list_size(tabla_segmentos) -1;
+	t_segmento* seg_anterior = list_get(tabla_segmentos, ind);
+
+
+	int tam = calcular_paginas_malloc(tamanio);
+	if(paginas_usadas + tam > config_muse->paginas_totales){
+		return -1;
+	}
+	seg_nuevo->segmento = ind +1;
+	seg_nuevo->base     = seg_anterior->base + seg_anterior->tamanio;
+	seg_nuevo->tamanio  = tam * config_muse->tamanio_pagina;
+	seg_nuevo->dinamico = 0;
+	seg_nuevo->shared   = 0;
+	seg_nuevo->paginas  = list_create();
+
+
+
+	int res = crearPaginas(tam,seg_nuevo->paginas, tamanio);
+	if (res >=0){
+	res =  list_add(tabla_segmentos, seg_nuevo);
+		}
+	return res;
+}
+
+
+
+uint32_t mallocMuse(uint32_t tamanio, t_list* bloquesLibres, t_list* tabla_segmentos){
 
 
 	bool igual_tamanio(t_libres* bloque_libre){
@@ -64,10 +191,10 @@ uint32_t mallocMuse(int tamanio, t_list* bloquesLibres, t_list* tabla_segmentos)
 
 //---------------------------------------------------------------------------------
 			//CREAR SEGMENTO
-//			int res = crearSegmento();
-//			if(res == -1){
-//				return -1;
-//			}
+			uint32_t res = crearSegmentoDinamico(tamanio, tabla_segmentos);
+			if(res == -1){
+				return -1;
+			}
 //---------------------------------------------------------------------------------
 
 		}
@@ -115,7 +242,7 @@ void atenderConexiones(int parametros){
 			pthread_exit("CHAU");
 		}break;
 		case RESERVAR: {
-			int tamanio = recibirInt(proceso->cliente);
+			uint32_t tamanio = recibirUint32_t(proceso->cliente);
 			uint32_t posicion = mallocMuse(tamanio, bloquesLibres, proceso->segmentos);
 
 		} break;
@@ -285,6 +412,7 @@ void inicializarMemoria(){
 
 	cantidad_paginas = config_muse->tamanio_total/config_muse->tamanio_pagina;
 
+	config_muse->paginas_totales = cantidad_paginas +  (config_muse->tamanio_swap / config_muse->tamanio_pagina);
 //  BIG MALLOC
 	punteroMemoria = malloc(config_muse->tamanio_total);
 //	tabla_inicial = malloc(sizeof(t_inicial) * cantidad_paginas);
@@ -294,9 +422,11 @@ void inicializarMemoria(){
 //		tabla_inicial[i].marco = malloc(config_muse->tamanio_pagina);
 //	}
 
+	bitmap_marcos 	= string_repeat('0', cantidad_paginas);
 
 	tabla_archivos = list_create();
 	tabla_procesos = list_create();
+	tabla_clock    = list_create();
 
 }
 
@@ -308,7 +438,7 @@ void inicializarSwap(){
 
 	rewind(archivoSwap);
 	int i = 0;
-	vaciar = malloc(strlen("\n")); //LLeno todo el archivo on \n
+	vaciar = malloc(strlen("\n")); //LLeno todo el archivo con \n
 	vaciar = "\n";
 
 	paginas_swap = config_muse->tamanio_swap/config_muse->tamanio_pagina;
@@ -316,6 +446,8 @@ void inicializarSwap(){
 		fputs(vaciar, archivoSwap);
 		i++;
 	}
+
+	bitmap_swap 	= string_repeat('0', paginas_swap);
 
 }
 

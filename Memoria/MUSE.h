@@ -10,6 +10,7 @@
 
 #include <commons/collections/list.h>
 #include <commons/config.h>
+#include <commons/bitarray.h>
 #include <commons/log.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -23,6 +24,9 @@
 #include <time.h>
 #include <libs.h>
 #include <mensajes.h>
+#include <math.h>
+
+
 
 
 //#define rutaConfigMuse "../../configs/muse.cfg"
@@ -35,24 +39,26 @@ typedef struct {
 	int tamanio_total;
 	int tamanio_pagina;
 	int tamanio_swap;
+	int paginas_totales; //sumo las paginas de mi memoria + swap, mas de eso no puedo tener. ;)
 } t_configuracion;
 
 
 typedef struct{
 	uint32_t size;
 	bool isFree;
-} HeapMetadata;
+} t_header;
 
 
 typedef struct {
 	void* marco;
 } t_inicial;
 void* punteroMemoria;
-void* posicionMemoria;
+//void* posicionMemoria;
 
 typedef struct{
+	int      segmento;
 	uint32_t base;
-	int      tamnio;
+	int      tamanio;
 	int      dinamico;//Si el segmneto esdinamico 0, si es map 1
 	int      shared;  // Si map = 1, 1 es compartido, 0 privado, sino ignorar
 	t_list*  paginas;
@@ -68,13 +74,20 @@ typedef struct{
 
 typedef struct {
 	int numero;
-	int u; //uso
 	int p; //Presencia
-	int m; //Modificado
 	int marco; //Presencia = 0, ESTÁ EN TXT; Presencia = 1, ESTÁ EN MEMORIA
 	int tamanio_header;
 	uint32_t ultimo_header;
 }t_pagina;
+
+typedef struct{
+	int id;
+	char* ip;
+	int segmento;
+	int u;
+	int m;
+} t_clock;
+
 
 typedef struct {
 	char* nombre;
@@ -85,7 +98,7 @@ typedef struct {
 typedef struct {
 	int segmento;
 	int pagina;
-	int tamanio;
+	uint32_t tamanio;
 	uint32_t posicion;
 } t_libres;
 
@@ -93,6 +106,7 @@ typedef struct {
 t_inicial* tabla_inicial;
 t_list*    tabla_archivos;
 t_list*    tabla_procesos;
+t_list*    tabla_clock;
 
 int  socket_escucha;
 int  cantidad_paginas;
@@ -105,6 +119,11 @@ t_log *logMuse;
 
 FILE * archivoSwap;
 bool activo;
+int  paginas_usadas;
+char* bitmap_marcos;
+char* bitmap_swap;
+
+
 
 bool existeArchivoConfig(char*);
 int crearConfigMemoria();
@@ -123,8 +142,13 @@ void atenderConexiones(int);
 void ip_de_programa(int,char*);
 
 
-uint32_t mallocMuse(int, t_list* bloquesLibres, t_list* segmentos);
+uint32_t mallocMuse(uint32_t tam, t_list* bloquesLibres, t_list* segmentos);
+int crearSegmento(int tamanio, t_list*  segmentos);
+int crearPaginas(int tam,t_list* paginas, uint32_t tamanio);
+int calcular_paginas_malloc(uint32_t tamanio);
+int buscar_marco_libre(char* bitmap);
 
+int swap(int pag_swap);
 // Para swap tengo al funcion rewind que devuelve el cursor al inicio del archivo
 //Esta char *fgets(char *buffer, int tamaño, FILE *archivo); buffer donde lo guarda, tamaño es el maximio
 // archivo DA
