@@ -9,7 +9,7 @@
 
 int muse_init(int id, char* ip, int puerto){
 
-		int cliente;
+		//int cliente;
 		struct sockaddr_in direccionServidor;
 
 		direccionServidor.sin_family = AF_INET;				// Ordenación de bytes de la máquina
@@ -17,13 +17,13 @@ int muse_init(int id, char* ip, int puerto){
 		direccionServidor.sin_port = htons(puerto);			// short, Ordenación de bytes de la red
 		memset(&(direccionServidor.sin_zero), '\0', 8); 	// Pone cero al resto de la estructura
 
-		cliente = socket(AF_INET, SOCK_STREAM, 0);//usa protocolo TCP/IP
-		if (cliente == -1) {
+		muse = socket(AF_INET, SOCK_STREAM, 0);//usa protocolo TCP/IP
+		if (muse == -1) {
 			//perror("No se pudo crear el file descriptor.\n");
 			return -1;
 		}
 
-		int valorConnect = connect(cliente, (struct sockaddr *) &direccionServidor, sizeof(direccionServidor));
+		int valorConnect = connect(muse, (struct sockaddr *) &direccionServidor, sizeof(direccionServidor));
 
 		if(valorConnect == -1)  {
 				return -1;
@@ -34,15 +34,15 @@ int muse_init(int id, char* ip, int puerto){
 //			int result = enviarMensaje(cliente, mensaje);
 //			printf("result %d", result);
 
-			int res = enviarHeaderMuse(cliente, LIBMUSE, HANDSHAKE);
+			int res = enviarInt(muse, SALUDO);
 			if(res < 0){
 				return -1;
 			}else{
-				res = enviarInt(cliente, id);
+				res = enviarInt(muse, id);
 				if (res<0){
 					return -1;
 				}
-				res = recibirInt(cliente);
+				res = recibirInt(muse);
 			}
 			return 0;
 		}
@@ -50,4 +50,16 @@ int muse_init(int id, char* ip, int puerto){
 
 }
 
+uint32_t muse_alloc(uint32_t tam){
+
+	int res = enviarInt(muse, RESERVAR);
+	if(res > 0){
+		res = enviarUint32_t(muse, tam);
+		if(res > 0){
+			return recibirUint32_t(muse);
+		}
+	}
+
+	return -1;
+}
 

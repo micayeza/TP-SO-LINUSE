@@ -143,8 +143,9 @@ void ip_de_programa(int,char*);
 
 
 uint32_t mallocMuse(uint32_t tam, t_list* bloquesLibres, t_list* segmentos);
-int crearSegmento(int tamanio, t_list*  segmentos);
-int crearPaginas(int tam,t_list* paginas, uint32_t tamanio);
+void remover_bloque_libre(t_list* bloque_libre , int pag, int seg);
+int crearSegmento(int tamanio, t_list*  segmentos, t_list* bloques_libres);
+int crearPaginas(int tam,t_list* paginas, uint32_t tamanio, int segmento, t_list* bloques_libres);
 int calcular_paginas_malloc(uint32_t tamanio);
 int buscar_marco_libre(char* bitmap);
 

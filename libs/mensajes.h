@@ -19,6 +19,7 @@
 
 
 typedef enum {
+	NADA,
 	SALUDO,
 	CERRAR,
 	RESERVAR,
@@ -28,32 +29,17 @@ typedef enum {
 	MAPEAR,
 	SINCRO,
 	DESMAP
-
 } museOperacion;
 
-typedef enum{
-	MUSE,
-	LIBMUSE
-}tipoRemitente;
 
-typedef struct {
-    //int tamanioMensaje;
-    tipoRemitente remitente;
-    museOperacion   operacion;
-} __attribute__((packed)) HeaderMuse;
-
-
-void* armarHeaderMuse(tipoRemitente remitente, museOperacion operacion);
-//HeaderMuse desempaquetarHeaderMuse(void* paquete);
-int enviarHeaderMuse(int destinatario, tipoRemitente remitente, museOperacion operacion);
-HeaderMuse recibirHeaderMuse(int destinatario);
 int enviarInt(int destinatario, int loQueEnvio);
 int recibirInt(int destinatario);
+
 int enviarUint32_t(int destinatario, uint32_t loQueEnvio);
 uint32_t recibirUint32_t(int destinatario);
-int enviarUintSizet(int destinatario, uint32_t loQueEnvio, size_t n);
-void recibirUintSizet(int destinatario, uint32_t contenido,size_t n );
 
+int enviarSizet(int destinatario, size_t n);
+size_t recibirSizet(int destinatario);
 
 char* recibirString(int destinatario);
 int enviarString(int destinatario, char* loQueEnvio);

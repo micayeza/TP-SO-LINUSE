@@ -27,9 +27,10 @@
 	#include <string.h>
 	#include <stdio.h>
 	#include <libs.h>
-	#include <sockets.h>
 	#include <mensajes.h>
 
+
+int muse;
     /**
      * Inicializa la biblioteca de MUSE.
      * @param id El Process (o Thread) ID para identificar el caller en MUSE.

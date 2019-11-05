@@ -37,12 +37,12 @@ int buscar_marco_libre(char* bitmap){
 
 }
 
-int crearPaginas(int cant_pag,t_list* paginas, uint32_t tamanio){
+int crearPaginas(int cant_pag,t_list* paginas, uint32_t tamanio, int segmento, t_list* bloques_libres){
 	//Necesito una tabla de marcos libres y swaps libres;
 
  //Si es la unica pagina significa que entra el header ahi o no necesita
 //Para la primer pagina
-	int size_tabla = sizeof(paginas);
+	int size_tabla = list_size(paginas) -1;
 
 	uint32_t faltante;
 	uint32_t sobrante;
@@ -82,6 +82,12 @@ int crearPaginas(int cant_pag,t_list* paginas, uint32_t tamanio){
 //						list_add(paginas, pagina);
 //						return 0;
 						//Tengo que agrergarlo a mi tabla de bloques libres
+						t_libres* libre = malloc(sizeof(t_libres));
+						libre->pagina   = size_tabla;
+						libre->posicion = punteroMemoria + (marco*config_muse->tamanio_pagina + tamanio);
+						libre->segmento = segmento;
+						libre->tamanio  = sobrante-5;
+						list_add(bloques_libres, libre);
 
 					}else{
 						//Voy a desperdiciar si sobra menos de 5 #$%$#
@@ -105,16 +111,18 @@ int crearPaginas(int cant_pag,t_list* paginas, uint32_t tamanio){
 
 
 
-uint32_t crearSegmentoDinamico(uint32_t tamanio, t_list* tabla_segmentos){
-	t_segmento* seg_nuevo = malloc(sizeof(t_segmento));
-	int ind = list_size(tabla_segmentos) -1;
-	t_segmento* seg_anterior = list_get(tabla_segmentos, ind);
+uint32_t crearSegmentoDinamico(uint32_t tamanio, t_list* tabla_segmentos, t_list* bloques_libres){
 
 
 	int tam = calcular_paginas_malloc(tamanio);
 	if(paginas_usadas + tam > config_muse->paginas_totales){
 		return -1;
 	}
+	int ind = list_size(tabla_segmentos) -1;
+	t_segmento* seg_anterior = list_get(tabla_segmentos, ind);
+
+
+	t_segmento* seg_nuevo = malloc(sizeof(t_segmento));
 	seg_nuevo->segmento = ind +1;
 	seg_nuevo->base     = seg_anterior->base + seg_anterior->tamanio;
 	seg_nuevo->tamanio  = tam * config_muse->tamanio_pagina;
@@ -124,13 +132,25 @@ uint32_t crearSegmentoDinamico(uint32_t tamanio, t_list* tabla_segmentos){
 
 
 
-	int res = crearPaginas(tam,seg_nuevo->paginas, tamanio);
+	int res = crearPaginas(tam,seg_nuevo->paginas, tamanio, seg_nuevo->segmento, bloques_libres);
 	if (res >=0){
 	res =  list_add(tabla_segmentos, seg_nuevo);
 		}
 	return res;
 }
 
+
+void remover_bloque_libre(t_list* bloque_libre , int pag, int seg){
+
+	bool buscar_bloque(void* bloque_libre){
+
+			return (((t_libres*)bloque_libre)->segmento == seg && ((t_libres*)bloque_libre)->pagina == pag);
+
+		}
+	t_libres* libre  = list_remove_by_condition(bloque_libre, &buscar_bloque);
+	free(libre);
+
+}
 
 
 uint32_t mallocMuse(uint32_t tamanio, t_list* bloquesLibres, t_list* tabla_segmentos){
@@ -145,13 +165,14 @@ uint32_t mallocMuse(uint32_t tamanio, t_list* bloquesLibres, t_list* tabla_segme
 		return bloque_libre->tamanio >= tamanio_cinco;
 	}
 
-
 	//Busco si hay lugar justo para el maloc
-	t_libres* valor_libre = list_find(bloquesLibres, (void* )igual_tamanio );
+	t_libres* valor_libre = list_find(bloquesLibres, (void* ) igual_tamanio)  ;
 	if(valor_libre != NULL){
 
 // FUNCION QUE ACTUALIZE EL HEADER DE LA PAGINA, SI NO ESTA EN MEMORIA SWAPPEAR		(1)
-		return valor_libre->posicion + 5;
+		uint32_t retorno =  valor_libre->posicion + 5;
+		remover_bloque_libre(bloquesLibres,valor_libre->pagina,valor_libre->segmento);
+		return retorno;
 	}
 
 	//SI no hay un lugar igual para el maloc,
@@ -161,14 +182,17 @@ uint32_t mallocMuse(uint32_t tamanio, t_list* bloquesLibres, t_list* tabla_segme
 		if(valor_libre!=NULL){
 
 			// FUNCION QUE ACTUALIZE EL HEADER DE LA PAGINA Y CREE UN NUEVO HEADER ADELANTE, SI NO ESTA EN MEMORIA SWAPPEAR  (2)
+			remover_bloque_libre(bloquesLibres,valor_libre->pagina,valor_libre->segmento);
+			uint32_t retorno =  valor_libre->posicion + 5;
 			return valor_libre->posicion + 5;
 		}
 
 //reviso si en el utimo header hay lugar
 		int i = list_size(tabla_segmentos) - 1;
-
+		if(i != -1){
 		t_segmento* ult_segmento = list_get(tabla_segmentos, i);
 		//SI el segmento es dinámico, voy a extenderlo (IGual a CERO)
+
 		if(ult_segmento->dinamico == 0){
 			i = list_size(ult_segmento->paginas) - 1;
 
@@ -181,24 +205,34 @@ uint32_t mallocMuse(uint32_t tamanio, t_list* bloquesLibres, t_list* tabla_segme
 
 //---------------------------------------------------------------------------------
 //CREAR NUEVA PAGINA, YA SE QUE ES EXTENSIBLE EL SEGMNTO SOLO HAY QUE VER QUE HAYA LUGAR EN LA MEMORIA, DEVOLVERÁ -1 SI NO HAY MAS LUGAR EN LA MEMORIA
-//				int res = crearPagina();
-//				if (res == -1){
-//					return -1;
-//				}
+				int tam = calcular_paginas_malloc(tamanio);
+					if(paginas_usadas + tam > config_muse->paginas_totales){
+						return -1;
+					}
+				int res = crearPaginas(tam,ult_segmento->paginas, tamanio, ult_segmento->segmento,bloquesLibres);
+				if (res == -1){
+					return -1;
+				}
 //---------------------------------------------------------------------------------
 			}
 		}else{
 
 //---------------------------------------------------------------------------------
 			//CREAR SEGMENTO
-			uint32_t res = crearSegmentoDinamico(tamanio, tabla_segmentos);
+			uint32_t res = crearSegmentoDinamico(tamanio, tabla_segmentos, bloquesLibres);
 			if(res == -1){
 				return -1;
 			}
 //---------------------------------------------------------------------------------
 
 		}
-
+	} else {
+		uint32_t res = crearSegmentoDinamico(tamanio, tabla_segmentos, bloquesLibres);
+					if(res == -1){
+						return -1;
+					}
+	}
+	return -1;
 }
 
 
@@ -218,8 +252,8 @@ void atenderConexiones(int parametros){
 	activo = true;
 
 	while(activo){
-		HeaderMuse header = recibirHeaderMuse(proceso->cliente);
-		switch (header.operacion) {
+		int operacion = recibirInt(proceso->cliente);
+		switch (operacion) {
 		case SALUDO:{
 
 			proceso->id = recibirInt(proceso->cliente);
