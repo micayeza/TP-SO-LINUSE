@@ -2,6 +2,7 @@
 
 void inicializacion(){
 	configPath = string_new();
+	proximo_pcb_id = 0;
 	string_append(&configPath, "/home/utnso/workspace/tp-2019-2c-capitulo-2/configs/SUSE.config");
 
 	log_resultados = log_create("log_resultados.txt", "LOG-RES", false, LOG_LEVEL_INFO);
@@ -22,13 +23,13 @@ void finalizacion(){
 	pthread_mutex_destroy(&mutexColaEjecucion);
 }
 
-/*void aceptarClientes(){
+void aceptarClientes(){
 
 	t_configSUSE* config = getConfigSUSE(configPath);
 	int socket_escucha = crearSocketEscucha(config->listenPort, log_interno);
 
 	int cliente = 0;
-	//while((cliente = aceptarCliente(socket_escucha)) > 0){
+	while((cliente = aceptarCliente(socket_escucha)) > 0){
 		t_PCB* nuevoPCB = create_PCB(cliente);
 		dictionary_put(PCBs,string_itoa(proximo_pcb_id),nuevoPCB);
 		proximo_pcb_id++;
@@ -37,15 +38,13 @@ void finalizacion(){
 		pthread_create(&hiloPrograma, NULL, (void*)&atenderPrograma, (void*) nuevoPCB);
 		//No se hace el join porque sino esperaría hasta que termine este para aceptar a otro
 
-	//}
+	}
 
-}*/
+}
 
-void atenderPedidos(){
+/*void atenderPedidos(){
 
 	t_configSUSE* config = getConfigSUSE(configPath);
-
-	GestorConexiones* conexionServidor = inicializarConexion();
 
 	crearInicializarServidor(config->listenPort, conexionServidor, log_interno);
 
@@ -68,7 +67,7 @@ void atenderPedidos(){
 		}
 	}
 
-}
+}*/
 
 
 int main(void) {
