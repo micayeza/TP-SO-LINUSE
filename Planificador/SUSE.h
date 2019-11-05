@@ -22,7 +22,7 @@
 //Librerias propias
 #include <libs.h>
 //#include <sockets.h>
-#include <socket_servidor.h>
+#include <conexion.h>
 
 //------------------------- SECCION CONEXION -------------------------------
 
@@ -32,6 +32,7 @@ void atenderPedidos();
 // -------------------------- FIN SECCIÓN PLANIFICACIÓN --------------------
 pthread_t mainThread;
 pthread_mutex_t mutexColaEjecucion;
+int proximo_pcb_id;
 
 typedef struct {
 	int socket;

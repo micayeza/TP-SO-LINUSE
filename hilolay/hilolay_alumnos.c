@@ -6,7 +6,7 @@ int suse_create(int tid){
 	return 0;
 }
 
-int suse_schedule_next(int tid){
+int suse_schedule_next(){
 	char* mensajeTexto = "Schedule next";
 	int resultadoEnvio = enviarPaquete(socketServidor, TEXTO, SCHEDULE_NEXT, (void*) mensajeTexto, -1);
 	return 0;
@@ -24,13 +24,13 @@ int suse_close(int tid){
 	return 0;
 }
 
-int suse_wait(int tid){
+int suse_wait(int tid, char *sem_name){
 	char* mensajeTexto = "Wait";
 	int resultadoEnvio = enviarPaquete(socketServidor, TEXTO, WAIT, (void*) mensajeTexto, -1);
 	return 0;
 }
 
-int suse_signal(int tid){
+int suse_signal(int tid, char *sem_name){
 	char* mensajeTexto = "Signal";
 	int resultadoEnvio = enviarPaquete(socketServidor, TEXTO, SIGNAL, (void*) mensajeTexto, -1);
 	return 0;
