@@ -9,7 +9,6 @@
 #define ERROR -1 // Las system-calls de sockets retornan -1 en caso de error
 
 typedef enum  {
-	INDEFINIDO,
     ENTERO,
 	TEXTO
 } TipoDato;
@@ -23,39 +22,26 @@ typedef enum {
 	SIGNAL,
 	JOIN,
 	CLOSE
-} TipoMensaje;
+} TipoOperacion;
 
 typedef struct {
-	TipoDato tipoDato;
-	TipoMensaje tipoMensaje;
-	int size;
-	void* contenido;
-	int fd_remitente;
-} Mensaje;
-
-typedef struct {
-    int tamanioMensaje;
-    int fdRemitente;
-    TipoDato tipoDato;
-    TipoMensaje tipoMensaje;
-    int pid;
-} __attribute__((packed)) Header;
+	TipoOperacion tipoOperacion;
+	int id;
+	char* texto;
+} Paquete;
 
 int crearSocketEscucha (int puerto, t_log* logger);
 int crearSocketServidor(int puerto, t_log* logger);
 int crearSocket(t_log* logger);
 int crearSocketCliente(char *ipServidor, int puerto, t_log* logger);
-int enviarPaquete(int fdDestinatario, TipoDato tipoDato, TipoMensaje tipoMensaje, void* mensaje, int pid);
-Mensaje* recibirPaquete(int fdConexion, t_log* logger);
 int aceptarCliente(int fd_servidor, t_log* logger);
-int serializarMensaje(void* mensaje, TipoDato tipoDato, void* mensajeSerializado);
-void* deserializarMensaje(void* mensajeSerializado, int tamanio, TipoDato tipoDato);
-void* serializarHeader(Header header);
-Header armarHeader(int fdDestinatario, int tamanioDelMensaje, TipoDato tipoDato, TipoMensaje tipoMensaje, int pid);
-int empaquetar(void* headerSerializado, void* mensajeSerializado, int pesoMensaje, TipoDato tipoDato, void* paqueteSerializado);
-Header deserializarHeader(void* headerSerializado);
-Mensaje* inicializarMensaje();
-void freeMensaje(Mensaje* mensaje);
+int enviarMensaje(int fdDestinatario, TipoDato tipoDato, void* mensaje,  t_log* logger);
+void* recibirMensaje(int fdOrigen, t_log* logger);
+void escucharSocketsEn(int fd_socket, t_log* logger);
+int enviarPaquete(int fdDestinatario, Paquete* paquete, t_log* logger);
+Paquete* recibirPaquete(int fdOrigen, t_log* logger);
+Paquete* crearPaqueteEnvio(TipoOperacion tipoOperacion, int id, char* texto);
+void freePaquete(Paquete* paquete);
 void freeCharArray(char** charArray);
 int pesoString(char *string);
 

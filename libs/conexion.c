@@ -67,20 +67,56 @@ int aceptarCliente(int fd_servidor, t_log* logger){
 
 }
 
+int enviarPaquete(int fdDestinatario, Paquete* paquete, t_log* logger){
+	int resTipoOperacion = enviarMensaje(fdDestinatario, ENTERO, &(paquete->tipoOperacion),logger);
+	int resId = enviarMensaje(fdDestinatario, ENTERO, &(paquete->id),logger);
+	int resTexto = enviarMensaje(fdDestinatario, TEXTO, paquete->texto,logger);
+	if(resTipoOperacion == ERROR || resId == ERROR || resTexto == ERROR){
+		return ERROR;
+	}
+	return 0;
+}
+
+Paquete* recibirPaquete(int fdOrigen, t_log* logger){
+	Paquete* paquete = malloc(sizeof(paquete));
+	paquete->tipoOperacion = (TipoOperacion) recibirMensaje(fdOrigen,logger);
+	paquete->id = (int) recibirMensaje(fdOrigen,logger);
+	paquete->texto = (char*) recibirMensaje(fdOrigen,logger);
+	return paquete;
+}
+
+Paquete* crearPaqueteEnvio(TipoOperacion tipoOperacion, int id, char* texto){
+	Paquete* nuevoPaquete = malloc(sizeof(Paquete));
+	nuevoPaquete->tipoOperacion = tipoOperacion;
+	if(id != NULL) nuevoPaquete->id = id;
+	else nuevoPaquete->id = -1;
+	if(texto != NULL) nuevoPaquete->texto = texto;
+	else nuevoPaquete->texto = "0";
+
+	return nuevoPaquete;
+}
+
+void freePaquete(Paquete* paquete){
+	free(paquete->texto);
+	free(paquete);
+}
+
 int enviarMensaje(int fdDestinatario, TipoDato tipoDato, void* mensaje,  t_log* logger){
 	int resMensaje = 0;
-	int resTipoDato = send(fdDestinatario, tipoDato, sizeof(int), MSG_WAITALL);
+	int resTipoDato = send(fdDestinatario, &tipoDato, sizeof(int), MSG_WAITALL);
 	if(resTipoDato == ERROR){
 		log_error(logger, "Hubo un error al enviar TipoDato a %i", fdDestinatario);
 		return ERROR;
 	}
+	int tamanio;
+	int resTamanio;
 	switch(tipoDato)  {
 	case ENTERO:
 		resMensaje = send(fdDestinatario, mensaje, sizeof(int), MSG_WAITALL);
 		break;
 	case TEXTO:
-		int tamanio = pesoString((char*) mensaje);
-		int resTamanio = send(fdDestinatario, tamanio, sizeof(int), MSG_WAITALL);
+		tamanio = pesoString((char*) mensaje);
+		resTamanio = send(fdDestinatario, &tamanio, sizeof(int), MSG_WAITALL);
 		if(resTamanio == ERROR){
 			log_error(logger, "Hubo un error al enviar Tamanio a %i", fdDestinatario);
 			return ERROR;
@@ -98,19 +134,20 @@ void* recibirMensaje(int fdOrigen, t_log* logger){
 	int resMensaje = 0;
 	void* mensaje;
 	TipoDato tipoDato;
-	int resTipoDato = recv(fdOrigen, tipoDato, sizeof(int), MSG_WAITALL);
+	int resTipoDato = recv(fdOrigen, &tipoDato, sizeof(TipoDato), MSG_WAITALL);
 	if(resTipoDato == ERROR){
 		log_error(logger, "Hubo un error al recibir TipoDato de %i", fdOrigen);
 		return ERROR;
 	}
+	int tamanio;
+	int resTamanio;
 	switch(tipoDato)  {
 	case ENTERO:
 		mensaje = malloc(sizeof(int));
 		resMensaje = recv(fdOrigen, mensaje, sizeof(int), MSG_WAITALL);
 		break;
 	case TEXTO:
-		int tamanio;
-		int resTamanio = recv(fdOrigen, tamanio, sizeof(int), MSG_WAITALL);
+		resTamanio = recv(fdOrigen, &tamanio, sizeof(int), MSG_WAITALL);
 		if(resTamanio == ERROR){
 			log_error(logger, "Hubo un error al recibir Tamanio de %i", fdOrigen);
 			return ERROR;
@@ -122,69 +159,17 @@ void* recibirMensaje(int fdOrigen, t_log* logger){
 	return mensaje;
 }
 
-/**
- * ENVIO PAQUETE
- * Envio paquete 'mensaje' al destinatario fdDestinatario.
- * El parametro mensaje tiene que venir sin serializar (se serializa dependiendo el tipoDato.
- */
-int enviarPaquete(int fdDestinatario, TipoDato tipoDato, TipoMensaje tipoMensaje, void* mensaje, int pid)  {
+//Habilitar socket servidor de esucha
+void escucharSocketsEn(int fd_socket, t_log* logger){
 
-	void* mensajeSerializado = malloc(1);
-	int pesoMensaje = serializarMensaje(mensaje, tipoDato, mensajeSerializado);
-	Header header = armarHeader(fdDestinatario, pesoMensaje, tipoDato, tipoMensaje, pid);
-    void* headerSerializado = serializarHeader(header);
-    void* paqueteSerializado = malloc(1);
-    int pesoPaquete = empaquetar(headerSerializado, mensajeSerializado, pesoMensaje, tipoDato, paqueteSerializado);
-    int res = send(fdDestinatario, paqueteSerializado, pesoPaquete, MSG_WAITALL);
-    //free(headerSerializado); //Me da error al hacer free de un void*
-    //free(paqueteSerializado);
-
-    return res;
-}
-
-/**
- * RECIBIR PAQUETE
- * Espera conexiones y espera paquetes de los clientes ya conextados.
- * Retorna NULL si se recibió una conexión, retorna distinto de NULL
- * si se recibió un paquete.
- */
-Mensaje* recibirPaquete(int fdCliente, t_log* logger){
-	Mensaje* mensaje = inicializarMensaje();
-	int bytesRecibidos;
-	Header headerSerializado;
-	bytesRecibidos = recv(fdCliente, &headerSerializado, sizeof(Header), MSG_DONTWAIT);
-	switch(bytesRecibidos)  {
-		// Hubo un error al recibir los datos:
-		case -1:
-			log_warning(logger, "Hubo un error al recibir el header proveniente del socket %i", fdCliente);
-			break;
-		// Se desconectó:
-		case 0:
-			break;
-
-		//Obtengo Header:
-		default: ;
-			Header header = deserializarHeader(&headerSerializado);
-			header.fdRemitente = fdCliente;
-			int pesoMensaje = header.tamanioMensaje * sizeof(char);
-			void* mensajeBruto = (void*) malloc(pesoMensaje);
-			//Obtengo mensaje:
-			bytesRecibidos = recv(fdCliente, mensajeBruto, pesoMensaje, MSG_DONTWAIT);
-			if(bytesRecibidos == -1 || bytesRecibidos < pesoMensaje)
-				log_warning(logger, "Hubo un error al recibir el mensaje proveniente del socket %i", fdCliente);
-			else if(bytesRecibidos == 0){
-				//Cliente desconectado
-			}else{
-
-				mensaje->fd_remitente = fdCliente;
-				mensaje->size = pesoMensaje;
-				mensaje->tipoDato = header.tipoDato;
-				mensaje->tipoMensaje = header.tipoMensaje;
-				mensaje->contenido = deserializarMensaje(mensajeBruto, pesoMensaje, header.tipoDato);
-			}
-
-	}
-	return mensaje;
+    int valorListen;
+    valorListen = listen(fd_socket, SOMAXCONN);/*Le podríamos poner al listen
+				SOMAXCONN como segundo parámetro, y significaría el máximo tamaño de la cola*/
+    if(valorListen == ERROR) {
+        log_error(logger, "El servidor no pudo recibir escuchar conexiones de clientes.");
+    } else	{
+        log_info(logger, "El servidor está escuchando conexiones a través del socket %i.", fd_socket);
+    }
 }
 
 
@@ -234,126 +219,6 @@ int crearSocket(t_log* logger) {
     return fileDescriptor;
 }
 
-int serializarMensaje(void* mensaje, TipoDato tipoDato, void* mensajeSerializado){
-	if(tipoDato == ENTERO){
-		int dato = (int) mensaje;
-		int tamanio = sizeof(int);
-		realloc(mensajeSerializado,tamanio);
-		void* puntero = mensajeSerializado;
-		memcpy(puntero, dato, tamanio);
-		return tamanio;
-	}
-	if(tipoDato == TEXTO){
-		int puntero = 0;
-		int tamanio = pesoString((char*)mensaje);
-		realloc(mensajeSerializado,tamanio); //Uso REALOC para que siga manteniendo la dir de memoria.
-		memcpy(mensajeSerializado + puntero, mensaje, tamanio);
-
-		return tamanio;
-	}
-	mensajeSerializado = NULL;
-	return -1;
-}
-
-void* deserializarMensaje(void* mensajeSerializado, int tamanio, TipoDato tipoDato)	{
-    if(tipoDato == ENTERO){
-    	int* mensaje = malloc(tamanio);
-    	mensaje = memcpy(mensajeSerializado, mensaje, tamanio);
-    	return (void*) mensaje;
-    }
-
-    if(tipoDato == TEXTO){
-    	char* mensaje = malloc(tamanio);
-    	mensaje = memcpy(mensaje,mensajeSerializado,tamanio);
-    	return (void*) mensaje;
-    }
-}
-
-/**
- * Serializa una estructura Header.
- */
-void* serializarHeader(Header header)    {
-    void* headerSerializado = malloc(sizeof(Header));
-    void* puntero = headerSerializado;
-    int tamanioSize = sizeof(typeof(header.tamanioMensaje));
-    int pesoTipoRemitente = sizeof(typeof(header.fdRemitente));
-    int pesoTipoDato = sizeof(typeof(header.tipoDato));
-    int pesoTipoMensaje = sizeof(typeof(header.tipoMensaje));
-
-    memcpy(puntero, &(header.tamanioMensaje), tamanioSize);
-    puntero += tamanioSize;
-    memcpy(puntero, &(header.fdRemitente), pesoTipoRemitente);
-    puntero += pesoTipoRemitente;
-    memcpy(puntero, &(header.tipoDato), pesoTipoDato);
-    puntero += pesoTipoDato;
-    memcpy(puntero, &(header.tipoMensaje), pesoTipoMensaje);
-    puntero += pesoTipoMensaje;
-    memcpy(puntero, &(header.pid), sizeof(int));
-
-    return headerSerializado;
-}
-
-Header deserializarHeader(void* headerSerializado)	{
-    Header header;
-    void* puntero = headerSerializado;
-    int tamanioSize = sizeof(typeof(header.tamanioMensaje));
-    int pesoTipoRemitente = sizeof(typeof(header.fdRemitente));
-    int pesoTipoDato = sizeof(typeof(header.tipoDato));
-    int pesoTipoMensaje = sizeof(typeof(header.tipoMensaje));
-
-    memcpy(&(header.tamanioMensaje), puntero, tamanioSize);
-    puntero += tamanioSize;
-
-    memcpy(&(header.fdRemitente), puntero, pesoTipoRemitente);
-    puntero += pesoTipoRemitente;
-
-    memcpy(&(header.tipoDato), puntero, pesoTipoDato);
-    puntero += pesoTipoDato;
-
-    memcpy(&(header.tipoMensaje), puntero, pesoTipoMensaje);
-    puntero += pesoTipoMensaje;
-
-    memcpy(&(header.pid), puntero, sizeof(int));
-
-    return header;
-}
-
-/**
- * Arma una estructura header a partir de la informacion pasada por parametro.
- */
-Header armarHeader(int fdDestinatario, int tamanioDelMensaje, TipoDato tipoDato, TipoMensaje tipoMensaje, int pid)    {
-    Header header = {.tamanioMensaje = tamanioDelMensaje, .fdRemitente = fdDestinatario, .tipoDato = tipoDato, .tipoMensaje = tipoMensaje, .pid = pid};
-    return header;
-}
-
-/**
- * Empaquetar
- */
-int empaquetar(void* headerSerializado, void* mensajeSerializado, int pesoMensaje, TipoDato tipoDato, void* paqueteSerializado)   {
-    int pesoPaquete = sizeof(Header) + pesoMensaje;
-	realloc(paqueteSerializado,pesoPaquete);
-    void* puntero = paqueteSerializado;
-    memcpy(puntero, headerSerializado, sizeof(Header));
-    puntero += sizeof(Header);
-    memcpy(puntero, mensajeSerializado, pesoMensaje);
-    return pesoPaquete;
-}
-
-Mensaje* inicializarMensaje(){
-	Mensaje* mensaje = malloc(sizeof(Mensaje));
-	mensaje->fd_remitente = -1;
-	mensaje->size = 0;
-	mensaje->tipoDato = INDEFINIDO;
-	mensaje->tipoMensaje = VACIO;
-	mensaje->contenido = NULL;
-
-	return mensaje;
-}
-
-void freeMensaje(Mensaje* mensaje){
-	free(mensaje->contenido);
-	free(mensaje);
-}
 
 void freeCharArray(char** charArray){
 
