@@ -2,7 +2,7 @@
 	#define hilolay_alumnos_h__
 
 #include <commons/log.h>
-#include <socket_servidor.h>
+#include <conexion.h>
 
 t_log* log_interno;
 int socketServidor;

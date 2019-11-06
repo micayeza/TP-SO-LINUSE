@@ -29,7 +29,7 @@ void aceptarClientes(){
 	int socket_escucha = crearSocketEscucha(config->listenPort, log_interno);
 
 	int cliente = 0;
-	while((cliente = aceptarCliente(socket_escucha)) > 0){
+	while((cliente = aceptarCliente(socket_escucha,log_interno)) > 0){
 		t_PCB* nuevoPCB = create_PCB(cliente);
 		dictionary_put(PCBs,string_itoa(proximo_pcb_id),nuevoPCB);
 		proximo_pcb_id++;
@@ -72,8 +72,7 @@ void aceptarClientes(){
 
 int main(void) {
 	inicializacion();
-
-	atenderPedidos();
+	aceptarClientes();
 
 	//finalizacion();
 }

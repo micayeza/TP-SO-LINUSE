@@ -67,6 +67,61 @@ int aceptarCliente(int fd_servidor, t_log* logger){
 
 }
 
+int enviarMensaje(int fdDestinatario, TipoDato tipoDato, void* mensaje,  t_log* logger){
+	int resMensaje = 0;
+	int resTipoDato = send(fdDestinatario, tipoDato, sizeof(int), MSG_WAITALL);
+	if(resTipoDato == ERROR){
+		log_error(logger, "Hubo un error al enviar TipoDato a %i", fdDestinatario);
+		return ERROR;
+	}
+	switch(tipoDato)  {
+	case ENTERO:
+		resMensaje = send(fdDestinatario, mensaje, sizeof(int), MSG_WAITALL);
+		break;
+	case TEXTO:
+		int tamanio = pesoString((char*) mensaje);
+		int resTamanio = send(fdDestinatario, tamanio, sizeof(int), MSG_WAITALL);
+		if(resTamanio == ERROR){
+			log_error(logger, "Hubo un error al enviar Tamanio a %i", fdDestinatario);
+			return ERROR;
+		}
+		resMensaje = send(fdDestinatario, mensaje, tamanio, MSG_WAITALL);
+		break;
+	}
+	if(resMensaje == ERROR){
+		log_error(logger, "Hubo un error al enviar el Mensaje a %i", fdDestinatario);
+	}
+	return resMensaje;
+}
+
+void* recibirMensaje(int fdOrigen, t_log* logger){
+	int resMensaje = 0;
+	void* mensaje;
+	TipoDato tipoDato;
+	int resTipoDato = recv(fdOrigen, tipoDato, sizeof(int), MSG_WAITALL);
+	if(resTipoDato == ERROR){
+		log_error(logger, "Hubo un error al recibir TipoDato de %i", fdOrigen);
+		return ERROR;
+	}
+	switch(tipoDato)  {
+	case ENTERO:
+		mensaje = malloc(sizeof(int));
+		resMensaje = recv(fdOrigen, mensaje, sizeof(int), MSG_WAITALL);
+		break;
+	case TEXTO:
+		int tamanio;
+		int resTamanio = recv(fdOrigen, tamanio, sizeof(int), MSG_WAITALL);
+		if(resTamanio == ERROR){
+			log_error(logger, "Hubo un error al recibir Tamanio de %i", fdOrigen);
+			return ERROR;
+		}
+		mensaje = malloc(tamanio);
+		resMensaje = recv(fdOrigen, mensaje, tamanio, MSG_WAITALL);
+		break;
+	}
+	return mensaje;
+}
+
 /**
  * ENVIO PAQUETE
  * Envio paquete 'mensaje' al destinatario fdDestinatario.
@@ -116,7 +171,7 @@ Mensaje* recibirPaquete(int fdCliente, t_log* logger){
 			//Obtengo mensaje:
 			bytesRecibidos = recv(fdCliente, mensajeBruto, pesoMensaje, MSG_DONTWAIT);
 			if(bytesRecibidos == -1 || bytesRecibidos < pesoMensaje)
-				log_warning(logger, "Hubo un error al recibir el mensaje proveniente del socket %i", fdConexion);
+				log_warning(logger, "Hubo un error al recibir el mensaje proveniente del socket %i", fdCliente);
 			else if(bytesRecibidos == 0){
 				//Cliente desconectado
 			}else{
@@ -298,4 +353,18 @@ Mensaje* inicializarMensaje(){
 void freeMensaje(Mensaje* mensaje){
 	free(mensaje->contenido);
 	free(mensaje);
+}
+
+void freeCharArray(char** charArray){
+
+	int i = 0;
+	while(charArray[i] != NULL){
+		free(charArray[i]);
+		i++;
+	}
+	free(charArray);
+}
+
+int pesoString(char *string) {
+    return string == NULL ? 0 : sizeof(char) * (strlen(string) + 1);
 }

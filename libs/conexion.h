@@ -47,7 +47,7 @@ int crearSocket(t_log* logger);
 int crearSocketCliente(char *ipServidor, int puerto, t_log* logger);
 int enviarPaquete(int fdDestinatario, TipoDato tipoDato, TipoMensaje tipoMensaje, void* mensaje, int pid);
 Mensaje* recibirPaquete(int fdConexion, t_log* logger);
-int aceptarCliente(int fd_servidor, t_log* logger)
+int aceptarCliente(int fd_servidor, t_log* logger);
 int serializarMensaje(void* mensaje, TipoDato tipoDato, void* mensajeSerializado);
 void* deserializarMensaje(void* mensajeSerializado, int tamanio, TipoDato tipoDato);
 void* serializarHeader(Header header);
@@ -56,6 +56,8 @@ int empaquetar(void* headerSerializado, void* mensajeSerializado, int pesoMensaj
 Header deserializarHeader(void* headerSerializado);
 Mensaje* inicializarMensaje();
 void freeMensaje(Mensaje* mensaje);
+void freeCharArray(char** charArray);
+int pesoString(char *string);
 
 
 
