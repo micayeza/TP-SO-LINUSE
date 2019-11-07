@@ -149,7 +149,7 @@ void ip_de_programa(int,char*);
 uint32_t mallocMuse(uint32_t tam, t_list* bloquesLibres, t_list* segmentos);
 void remover_bloque_libre(t_list* bloque_libre , int id);
 int crearSegmento(int tamanio, t_list*  segmentos, t_list* bloques_libres);
-int crearPaginas(int tam, uint32_t tamanio, t_segmento* segmento, t_list* bloques_libres);
+uint32_t crearPaginas(int tam, uint32_t tamanio, t_segmento* segmento, t_list* bloques_libres);
 int calcular_paginas_malloc(uint32_t tamanio);
 int buscar_marco_libre(char* bitmap);
 
@@ -157,7 +157,9 @@ int swap(int pag_swap);
 
 void actualizar_header(int seg, int pag,uint32_t posicion, uint32_t tamAnterior, uint32_t tamanio, t_list* tabla_segmentos, t_list* bloquesLibres);
 t_pagina* buscar_segmento_pagina(t_list* segmentos , int seg, int pag);
-void desperdicio(uint32_t sobrante, uint32_t posicion, t_pagina* pag);
+void desperdicio(uint32_t sobrante, void* posicion, t_pagina* pag);
+
+void* convertir(uint32_t posicion, int segmento, int size_tabla,int marco);
 // Para swap tengo al funcion rewind que devuelve el cursor al inicio del archivo
 //Esta char *fgets(char *buffer, int tamaño, FILE *archivo); buffer donde lo guarda, tamaño es el maximio
 // archivo DA
