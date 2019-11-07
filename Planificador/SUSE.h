@@ -55,6 +55,13 @@ t_PCB* create_PCB(int socket);
 void free_PCB(t_PCB* PCB);
 t_TCB* create_TCB(int id, void* funcion);
 void free_TCB(t_TCB* TCB);
+
+void create_hilo(int tid);
+int next_hilo();
+void join_hilo(int tid);
+void close_hilo(int tid);
+int wait_hilo(int tid,char* semName);
+void signal_hilo(int tid, char* semName);
 // ------------------------ FIN SECCIÓN PLANIFICACIÓN ------------------------
 
 

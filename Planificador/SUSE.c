@@ -30,21 +30,26 @@ void aceptarClientes(){
 
 	int cliente = 0;
 	while((cliente = aceptarCliente(socket_escucha, log_interno)) > 0){
+
+		TipoOperacion operacionRecibida = (TipoOperacion) recibirEntero(cliente, log_interno);
+		if(operacionRecibida == INIT){
+			t_PCB* nuevoPCB = create_PCB(cliente);
+			dictionary_put(PCBs,string_itoa(proximo_pcb_id),nuevoPCB);
+			proximo_pcb_id++;
+
+			pthread_t hiloPrograma;
+			pthread_create(&hiloPrograma, NULL, (void*)&atenderPrograma, (void*) nuevoPCB);
+			//No se hace el join porque sino esperaría hasta que termine este para aceptar a otro
+		}
+
 		//Prueba recepcion y envio ---------------
-		int enteroRecibido = recibirEntero(cliente, log_interno);
+		/*int enteroRecibido = recibirEntero(cliente, log_interno);
 		printf("Recibir entero --> contenido: %i \n", enteroRecibido);
 		char* textoEnviar = "Perreque";
 		int resTexto = enviarTexto(cliente, textoEnviar, log_interno);
-		printf("Enviar texto --> resultado: %i \n", resTexto);
+		printf("Enviar texto --> resultado: %i \n", resTexto);*/
 		//----------------------------
 
-		t_PCB* nuevoPCB = create_PCB(cliente);
-		dictionary_put(PCBs,string_itoa(proximo_pcb_id),nuevoPCB);
-		proximo_pcb_id++;
-
-		pthread_t hiloPrograma;
-		pthread_create(&hiloPrograma, NULL, (void*)&atenderPrograma, (void*) nuevoPCB);
-		//No se hace el join porque sino esperaría hasta que termine este para aceptar a otro
 
 	}
 

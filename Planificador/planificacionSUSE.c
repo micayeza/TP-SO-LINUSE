@@ -2,6 +2,68 @@
 
 void atenderPrograma(t_PCB* pcb){
 	//Me mantengo a la espera de Recibir Mensaje de este PCB->socket
+	while(1){
+		TipoOperacion operacionRecibida = (TipoOperacion) recibirEntero(pcb->socket, log_interno);
+		switch(operacionRecibida){
+			case CREATE_HILO:{
+				int tid = recibirEntero(pcb->socket, log_interno);
+				create_hilo(tid);//Hacer los pasos para un Create Hilo.
+				break;
+			}
+			case SCHEDULE_NEXT:{
+				int nextTid = next_hilo();//Hacer los pasos para un Schedule Next.
+				int resNext = enviarEntero(pcb->socket, nextTid,  log_interno);
+				break;
+			}
+			case JOIN:{
+				int tid = recibirEntero(pcb->socket, log_interno);
+				join_hilo(tid);//Hacer los pasos para un Join.
+				break;
+			}
+			case CLOSE:{
+				int tid = recibirEntero(pcb->socket, log_interno);
+				close_hilo(tid);//Hacer los pasos para un Close.
+				break;
+			}
+			case WAIT:{
+				int tid = recibirEntero(pcb->socket, log_interno);
+				char* semName = recibirTexto(pcb->socket, log_interno);
+				int resultadoWait = wait_hilo(tid,semName);//Hacer los pasos para un Wait.
+				int resWait = enviarEntero(pcb->socket, resultadoWait,  log_interno);
+				break;
+			}
+			case SIGNAL:{
+				int tid = recibirEntero(pcb->socket, log_interno);
+				char* semName = recibirTexto(pcb->socket, log_interno);
+				signal_hilo(tid,semName);//Hacer los pasos para un Signal.
+				break;
+			}
+		}
+	}
+}
+
+void create_hilo(int tid){
+
+}
+
+int next_hilo(){
+
+}
+
+void join_hilo(int tid){
+
+}
+
+void close_hilo(int tid){
+
+}
+
+int wait_hilo(int tid,char* semName){
+	return 32;
+}
+
+void signal_hilo(int tid, char* semName){
+
 }
 
 void encolarEnNew(t_TCB* TCB){
