@@ -24,24 +24,17 @@ typedef enum {
 	CLOSE
 } TipoOperacion;
 
-typedef struct {
-	TipoOperacion tipoOperacion;
-	int id;
-	char* texto;
-} Paquete;
-
 int crearSocketEscucha (int puerto, t_log* logger);
 int crearSocketServidor(int puerto, t_log* logger);
 int crearSocket(t_log* logger);
 int crearSocketCliente(char *ipServidor, int puerto, t_log* logger);
 int aceptarCliente(int fd_servidor, t_log* logger);
-int enviarMensaje(int fdDestinatario, TipoDato tipoDato, void* mensaje,  t_log* logger);
-void* recibirMensaje(int fdOrigen, t_log* logger);
+int enviarEntero(int fdDestinatario, int enteroEnviar,  t_log* logger);
+int enviarTexto(int fdDestinatario, char* textoEnviar,  t_log* logger);
+int recibirEntero(int fdOrigen, t_log* logger);
+char* recibirTexto(int fdOrigen, t_log* logger);
+
 void escucharSocketsEn(int fd_socket, t_log* logger);
-int enviarPaquete(int fdDestinatario, Paquete* paquete, t_log* logger);
-Paquete* recibirPaquete(int fdOrigen, t_log* logger);
-Paquete* crearPaqueteEnvio(TipoOperacion tipoOperacion, int id, char* texto);
-void freePaquete(Paquete* paquete);
 void freeCharArray(char** charArray);
 int pesoString(char *string);
 

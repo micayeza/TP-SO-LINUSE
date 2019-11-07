@@ -29,7 +29,15 @@ void aceptarClientes(){
 	int socket_escucha = crearSocketEscucha(config->listenPort, log_interno);
 
 	int cliente = 0;
-	while((cliente = aceptarCliente(socket_escucha,log_interno)) > 0){
+	while((cliente = aceptarCliente(socket_escucha, log_interno)) > 0){
+		//Prueba recepcion y envio ---------------
+		int enteroRecibido = recibirEntero(cliente, log_interno);
+		printf("Recibir entero --> contenido: %i \n", enteroRecibido);
+		char* textoEnviar = "Perreque";
+		int resTexto = enviarTexto(cliente, textoEnviar, log_interno);
+		printf("Enviar texto --> resultado: %i \n", resTexto);
+		//----------------------------
+
 		t_PCB* nuevoPCB = create_PCB(cliente);
 		dictionary_put(PCBs,string_itoa(proximo_pcb_id),nuevoPCB);
 		proximo_pcb_id++;
@@ -42,32 +50,6 @@ void aceptarClientes(){
 
 }
 
-/*void atenderPedidos(){
-
-	t_configSUSE* config = getConfigSUSE(configPath);
-
-	crearInicializarServidor(config->listenPort, conexionServidor, log_interno);
-
-
-	while(1){
-		Mensaje* mensaje = recibirConexionPaquete(conexionServidor, log_interno);
-		switch((int) mensaje->tipoMensaje)  {
-			case VACIO:
-				log_error(log_interno, "Error en recepción de mensaje o conexion");
-				break;
-			case INIT:
-				printf("Resultado: Se conectó el cliente %s \n", string_itoa((char*) mensaje->fd_remitente));
-				break;
-			case CREATE_HILO:
-				printf("Resultado: %s \n", (char*) mensaje->contenido);
-				break;
-			case JOIN:
-				printf("Resultado: %s \n", (char*) mensaje->contenido);
-				break;
-		}
-	}
-
-}*/
 
 
 int main(void) {

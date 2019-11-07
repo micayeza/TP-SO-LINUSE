@@ -1,11 +1,13 @@
 #include "hilolay_alumnos.h"
 
 int suse_create(int tid){
-	//Envio tipo operacion
-	TipoOperacion tipoOperacion = CREATE_HILO;
-	int resEnvioTipoOperacion = enviarMensaje(socketServidor, ENTERO, &tipoOperacion, log_interno);
-	//Envio id
-	int resEnvioId = enviarMensaje(socketServidor, ENTERO, &tid, log_interno);
+	//Prueba recepcion y envio ---------------
+	int enteroEnviar = 12;
+	int resEntero = enviarEntero(socketServidor, enteroEnviar,  log_interno);
+	printf("Enviar entero --> resultado: %i \n", resEntero);
+	char* textoRecibido = recibirTexto(socketServidor, log_interno);
+	printf("Recibir texto--> contenido: %s \n", textoRecibido);
+	//----------------------------
 
 	return 0;
 }
@@ -40,7 +42,7 @@ static struct hilolay_operations hiloops = {
 
 void hilolay_init(void){
 	log_interno = log_create("log_interno.txt", "LOG-INT", false, LOG_LEVEL_INFO);
-	socketServidor = crearSocketCliente("127.0.0.1", 8086, log_interno);
+	socketServidor = crearSocketCliente("127.0.0.1", 5003, log_interno);
 
 	init_internal(&hiloops);
 }

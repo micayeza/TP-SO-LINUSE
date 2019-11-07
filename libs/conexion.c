@@ -67,96 +67,54 @@ int aceptarCliente(int fd_servidor, t_log* logger){
 
 }
 
-int enviarPaquete(int fdDestinatario, Paquete* paquete, t_log* logger){
-	int resTipoOperacion = enviarMensaje(fdDestinatario, ENTERO, &(paquete->tipoOperacion),logger);
-	int resId = enviarMensaje(fdDestinatario, ENTERO, &(paquete->id),logger);
-	int resTexto = enviarMensaje(fdDestinatario, TEXTO, paquete->texto,logger);
-	if(resTipoOperacion == ERROR || resId == ERROR || resTexto == ERROR){
+int enviarEntero(int fdDestinatario, int enteroEnviar,  t_log* logger){
+	int resEntero =  send(fdDestinatario, &enteroEnviar, sizeof(int), MSG_WAITALL);
+	if(resEntero == ERROR){
+		log_error(logger, "Hubo un error al enviar el Entero a %i", fdDestinatario);
 		return ERROR;
 	}
-	return 0;
+	return resEntero;
 }
 
-Paquete* recibirPaquete(int fdOrigen, t_log* logger){
-	Paquete* paquete = malloc(sizeof(paquete));
-	paquete->tipoOperacion = (TipoOperacion) recibirMensaje(fdOrigen,logger);
-	paquete->id = (int) recibirMensaje(fdOrigen,logger);
-	paquete->texto = (char*) recibirMensaje(fdOrigen,logger);
-	return paquete;
-}
-
-Paquete* crearPaqueteEnvio(TipoOperacion tipoOperacion, int id, char* texto){
-	Paquete* nuevoPaquete = malloc(sizeof(Paquete));
-	nuevoPaquete->tipoOperacion = tipoOperacion;
-	if(id != NULL) nuevoPaquete->id = id;
-	else nuevoPaquete->id = -1;
-	if(texto != NULL) nuevoPaquete->texto = texto;
-	else nuevoPaquete->texto = "0";
-
-	return nuevoPaquete;
-}
-
-void freePaquete(Paquete* paquete){
-	free(paquete->texto);
-	free(paquete);
-}
-
-int enviarMensaje(int fdDestinatario, TipoDato tipoDato, void* mensaje,  t_log* logger){
-	int resMensaje = 0;
-	int resTipoDato = send(fdDestinatario, &tipoDato, sizeof(int), MSG_WAITALL);
-	if(resTipoDato == ERROR){
-		log_error(logger, "Hubo un error al enviar TipoDato a %i", fdDestinatario);
+int enviarTexto(int fdDestinatario, char* textoEnviar,  t_log* logger){
+	int tamanio = pesoString(textoEnviar);
+	int resTamanio = send(fdDestinatario, &tamanio, sizeof(int), MSG_WAITALL);
+	if(resTamanio == ERROR){
+		log_error(logger, "Hubo un error al enviar Tamanio a %i", fdDestinatario);
 		return ERROR;
 	}
-	int tamanio;
-	int resTamanio;
-	switch(tipoDato)  {
-	case ENTERO:
-		resMensaje = send(fdDestinatario, mensaje, sizeof(int), MSG_WAITALL);
-		break;
-	case TEXTO:
-		tamanio = pesoString((char*) mensaje);
-		resTamanio = send(fdDestinatario, &tamanio, sizeof(int), MSG_WAITALL);
-		if(resTamanio == ERROR){
-			log_error(logger, "Hubo un error al enviar Tamanio a %i", fdDestinatario);
-			return ERROR;
-		}
-		resMensaje = send(fdDestinatario, mensaje, tamanio, MSG_WAITALL);
-		break;
+	int resTexto = send(fdDestinatario, (void*)textoEnviar, tamanio, MSG_WAITALL);
+	if(resTexto == ERROR){
+		log_error(logger, "Hubo un error al enviar el Texto a %i", fdDestinatario);
+		return ERROR;
 	}
-	if(resMensaje == ERROR){
-		log_error(logger, "Hubo un error al enviar el Mensaje a %i", fdDestinatario);
-	}
-	return resMensaje;
+	return resTexto;
 }
 
-void* recibirMensaje(int fdOrigen, t_log* logger){
-	int resMensaje = 0;
-	void* mensaje;
-	TipoDato tipoDato;
-	int resTipoDato = recv(fdOrigen, &tipoDato, sizeof(TipoDato), MSG_WAITALL);
-	if(resTipoDato == ERROR){
+int recibirEntero(int fdOrigen, t_log* logger){
+	int enteroRecibido;
+	int resEntero = recv(fdOrigen, &enteroRecibido, sizeof(int), MSG_WAITALL);
+	if(resEntero == ERROR){
 		log_error(logger, "Hubo un error al recibir TipoDato de %i", fdOrigen);
 		return ERROR;
 	}
+	return enteroRecibido;
+}
+
+char* recibirTexto(int fdOrigen, t_log* logger){
 	int tamanio;
-	int resTamanio;
-	switch(tipoDato)  {
-	case ENTERO:
-		mensaje = malloc(sizeof(int));
-		resMensaje = recv(fdOrigen, mensaje, sizeof(int), MSG_WAITALL);
-		break;
-	case TEXTO:
-		resTamanio = recv(fdOrigen, &tamanio, sizeof(int), MSG_WAITALL);
-		if(resTamanio == ERROR){
-			log_error(logger, "Hubo un error al recibir Tamanio de %i", fdOrigen);
-			return ERROR;
-		}
-		mensaje = malloc(tamanio);
-		resMensaje = recv(fdOrigen, mensaje, tamanio, MSG_WAITALL);
-		break;
+	int resTamanio = recv(fdOrigen, &tamanio, sizeof(int), MSG_WAITALL);
+	if(resTamanio == ERROR){
+		log_error(logger, "Hubo un error al recibir Tamanio de Texto de %i", fdOrigen);
+		return NULL;
 	}
-	return mensaje;
+	char* textoRecibido = malloc(tamanio);
+	int resTexto = recv(fdOrigen, textoRecibido, tamanio, MSG_WAITALL);
+	if(resTexto == ERROR){
+		log_error(logger, "Hubo un error al recibir Texto de %i", fdOrigen);
+		return NULL;
+	}
+	return textoRecibido;
 }
 
 //Habilitar socket servidor de esucha
