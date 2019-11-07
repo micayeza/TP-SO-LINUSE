@@ -6,10 +6,97 @@
  */
 #include "MUSE.h"
 
+uint32_t  convertir(uint32_t logica, int seg, int pag, int marco){
 
-int swap(int pag_swap){
+	return (marco*config_muse->tamanio_pagina) + (logica%config_muse->tamanio_pagina);
 
 }
+
+void desperdicio(uint32_t sobrante, uint32_t posicion, t_pagina* pag){
+	  char* desperdicio = string_repeat('#', sobrante);
+	  memmove(posicion, desperdicio, sobrante);
+	  pag->ultimo_header  = 0;
+	  pag->tamanio_header = 0;
+}
+
+t_pagina* buscar_segmento_pagina(t_list* segmentos , int seg, int pag){
+
+	bool buscar_seg(void* elSeg){
+
+			return (((t_segmento*)elSeg)->segmento == seg);
+
+		}
+	bool buscar_pag(void* laPag){
+
+			return (((t_pagina*)laPag)->numero == pag);
+
+		}
+	t_segmento* segmento  = list_find(segmentos, &(buscar_seg));
+	t_pagina*   pagina    = list_find(segmento->paginas, &(buscar_pag));
+
+	return pagina;
+
+}
+
+int swap(int pag_swap){
+return 0;
+}
+
+
+void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamAnterior, uint32_t tamanio,  t_list* tabla_segmentos, t_list* bloquesLibres){
+//no actualizo aca el header de la ultima pagina salvo que entre exactamente el tamanio
+  t_pagina* pag = buscar_segmento_pagina(tabla_segmentos,segmento, pagina );
+	  if(pag->p !=1){ //Necesito swapear y traer el marco correcto
+		  pag->marco = swap(pag->marco);
+		  pag->p     = 1;
+
+	  }
+
+//Logicamente tengo pag->ultimo_header pero como es la fisica?
+  	  uint32_t fisica = convertir(posicion, segmento, pagina, pag->marco);
+  	  t_header* header = fisica;
+  	  header->isFree = false;
+  	  header->size   = tamanio;
+
+  	  if(tamAnterior >= tamanio +5){
+      //if(headers == 1){ // tamanio libre >=
+//Que pagina es la del ultimo header? el segmento es el mismo pero podria variar la pagina
+  		  pag->esFinPag = 0;
+    	  uint32_t nueva = posicion + tamanio + 5;
+    	  int pag_final  = nueva/config_muse->tamanio_pagina;
+
+    	  pag = buscar_segmento_pagina(tabla_segmentos,segmento, pag_final );
+    	  if(pag->p !=1){ //Necesito swapear y traer el marco correcto
+    	  		  pag->marco = swap(pag->marco);
+    	  		  pag->p     = 1;
+
+    	  	  }
+    	  fisica = convertir(nueva, segmento, pag->numero, pag->marco);
+  		  t_header* cola = fisica;
+  		  cola->isFree   = true;
+  		  cola->size     = tamAnterior - tamanio;
+  		if(pag->esFinPag == 0){
+  		  t_libres* newLibre = malloc(sizeof(t_libres));
+  		  newLibre->pagina   = pag->numero;
+  		  newLibre->segmento = segmento;
+  		  newLibre->posicion = nueva;
+  		  newLibre->tamanio  = cola->size;
+  		  newLibre->id       = contador++;
+  		  list_add(bloquesLibres, newLibre);
+  		 }
+  		else{
+  		  		  pag->ultimo_header  = nueva;
+  		  		  pag->tamanio_header = cola->size;
+  		  	  }
+  	  }
+  	  if(tamAnterior - tamanio< 5 && pag->esFinPag == 1){
+
+    	  desperdicio(tamAnterior - tamanio,fisica + 5 + tamanio,pag );
+      }
+
+}
+
+
 int calcular_paginas_malloc(uint32_t tamanio){
 
 	int cociente   = (tamanio+5)/config_muse->tamanio_pagina;
@@ -26,46 +113,79 @@ int calcular_paginas_malloc(uint32_t tamanio){
 }
 
 int buscar_marco_libre(char* bitmap){
-	if(!string_contains('0', bitmap_marcos)){
+	if(!string_contains("0", bitmap_marcos)){
 		return -1;}
 	//reviso si hay un marco libre
-	for( int i = 0; i<strlen(bitmap_marcos); i++){
+	int i;
+	for( i = 0; i<strlen(bitmap_marcos); i++){
 		if(bitmap_marcos[i] == '0'){
-			return i;
+			break;
 			}
 	}
-
+	return i;
 }
 
-int crearPaginas(int cant_pag,t_list* paginas, uint32_t tamanio, int segmento, t_list* bloques_libres){
+int crearPaginas(int cant_pag, uint32_t tamanio, t_segmento* segmento, t_list* bloques_libres){
 	//Necesito una tabla de marcos libres y swaps libres;
 
- //Si es la unica pagina significa que entra el header ahi o no necesita
-//Para la primer pagina
-	int size_tabla = list_size(paginas) -1;
+	int size_tabla = list_size(segmento->paginas) -1;
 
 	uint32_t faltante;
 	uint32_t sobrante;
+
+//
 	tamanio +=5;
 	for(int i = 1; i<=cant_pag; i++){
-		size_tabla++;
 
+		size_tabla++;
 		t_pagina* pagina = malloc(sizeof(t_pagina));
 
-		int marco = buscar_marco_libre(bitmap_marcos);
+		if(size_tabla>0 && i ==1){
+
+			t_pagina* ultima_pagina = list_get(segmento->paginas, size_tabla);
+			if (ultima_pagina->ultimo_header>=5){
+				free(pagina);
+				size_tabla--;
+					if(ultima_pagina->p==0){
+						ultima_pagina->marco = swap(ultima_pagina->marco);
+					}
+				ultima_pagina->p=1;
+
+				uint32_t fisica = convertir(ultima_pagina->ultimo_header, segmento->segmento,  ultima_pagina->numero, ultima_pagina->marco);
+
+				t_header* head = fisica;
+				head->isFree = false;
+				head->size   = tamanio;
+				tamanio = tamanio - 5 - (ultima_pagina->tamanio_header);
+				ultima_pagina->esFinPag = 0;
+				ultima_pagina->tamanio_header = 0;
+				ultima_pagina->ultimo_header  = 0;
+				continue;
+			}
+		}
+
+		pagina->marco = buscar_marco_libre(bitmap_marcos);
 		pagina->p=1;
 
-		if(marco == -1){
-		   marco  = buscar_marco_libre(bitmap_swap);
+		if(pagina->marco == -1){
+			pagina->marco  = buscar_marco_libre(bitmap_swap);
 		   pagina->p = 0;
 
 		   	   if(i==cant_pag || i==1){
-					marco = swap(marco);
+		   		    pagina->marco = swap(pagina->marco);
 					pagina->p=1;
 		   			}
+
 				}
-		pagina->numero = size_tabla;
-		pagina->marco  = marco;
+		if(i==1){
+
+			uint32_t fisica = convertir(segmento->base * size_tabla, segmento->segmento,  size_tabla, pagina->marco);
+			t_header* head = fisica;
+			head->isFree = false;
+			head->size   = tamanio;
+	   }
+		pagina->numero   = size_tabla;
+		pagina->esFinPag = 0;
 
 		if(tamanio>config_muse->tamanio_pagina){
 					faltante = config_muse->tamanio_pagina -tamanio;
@@ -74,17 +194,18 @@ int crearPaginas(int cant_pag,t_list* paginas, uint32_t tamanio, int segmento, t
 				else{
 					sobrante = tamanio - config_muse->tamanio_pagina;
 					if(sobrante >= 5){
-						t_header* cola = punteroMemoria + (marco*config_muse->tamanio_pagina + tamanio);
+						t_header* cola = punteroMemoria + (pagina->marco*config_muse->tamanio_pagina + tamanio);
 						cola->isFree = true;
 						cola->size   = sobrante-5;
-						pagina->ultimo_header = punteroMemoria + (marco*config_muse->tamanio_pagina + tamanio);
+						pagina->ultimo_header = punteroMemoria + (pagina->marco*config_muse->tamanio_pagina + tamanio);
 						pagina->tamanio_header = sobrante-5;
+						pagina->esFinPag =1;
 //						list_add(paginas, pagina);
 //						return 0;
 						//Tengo que agrergarlo a mi tabla de bloques libres
 						t_libres* libre = malloc(sizeof(t_libres));
 						libre->pagina   = size_tabla;
-						libre->posicion = punteroMemoria + (marco*config_muse->tamanio_pagina + tamanio);
+						libre->posicion = punteroMemoria + (pagina->marco*config_muse->tamanio_pagina + tamanio);
 						libre->segmento = segmento;
 						libre->tamanio  = sobrante-5;
 						list_add(bloques_libres, libre);
@@ -92,15 +213,16 @@ int crearPaginas(int cant_pag,t_list* paginas, uint32_t tamanio, int segmento, t
 					}else{
 						//Voy a desperdiciar si sobra menos de 5 #$%$#
 						char* desperdicio = string_repeat('#', sobrante);
-						memmove(punteroMemoria + (marco*config_muse->tamanio_pagina + tamanio), desperdicio, sobrante);
+						memmove(punteroMemoria + (pagina->marco*config_muse->tamanio_pagina + tamanio), desperdicio, sobrante);
 						pagina->ultimo_header  = 0;
 						pagina->tamanio_header = 0;
+						pagina->esFinPag       = 1;
 //						return 0;
 					}
 
 				}
 
-		list_add(paginas, pagina);
+		list_add(segmento->paginas, pagina);
 
 
 	}
@@ -124,15 +246,15 @@ uint32_t crearSegmentoDinamico(uint32_t tamanio, t_list* tabla_segmentos, t_list
 
 	t_segmento* seg_nuevo = malloc(sizeof(t_segmento));
 	seg_nuevo->segmento = ind +1;
-	seg_nuevo->base     = seg_anterior->base + seg_anterior->tamanio;
-	seg_nuevo->tamanio  = tam * config_muse->tamanio_pagina;
+	seg_nuevo->base     = seg_anterior->limite;
+	seg_nuevo->limite   = tam * config_muse->tamanio_pagina;
 	seg_nuevo->dinamico = 0;
 	seg_nuevo->shared   = 0;
 	seg_nuevo->paginas  = list_create();
 
 
 
-	int res = crearPaginas(tam,seg_nuevo->paginas, tamanio, seg_nuevo->segmento, bloques_libres);
+	int res = crearPaginas(tam, tamanio, seg_nuevo, bloques_libres);
 	if (res >=0){
 	res =  list_add(tabla_segmentos, seg_nuevo);
 		}
@@ -140,13 +262,14 @@ uint32_t crearSegmentoDinamico(uint32_t tamanio, t_list* tabla_segmentos, t_list
 }
 
 
-void remover_bloque_libre(t_list* bloque_libre , int pag, int seg){
+void remover_bloque_libre(t_list* bloque_libre , int id){ //int pag, int seg){
 
 	bool buscar_bloque(void* bloque_libre){
 
-			return (((t_libres*)bloque_libre)->segmento == seg && ((t_libres*)bloque_libre)->pagina == pag);
-
+//			return (((t_libres*)bloque_libre)->segmento == seg && ((t_libres*)bloque_libre)->pagina == pag);
+		return (((t_libres*)bloque_libre)->id == id);
 		}
+
 	t_libres* libre  = list_remove_by_condition(bloque_libre, &buscar_bloque);
 	free(libre);
 
@@ -154,79 +277,79 @@ void remover_bloque_libre(t_list* bloque_libre , int pag, int seg){
 
 
 uint32_t mallocMuse(uint32_t tamanio, t_list* bloquesLibres, t_list* tabla_segmentos){
+//No olvidar, yo NO agrego los ultimos espacios libres de las paginas en bloques libres
 
-
-	bool igual_tamanio(t_libres* bloque_libre){
-		return bloque_libre->tamanio == tamanio;
-	}
 
 	bool mayor_tamanio(t_libres* bloque_libre){
 		int tamanio_cinco = tamanio + 5;
-		return bloque_libre->tamanio >= tamanio_cinco;
+		return bloque_libre->tamanio >= tamanio_cinco || bloque_libre->tamanio == tamanio;
 	}
 
-	//Busco si hay lugar justo para el maloc
-	t_libres* valor_libre = list_find(bloquesLibres, (void* ) igual_tamanio)  ;
-	if(valor_libre != NULL){
-
-// FUNCION QUE ACTUALIZE EL HEADER DE LA PAGINA, SI NO ESTA EN MEMORIA SWAPPEAR		(1)
-		uint32_t retorno =  valor_libre->posicion + 5;
-		remover_bloque_libre(bloquesLibres,valor_libre->pagina,valor_libre->segmento);
-		return retorno;
-	}
-
-	//SI no hay un lugar igual para el maloc,
-
-		//Busco un FREE en donde haya lugar para el maloc + header
-		valor_libre = list_find(bloquesLibres, (void* )mayor_tamanio );
+	//Busco en los bloques libres
+	    t_libres*  valor_libre = list_find(bloquesLibres, (void* )mayor_tamanio );
 		if(valor_libre!=NULL){
 
-			// FUNCION QUE ACTUALIZE EL HEADER DE LA PAGINA Y CREE UN NUEVO HEADER ADELANTE, SI NO ESTA EN MEMORIA SWAPPEAR  (2)
-			remover_bloque_libre(bloquesLibres,valor_libre->pagina,valor_libre->segmento);
+			actualizar_header(valor_libre->segmento, valor_libre->pagina,valor_libre->posicion, valor_libre->tamanio, tamanio, tabla_segmentos, bloquesLibres ); //0 es que no tiene header final
+			remover_bloque_libre(bloquesLibres,valor_libre->id);
 			uint32_t retorno =  valor_libre->posicion + 5;
-			return valor_libre->posicion + 5;
+			return retorno;
 		}
 
-//reviso si en el utimo header hay lugar
+		//reviso si en el utimo header hay lugar
 		int i = list_size(tabla_segmentos) - 1;
 		if(i != -1){
-		t_segmento* ult_segmento = list_get(tabla_segmentos, i);
-		//SI el segmento es dinámico, voy a extenderlo (IGual a CERO)
 
-		if(ult_segmento->dinamico == 0){
-			i = list_size(ult_segmento->paginas) - 1;
+			t_segmento* ult_segmento = list_get(tabla_segmentos, i);
+			//SI el segmento es dinámico, voy a extenderlo (IGual a CERO)
 
-			t_pagina* ult_pag = list_get(ult_segmento->paginas, i);
-			if(ult_pag->tamanio_header >= (tamanio + 5)){
-				// FUNCION QUE ACTUALIZE EL HEADER DE LA PAGINA Y CREE UN NUEVO HEADER ADELANTE, SI NO ESTA EN MEMORIA SWAPPEAR(2)
-				return ult_pag->ultimo_header + 5;
+			if(ult_segmento->dinamico == 0 && ult_segmento->empty != 0){
+				i = list_size(ult_segmento->paginas) - 1;
 
-			} else {
+				t_pagina* ult_pag = list_get(ult_segmento->paginas, i);
 
-//---------------------------------------------------------------------------------
-//CREAR NUEVA PAGINA, YA SE QUE ES EXTENSIBLE EL SEGMNTO SOLO HAY QUE VER QUE HAYA LUGAR EN LA MEMORIA, DEVOLVERÁ -1 SI NO HAY MAS LUGAR EN LA MEMORIA
-				int tam = calcular_paginas_malloc(tamanio);
-					if(paginas_usadas + tam > config_muse->paginas_totales){
-						return -1;
-					}
-				int res = crearPaginas(tam,ult_segmento->paginas, tamanio, ult_segmento->segmento,bloquesLibres);
-				if (res == -1){
+						if(ult_pag->tamanio_header >= (tamanio)){
+
+							uint32_t retorno = 	ult_pag->ultimo_header + 5;
+						    actualizar_header(ult_segmento->segmento, ult_pag->numero, ult_pag->tamanio_header, tamanio, 2, tabla_segmentos, bloquesLibres);
+
+							return retorno;
+
+						} else{
+							uint32_t extra ;
+							if(ult_pag->tamanio_header!=0){ //compenso xq en la funcion sumo 5
+								extra = tamanio -5- ult_pag->tamanio_header;
+							}
+
+							int tam = calcular_paginas_malloc(extra);
+
+								if(paginas_usadas + tam > config_muse->paginas_totales){
+									return -1;
+								}
+								ult_segmento->limite += tam*config_muse->tamanio_pagina;
+
+									int res = crearPaginas(tam, tamanio, ult_segmento,bloquesLibres);
+									if (res == -1){
+										return -1;
+									}
+
+						}
+
+
+
+			}else{
+
+		//---------------------------------------------------------------------------------
+				//CREAR SEGMENTO
+				//antes fijarme si no tengo uno vacio
+				uint32_t res = crearSegmentoDinamico(tamanio, tabla_segmentos, bloquesLibres);
+				if(res == -1){
 					return -1;
 				}
-//---------------------------------------------------------------------------------
-			}
-		}else{
+		//---------------------------------------------------------------------------------
 
-//---------------------------------------------------------------------------------
-			//CREAR SEGMENTO
-			uint32_t res = crearSegmentoDinamico(tamanio, tabla_segmentos, bloquesLibres);
-			if(res == -1){
-				return -1;
 			}
-//---------------------------------------------------------------------------------
-
-		}
-	} else {
+	} else { // no existia ningun segmento --> creo uno nuevo
+		//antes fijarme si no tengo uno vacio
 		uint32_t res = crearSegmentoDinamico(tamanio, tabla_segmentos, bloquesLibres);
 					if(res == -1){
 						return -1;
@@ -394,7 +517,7 @@ int crearSocketEscuchaMemoria (int puerto) {
 		}
 
 	// hasta que no salga del listen, nunca va a retornar el socket del servidor ya que el listen es bloqueante
-		t_list* segmentos;
+//		t_list* segmentos;
 	return socketDeEscucha;
 }
 
@@ -461,6 +584,8 @@ void inicializarMemoria(){
 	tabla_archivos = list_create();
 	tabla_procesos = list_create();
 	tabla_clock    = list_create();
+
+	contador = 0;
 
 }
 

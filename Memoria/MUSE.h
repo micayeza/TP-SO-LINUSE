@@ -58,7 +58,8 @@ void* punteroMemoria;
 typedef struct{
 	int      segmento;
 	uint32_t base;
-	int      tamanio;
+	uint32_t limite;
+	int      empty;   // 0 = vacio
 	int      dinamico;//Si el segmneto esdinamico 0, si es map 1
 	int      shared;  // Si map = 1, 1 es compartido, 0 privado, sino ignorar
 	t_list*  paginas;
@@ -76,8 +77,9 @@ typedef struct {
 	int numero;
 	int p; //Presencia
 	int marco; //Presencia = 0, ESTÁ EN TXT; Presencia = 1, ESTÁ EN MEMORIA
-	int tamanio_header;
+	uint32_t tamanio_header;
 	uint32_t ultimo_header;
+	int esFinPag;
 }t_pagina;
 
 typedef struct{
@@ -96,6 +98,7 @@ typedef struct {
 }t_archivos;
 
 typedef struct {
+	int id;
 	int segmento;
 	int pagina;
 	uint32_t tamanio;
@@ -111,6 +114,7 @@ t_list*    tabla_clock;
 int  socket_escucha;
 int  cantidad_paginas;
 int  paginas_swap;
+int  contador;
 char* vaciar;
 
 t_configuracion *config_muse;
@@ -143,13 +147,17 @@ void ip_de_programa(int,char*);
 
 
 uint32_t mallocMuse(uint32_t tam, t_list* bloquesLibres, t_list* segmentos);
-void remover_bloque_libre(t_list* bloque_libre , int pag, int seg);
+void remover_bloque_libre(t_list* bloque_libre , int id);
 int crearSegmento(int tamanio, t_list*  segmentos, t_list* bloques_libres);
-int crearPaginas(int tam,t_list* paginas, uint32_t tamanio, int segmento, t_list* bloques_libres);
+int crearPaginas(int tam, uint32_t tamanio, t_segmento* segmento, t_list* bloques_libres);
 int calcular_paginas_malloc(uint32_t tamanio);
 int buscar_marco_libre(char* bitmap);
 
 int swap(int pag_swap);
+
+void actualizar_header(int seg, int pag,uint32_t posicion, uint32_t tamAnterior, uint32_t tamanio, t_list* tabla_segmentos, t_list* bloquesLibres);
+t_pagina* buscar_segmento_pagina(t_list* segmentos , int seg, int pag);
+void desperdicio(uint32_t sobrante, uint32_t posicion, t_pagina* pag);
 // Para swap tengo al funcion rewind que devuelve el cursor al inicio del archivo
 //Esta char *fgets(char *buffer, int tamaño, FILE *archivo); buffer donde lo guarda, tamaño es el maximio
 // archivo DA
