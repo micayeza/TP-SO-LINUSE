@@ -6,14 +6,6 @@ int suse_create(int tid){
 	int resOperacion = enviarEntero(socketServidor, CREATE_HILO,  log_interno);
 	int resTid = enviarEntero(socketServidor, tid,  log_interno);
 
-	//Prueba recepcion y envio ---------------
-	/*int enteroEnviar = 12;
-	int resEntero = enviarEntero(socketServidor, enteroEnviar,  log_interno);
-	printf("Enviar entero --> resultado: %i \n", resEntero);
-	char* textoRecibido = recibirTexto(socketServidor, log_interno);
-	printf("Recibir texto--> contenido: %s \n", textoRecibido);*/
-	//----------------------------
-
 	return 0;
 }
 

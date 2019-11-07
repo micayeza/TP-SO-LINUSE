@@ -40,16 +40,9 @@ void aceptarClientes(){
 			pthread_t hiloPrograma;
 			pthread_create(&hiloPrograma, NULL, (void*)&atenderPrograma, (void*) nuevoPCB);
 			//No se hace el join porque sino esperaría hasta que termine este para aceptar a otro
+		}else{
+			//Tirar mensaje de operacion erronea por log.
 		}
-
-		//Prueba recepcion y envio ---------------
-		/*int enteroRecibido = recibirEntero(cliente, log_interno);
-		printf("Recibir entero --> contenido: %i \n", enteroRecibido);
-		char* textoEnviar = "Perreque";
-		int resTexto = enviarTexto(cliente, textoEnviar, log_interno);
-		printf("Enviar texto --> resultado: %i \n", resTexto);*/
-		//----------------------------
-
 
 	}
 

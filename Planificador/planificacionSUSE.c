@@ -59,7 +59,7 @@ void close_hilo(int tid){
 }
 
 int wait_hilo(int tid,char* semName){
-	return 32;
+
 }
 
 void signal_hilo(int tid, char* semName){
