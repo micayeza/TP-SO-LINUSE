@@ -3,7 +3,7 @@
 void atenderPrograma(t_PCB* pcb){
 	//Me mantengo a la espera de Recibir Mensaje de este PCB->socket
 	while(1){
-		TipoOperacion operacionRecibida = (TipoOperacion) recibirEntero(pcb->socket, log_interno);
+		TipoOperacion operacionRecibida = (TipoOperacion) recibirEntero(pcb->socket, log_interno); //Chequear que no se bloquea, debuggear.
 		switch(operacionRecibida){
 			case CREATE_HILO:{
 				int tid = recibirEntero(pcb->socket, log_interno);
