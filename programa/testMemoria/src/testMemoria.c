@@ -84,7 +84,7 @@ int main(void) {
 	if( strcmp(palabras[0] ,"MALLOC")==0){
 		uint32_t tam = atoi(palabras[1]);
 		uint32_t resultado = muse_alloc(tam);
-		printf("%d ", resultado);
+		printf("%d \n", resultado);
 
 	}
 	}

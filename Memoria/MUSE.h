@@ -158,8 +158,9 @@ int swap(int pag_swap);
 void actualizar_header(int seg, int pag,uint32_t posicion, uint32_t tamAnterior, uint32_t tamanio, t_list* tabla_segmentos, t_list* bloquesLibres);
 t_pagina* buscar_segmento_pagina(t_list* segmentos , int seg, int pag);
 void desperdicio(uint32_t sobrante, void* posicion, t_pagina* pag);
+uint32_t sobrante_pagina(uint32_t base_segmento, int numero_pagina, uint32_t desplazamiento);
 
-void* convertir(uint32_t posicion, int segmento, int size_tabla,int marco);
+void* convertir(uint32_t posicion, int size_tabla,int marco);
 // Para swap tengo al funcion rewind que devuelve el cursor al inicio del archivo
 //Esta char *fgets(char *buffer, int tamaño, FILE *archivo); buffer donde lo guarda, tamaño es el maximio
 // archivo DA
