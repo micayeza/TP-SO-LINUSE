@@ -6,9 +6,31 @@
  */
 #include "MUSE.h"
 
-void*  convertir(uint32_t logica, int pag, int marco){
+void agregar_bloque_libre(t_list* bloquesLibres, int pagina,int segmento,uint32_t posicionEnPagina, uint32_t tamanioLibre){
+	contador++;
+	t_libres* newLibre = malloc(sizeof(t_libres));
+	  		  newLibre->pagina   = pagina;
+	  		  newLibre->segmento = segmento;
+	  		  newLibre->posicion = posicionEnPagina;
+	  		  newLibre->tamanio  = tamanioLibre;
+	  		  newLibre->id       = contador;
+	  		  list_add(bloquesLibres, newLibre);
+}
 
-	return punteroMemoria + (marco*config_muse->tamanio_pagina) + (logica%config_muse->tamanio_pagina);
+void buscar_segmento(uint32_t logica, t_list* tabla_segmentos){
+	bool buscar_segmento(void* seg){
+
+			return (((t_segmento*)seg)->base >= logica && ((t_segmento*)seg)->base < logica );
+
+		}
+
+	t_segmento* segmento = list_find(tabla_segmentos, &buscar_segmento);
+}
+
+
+void*  convertir(uint32_t logica, int marco){ //Ya se marco y posicion en la pagina.
+
+	return punteroMemoria + (marco*config_muse->tamanio_pagina + logica);// + (logica%config_muse->tamanio_pagina);
 
 }
 
@@ -49,58 +71,132 @@ return 0;
 }
 
 
-void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamAnterior, uint32_t tamanio,  t_list* tabla_segmentos, t_list* bloquesLibres){
-//no actualizo aca el header de la ultima pagina salvo que entre exactamente el tamanio
-  t_pagina* pag = buscar_segmento_pagina(tabla_segmentos,segmento, pagina );
-	  if(pag->p !=1){ //Necesito swapear y traer el marco correcto
-		  pag->marco = swap(pag->marco);
-		  pag->p     = 1;
+void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamAnterior, uint32_t tamanio,  t_list* tabla_segmentos, t_list* bloquesLibres, int fin){
 
-	  }
+	//Busco la pagina a actualizar y la traigo a memoria
+	t_pagina* pag = buscar_segmento_pagina(tabla_segmentos,segmento, pagina );
+		  if(pag->p !=1){
+			  pag->marco = swap(pag->marco);
+			  pag->p     = 1;
+		  }
 
-//Logicamente tengo pag->ultimo_header pero como es la fisica?
-	  //CREO QUE EL CONVERTIR ESTA MAAAAAAAAAAAAAAAAL
-	  t_header* header = convertir(posicion, pagina, pag->marco);
-  	 // t_header* header = fisica;
-  	  header->isFree = false;
-  	  header->size   = tamanio;
+	//Actualizo el header que ya existia, empieza en posicion
+	t_header* head = convertir(posicion, pag->marco);
+	head->isFree   = false;
+	head->size     = tamanio;
 
-  	  if(tamAnterior >= tamanio +5){
-      //if(headers == 1){ // tamanio libre >=
-      //Que pagina es la del ultimo cola? el segmento es el mismo pero podria variar la pagina
-  		  //ESTO ESTA MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAL. ME FALTA VER SI SOBRA O NO EN LA PAGINA.
-  		  pag->esFinPag = 0;
-    	  uint32_t nueva = posicion + tamanio + 5;
-    	  int pag_final  = nueva/config_muse->tamanio_pagina;
+	//Tengo que actualizar la nueva "Cola" primero veo si necesito una cola.
+	if(tamAnterior == tamanio){
+		if(pag->esFinPag == 1){
+			pag->tamanio_header = 0;
+			pag->ultimo_header  = 0;
+		}
+		return;
+	}
 
-    	  pag = buscar_segmento_pagina(tabla_segmentos,segmento, pag_final );
-    	  if(pag->p !=1){ //Necesito swapear y traer el marco correcto
-    	  		  pag->marco = swap(pag->marco);
-    	  		  pag->p     = 1;
+	//Necesito cola --> entra en la pagina actual?
+	uint32_t finPag        = config_muse->tamanio_pagina * pag->numero;
+	uint32_t ubicacionCola = posicion + 5 + tamanio;
+	uint32_t sobrantePag   = finPag - posicion +5;
+	if(finPag >= ubicacionCola){
+		uint32_t sobrante = finPag - ubicacionCola;
+		//si lo que sobra de la pagina actual es menor que 5 lo desperdicio
+		if(sobrante < 5){
+			void* puntero = punteroMemoria + (config_muse->tamanio_pagina * pag->marco + ubicacionCola);
+			desperdicio(sobrante, puntero, pag);
+			//sumando al tamanio lo desperdiciado, todavia sobra tamAnterior? esta en la otra pag
+			if(tamAnterior >sobrantePag){
+				tamAnterior -= sobrantePag;
+				t_pagina* sigPagina = buscar_segmento_pagina(tabla_segmentos, segmento, pag->numero + 1);
+				if(sigPagina->p != 1){
+					sigPagina->marco = swap(sigPagina->marco);
+					sigPagina->p     = 1;
+				}
+				//Entra en el sobrante de esta pagina un header?
+				if(tamAnterior < 5){
+					desperdicio(tamAnterior,0, sigPagina);
+				}else{
+					t_header* cola = convertir(0, sigPagina->marco);
+					cola->isFree   = true;
+					cola->size     = tamAnterior -5;
+					if(fin == 1){
+						pag->esFinPag       = 0;
+						sigPagina->esFinPag = 1;
+						sigPagina->tamanio_header = tamAnterior -5;
+						sigPagina->ultimo_header  = 0;
+					} else{
 
-    	  	  }
-    	  t_header* cola = convertir(nueva, pag->numero, pag->marco);
+						agregar_bloque_libre(bloquesLibres, sigPagina->numero, segmento, 0, tamAnterior -5);
+					}
+				}
+			}
 
-  		  cola->isFree   = true;
-  		  cola->size     = tamAnterior - tamanio;
-  		if(pag->esFinPag == 0){
-  		  t_libres* newLibre = malloc(sizeof(t_libres));
-  		  newLibre->pagina   = pag->numero;
-  		  newLibre->segmento = segmento;
-  		  newLibre->posicion = nueva;
-  		  newLibre->tamanio  = cola->size;
-  		  newLibre->id       = contador++;
-  		  list_add(bloquesLibres, newLibre);
-  		 }
-  		else{
-  		  		  pag->ultimo_header  = nueva;
-  		  		  pag->tamanio_header = cola->size;
-  		  	  }
-  	  }
-  	  if(tamAnterior - tamanio< 5 && pag->esFinPag == 1){
+		}
+		if(sobrante >= 5){
+			t_header* cola = convertir(ubicacionCola,pag->marco);
+			cola->isFree   = true;
+			cola->size     = tamAnterior - tamanio -5;
+			if(fin ==1){
+				pag->tamanio_header = tamAnterior - tamanio -5;
+				pag->ultimo_header  = ubicacionCola;
+			}else{
+				agregar_bloque_libre(bloquesLibres, pag->numero, segmento, ubicacionCola,tamAnterior - tamanio -5 );
+			}
+		}
 
-    	  desperdicio(tamAnterior - tamanio,header + 5 + tamanio,pag );
-      }
+
+	}
+	//Si la cola no entra en la pag inicial, busco la pagina final de este header
+	if(finPag<ubicacionCola){
+		//Necesito saber cuanto me falta ubicar despues de la pagina actual
+		uint32_t reservado = tamanio;
+		tamanio     -= sobrantePag;
+		int cociente = tamanio/config_muse->tamanio_pagina;
+		int resto    = tamanio%config_muse->tamanio_pagina;
+
+
+		tamanio -= (config_muse->tamanio_pagina * cociente);
+		cociente ++;
+		t_pagina* ultPagina = buscar_segmento_pagina(tabla_segmentos, segmento, cociente);
+					if(ultPagina->p != 1){
+						ultPagina->marco = swap(ultPagina->marco);
+						ultPagina->p     = 1;
+					}
+			uint32_t sobrante     = config_muse->tamanio_pagina - tamanio;
+			uint32_t libreOtraPag = tamAnterior-reservado-sobrante;
+			if(sobrante <5 ){
+				void* puntero = (config_muse->tamanio_pagina*ultPagina->marco + tamanio);
+
+				desperdicio(sobrante, puntero,ultPagina);
+				//Me quedo tamanio libre del espacio original?
+
+				if(libreOtraPag > 0){
+					ultPagina = buscar_segmento_pagina(tabla_segmentos, segmento, cociente+1);
+						if(ultPagina->p != 1){
+							ultPagina->marco = swap(ultPagina->marco);
+							ultPagina->p     = 1;
+						}
+						puntero = 		config_muse->tamanio_pagina*ultPagina->marco;
+				}
+				if(libreOtraPag > 0 && libreOtraPag<5){
+					desperdicio(libreOtraPag, puntero, ultPagina);
+
+				}
+				if(libreOtraPag >=5){
+					t_header* cola = puntero;
+					cola->isFree   = true;
+					cola->size     = libreOtraPag-5;
+					agregar_bloque_libre(bloquesLibres, ultPagina->numero, segmento, 0, libreOtraPag-5);
+				}
+			}
+			if(sobrante >= 5){
+				t_header* cola = config_muse->tamanio_pagina*ultPagina->marco + tamanio;
+				cola->isFree   = true;
+				cola->size     = libreOtraPag-5;
+				agregar_bloque_libre(bloquesLibres, ultPagina->numero, segmento, tamanio, libreOtraPag-5);
+			}
+
+	}
 
 }
 
@@ -109,13 +205,13 @@ int calcular_paginas_malloc(uint32_t tamanio){
 
 	int cociente   = (tamanio)/config_muse->tamanio_pagina;
 	int resto      = (tamanio)%config_muse->tamanio_pagina;
-	int resto_pag  = config_muse->tamanio_pagina%tamanio;
-//Esta mal pensado, este resto es del
+	int resto_pag  = config_muse->tamanio_pagina - (tamanio - (config_muse->tamanio_pagina * cociente));
+
 	if(resto == 0){
 		return cociente;
 	}
 	else{
-		if(resto_pag < 5 && resto_pag >0){
+		if(resto_pag >0 && resto_pag < 5){
 			return cociente +2;
 		}else{
 		return cociente +1;
@@ -164,7 +260,7 @@ uint32_t crearPaginas(int cant_pag, uint32_t tamanio, t_segmento* segmento, t_li
 					}
 				ultima_pagina->p=1;
 
-				t_header* head = convertir(ultima_pagina->ultimo_header,  ultima_pagina->numero, ultima_pagina->marco);
+				t_header* head = convertir(ultima_pagina->ultimo_header, ultima_pagina->marco);
 
 				retorno = ultima_pagina->ultimo_header + 5;
 				head->isFree = false;
@@ -180,7 +276,7 @@ uint32_t crearPaginas(int cant_pag, uint32_t tamanio, t_segmento* segmento, t_li
 				}else{
 					sob_pag -= tamanio;
 					if(sob_pag>=5){
-						t_header* cola = convertir(retorno+tamanio, ultima_pagina->numero,ultima_pagina->marco );
+						t_header* cola = convertir(retorno+tamanio,ultima_pagina->marco );
 						cola->isFree   = true;
 						cola->size     = sob_pag-5;
 						ultima_pagina->tamanio_header = sob_pag-5;
@@ -215,7 +311,7 @@ uint32_t crearPaginas(int cant_pag, uint32_t tamanio, t_segmento* segmento, t_li
 				}
 		if(i==1){
 
-			t_header* head = convertir(segmento->base * size_tabla, size_tabla, pagina->marco);
+			t_header* head = convertir(segmento->base * size_tabla, pagina->marco);
 			retorno = segmento->base * size_tabla + 5;
 			head->isFree = false;
 			head->size   = tamanio;
@@ -318,7 +414,7 @@ uint32_t mallocMuse(uint32_t tamanio, t_list* bloquesLibres, t_list* tabla_segme
 	    t_libres*  valor_libre = list_find(bloquesLibres, (void* )mayor_tamanio );
 		if(valor_libre!=NULL){
 
-			actualizar_header(valor_libre->segmento, valor_libre->pagina,valor_libre->posicion, valor_libre->tamanio, tamanio, tabla_segmentos, bloquesLibres );
+			actualizar_header(valor_libre->segmento, valor_libre->pagina,valor_libre->posicion, valor_libre->tamanio, tamanio, tabla_segmentos, bloquesLibres, 0 );
 			remover_bloque_libre(bloquesLibres,valor_libre->id);
 			uint32_t retorno =  valor_libre->posicion + 5;
 			return retorno;
@@ -339,7 +435,7 @@ uint32_t mallocMuse(uint32_t tamanio, t_list* bloquesLibres, t_list* tabla_segme
 						if(ult_pag->tamanio_header >= (tamanio)){
 
 							uint32_t retorno = 	ult_pag->ultimo_header + 5;
-						    actualizar_header(ult_segmento->segmento, ult_pag->numero,ult_pag->ultimo_header, ult_pag->tamanio_header, tamanio, tabla_segmentos, bloquesLibres);
+						    actualizar_header(ult_segmento->segmento, ult_pag->numero,ult_pag->ultimo_header, ult_pag->tamanio_header, tamanio, tabla_segmentos, bloquesLibres, 1);
 
 							return retorno;
 

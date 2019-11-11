@@ -102,7 +102,7 @@ typedef struct {
 	int segmento;
 	int pagina;
 	uint32_t tamanio;
-	uint32_t posicion;
+	uint32_t posicion; //EN LA PAGINA
 } t_libres;
 
 
@@ -155,12 +155,13 @@ int buscar_marco_libre(char* bitmap);
 
 int swap(int pag_swap);
 
-void actualizar_header(int seg, int pag,uint32_t posicion, uint32_t tamAnterior, uint32_t tamanio, t_list* tabla_segmentos, t_list* bloquesLibres);
+void actualizar_header(int seg, int pag,uint32_t posicion, uint32_t tamAnterior, uint32_t tamanio, t_list* tabla_segmentos, t_list* bloquesLibres, int fin);
 t_pagina* buscar_segmento_pagina(t_list* segmentos , int seg, int pag);
 void desperdicio(uint32_t sobrante, void* posicion, t_pagina* pag);
+void agregar_bloque_libre(t_list* bloquesLibres, int pagina,int segmento,uint32_t posicionEnPagina, uint32_t tamanioLibre);
 uint32_t sobrante_pagina(uint32_t base_segmento, int numero_pagina, uint32_t desplazamiento);
 
-void* convertir(uint32_t posicion, int size_tabla,int marco);
+void* convertir(uint32_t posicion,int marco);
 // Para swap tengo al funcion rewind que devuelve el cursor al inicio del archivo
 //Esta char *fgets(char *buffer, int tamaño, FILE *archivo); buffer donde lo guarda, tamaño es el maximio
 // archivo DA
