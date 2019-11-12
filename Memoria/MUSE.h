@@ -58,7 +58,7 @@ void* punteroMemoria;
 typedef struct{
 	int      segmento;
 	uint32_t base;
-	uint32_t limite;
+	uint32_t tamanio;
 	int      empty;   // 0 = vacio
 	int      dinamico;//Si el segmneto esdinamico 0, si es map 1
 	int      shared;  // Si map = 1, 1 es compartido, 0 privado, sino ignorar

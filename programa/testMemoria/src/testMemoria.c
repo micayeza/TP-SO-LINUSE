@@ -87,6 +87,9 @@ int main(void) {
 		printf("%d \n", resultado);
 
 	}
+	if( strcmp(palabras[0] ,"VER")==0){
+		uint32_t resultado = muse_enviar();
+	}
 	}
 
 	return EXIT_SUCCESS;
