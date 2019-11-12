@@ -97,11 +97,11 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 	}
 
 	//Necesito cola --> entra en la pagina actual?
-	uint32_t finPag        = (config_muse->tamanio_pagina * pag->numero) + config_muse->tamanio_pagina;
+//	uint32_t finPag        = (config_muse->tamanio_pagina * pag->numero) + config_muse->tamanio_pagina;
 	uint32_t ubicacionCola = posicion + 5 + tamanio;
-	uint32_t sobrantePag   = finPag - posicion;
-	if(finPag > ubicacionCola){
-		uint32_t sobrante = finPag - ubicacionCola;
+	uint32_t sobrantePag   = config_muse->tamanio_pagina - posicion;
+	if(config_muse->tamanio_pagina > ubicacionCola){
+		uint32_t sobrante = config_muse->tamanio_pagina - ubicacionCola;
 		//si lo que sobra de la pagina actual es menor que 5 lo desperdicio
 		if(sobrante < 5){
 			void* puntero = punteroMemoria + (config_muse->tamanio_pagina * pag->marco + ubicacionCola);
@@ -150,7 +150,7 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 
 	}
 	//Si la cola no entra en la pag inicial, busco la pagina final de este header
-	if(finPag<ubicacionCola){
+	if(config_muse->tamanio_pagina <= ubicacionCola){
 		//Necesito saber cuanto me falta ubicar despues de la pagina actual
 		uint32_t reservado = tamanio;
 		tamanio     -= sobrantePag;
@@ -619,10 +619,13 @@ void atenderConexiones(int parametros){
 
 		}break;
 		case VER:{
+			char* cero = string_new();
+//			cero = '\0';
+			memcpy(punteroMemoria+config_muse->tamanio_total, cero, 1);
 //			char* string = malloc(config_muse->tamanio_total);
 //			memcpy(string, punteroMemoria, config_muse->tamanio_total);
 //			(char*)punteroMemoria +  config_muse->tamanio_total = '\0';
-//			printf("%s ", (char*)punteroMemoria);
+			printf("%s ", (char*)punteroMemoria);
 
 		}break;
 
