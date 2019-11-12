@@ -28,7 +28,8 @@ typedef enum {
 	COPIAR,
 	MAPEAR,
 	SINCRO,
-	DESMAP
+	DESMAP,
+	VER
 } museOperacion;
 
 
