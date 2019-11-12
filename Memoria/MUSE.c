@@ -619,10 +619,10 @@ void atenderConexiones(int parametros){
 
 		}break;
 		case VER:{
-			char* string = malloc(config_muse->tamanio_total);
-			memcpy(string, punteroMemoria, config_muse->tamanio_total);
-
-			printf("%s ", string);
+//			char* string = malloc(config_muse->tamanio_total);
+//			memcpy(string, punteroMemoria, config_muse->tamanio_total);
+//			(char*)punteroMemoria +  config_muse->tamanio_total = '\0';
+//			printf("%s ", (char*)punteroMemoria);
 
 		}break;
 
