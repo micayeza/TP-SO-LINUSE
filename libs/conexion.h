@@ -16,12 +16,21 @@ typedef enum  {
 typedef enum {
 	VACIO,
 	INIT,
+	//Para SUSE
     CREATE_HILO,
 	SCHEDULE_NEXT,
 	WAIT,
 	SIGNAL,
 	JOIN,
-	CLOSE
+	CLOSE,
+	//Para FUSE
+	SYS_WRITE,
+	SYS_OPEN,
+	SYS_READ,
+	SYS_RMDIR,
+	SYS_UNLINK,
+	SYS_MKDIR,
+	SYS_READDIR,
 } TipoOperacion;
 
 int crearSocketEscucha (int puerto, t_log* logger);
