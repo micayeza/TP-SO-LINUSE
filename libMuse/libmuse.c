@@ -62,6 +62,15 @@ uint32_t muse_alloc(uint32_t tam){
 
 	return -1;
 }
+void muse_free(uint32_t posicion){
+
+	int res = enviarInt(muse, LIBERAR);
+	if (res >0){
+		enviarUint32_t(muse, posicion);
+	}
+
+
+}
 
 void muse_enviar(){
 	enviarInt(muse, VER);

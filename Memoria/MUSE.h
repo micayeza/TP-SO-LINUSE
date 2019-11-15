@@ -70,6 +70,7 @@ typedef struct{
 	int   cliente;
 	char* ip;
 	t_list* segmentos;
+	t_list*  bloquesLibres;
 } t_proceso;
 
 
@@ -162,6 +163,9 @@ void agregar_bloque_libre(t_list* bloquesLibres, int pagina,int segmento,uint32_
 uint32_t sobrante_pagina(uint32_t base_segmento, int numero_pagina, uint32_t desplazamiento);
 
 void* convertir(uint32_t posicion,int marco);
+
+void freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesLibres);
+
 // Para swap tengo al funcion rewind que devuelve el cursor al inicio del archivo
 //Esta char *fgets(char *buffer, int tamaño, FILE *archivo); buffer donde lo guarda, tamaño es el maximio
 // archivo DA

@@ -90,6 +90,10 @@ int main(void) {
 	if( strcmp(palabras[0] ,"VER")==0){
         muse_enviar();
 	}
+	if( strcmp(palabras[0] ,"FREE")==0){
+		uint32_t pos = atoi(palabras[1]);
+		muse_free(pos);
+	}
 	}
 
 	return EXIT_SUCCESS;
