@@ -59,7 +59,8 @@ typedef struct{
 	int      segmento;
 	uint32_t base;
 	uint32_t tamanio;
-	int      empty;   // 0 = vacio
+	bool     empty;   // 0 = vacio
+	bool     ultimo;
 	int      dinamico;//Si el segmneto esdinamico 0, si es map 1
 	int      shared;  // Si map = 1, 1 es compartido, 0 privado, sino ignorar
 	t_list*  paginas;
@@ -165,6 +166,7 @@ uint32_t sobrante_pagina(uint32_t base_segmento, int numero_pagina, uint32_t des
 void* convertir(uint32_t posicion,int marco);
 
 void freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesLibres);
+void vaciarSegmento(t_segmento* segmento, t_list* bloquesLibres );
 
 // Para swap tengo al funcion rewind que devuelve el cursor al inicio del archivo
 //Esta char *fgets(char *buffer, int tamaño, FILE *archivo); buffer donde lo guarda, tamaño es el maximio
