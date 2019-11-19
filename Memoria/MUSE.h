@@ -160,7 +160,7 @@ int swap(int pag_swap);
 void actualizar_header(int seg, int pag,uint32_t posicion, uint32_t tamAnterior, uint32_t tamanio, t_list* tabla_segmentos, t_list* bloquesLibres, int fin);
 void actualizar_bloque_libre(int pag, t_segmento* seg, uint32_t desplazamiento, uint32_t tamanio, t_list* bloquesLibres);
 t_pagina* buscar_segmento_pagina(t_list* segmentos , int seg, int pag);
-void desperdicio(uint32_t sobrante, void* posicion, t_pagina* pag);
+void desperdicio(uint32_t sobrante, void* posicion, t_pagina* pag, uint32_t posHeader);
 void agregar_bloque_libre(t_list* bloquesLibres, int pagina,int segmento,uint32_t posicionEnPagina, uint32_t tamanioLibre);
 uint32_t sobrante_pagina(uint32_t base_segmento, int numero_pagina, uint32_t desplazamiento);
 

@@ -86,10 +86,10 @@ uint32_t sobrante_pagina(uint32_t base_segmento, int numero_pagina, uint32_t des
 
 }
 
-void desperdicio(uint32_t sobrante, void* posicion, t_pagina* pag){
+void desperdicio(uint32_t sobrante, void* posicion, t_pagina* pag, uint32_t header){
 	  char* desperdicio = string_repeat('#', sobrante);
 	  memmove(posicion, desperdicio, sobrante);
-	  pag->ultimo_header  = 0;
+	  pag->ultimo_header  = header;
 	  pag->tamanio_header = 0;
 	  free(desperdicio);
 }
@@ -307,7 +307,8 @@ void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres){
 				t_segmento* anterior = list_get(tabla_segmentos, i--);
 				if(anterior->empty){
 					anterior->tamanio += segmento->tamanio;
-					segmento->tamanio=0;
+					segmento = list_remove(tabla_segmentos, i);
+					free(segmento);
 				}
 			}
 			continue;
@@ -386,7 +387,8 @@ void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres){
 								t_segmento* anterior = list_get(tabla_segmentos, i--);
 								if(anterior->empty){
 									anterior->tamanio += segmento->tamanio;
-									segmento->tamanio=0;
+									segmento = list_remove(tabla_segmentos, i);
+									free(segmento);
 								}
 								fin = true;
 								continue;
@@ -478,7 +480,7 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 	}
 
 	//Necesito cola --> entra en la pagina actual?
-//	uint32_t finPag        = (config_muse->tamanio_pagina * pag->numero) + config_muse->tamanio_pagina;
+
 	uint32_t ubicacionCola = posicion + 5 + tamanio;
 	uint32_t sobrantePag   = config_muse->tamanio_pagina - posicion;
 	if(config_muse->tamanio_pagina > ubicacionCola){
@@ -486,7 +488,7 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 		//si lo que sobra de la pagina actual es menor que 5 lo desperdicio
 		if(sobrante < 5){
 			void* puntero = punteroMemoria + (config_muse->tamanio_pagina * pag->marco + ubicacionCola);
-			desperdicio(sobrante, puntero, pag);
+			desperdicio(sobrante, puntero, pag,posicion);
 			//sumando al tamanio lo desperdiciado, todavia sobra tamAnterior? esta en la otra pag
 			if(tamAnterior >sobrantePag){
 				tamAnterior -= sobrantePag;
@@ -495,7 +497,7 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 				//Entra en el sobrante de esta pagina un header?
 				if(tamAnterior < 5){
 					void* puntero = punteroMemoria + (config_muse->tamanio_pagina*sigPagina->marco);
-					desperdicio(tamAnterior,puntero, sigPagina);
+					desperdicio(tamAnterior,puntero, sigPagina, tamAnterior);
 				}else{
 					t_header* cola = convertir(0, sigPagina->marco);
 					cola->isFree   = true;
@@ -543,7 +545,7 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 			if(sobrante <5 ){
 				void* puntero = punteroMemoria + (config_muse->tamanio_pagina*ultPagina->marco + tamanio);
 
-				desperdicio(sobrante, puntero,ultPagina);
+				desperdicio(sobrante, puntero,ultPagina, 0);
 				//Me quedo tamanio libre del espacio original?
 
 				if(libreOtraPag > 0){
@@ -552,7 +554,7 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 						puntero = punteroMemoria + config_muse->tamanio_pagina*ultPagina->marco;
 				}
 				if(libreOtraPag > 0 && libreOtraPag<5){
-					desperdicio(libreOtraPag, puntero, ultPagina);
+					desperdicio(libreOtraPag, puntero, ultPagina, libreOtraPag);
 
 				}
 				if(libreOtraPag >=5){
@@ -585,7 +587,7 @@ int calcular_paginas_malloc(uint32_t tamanio){
 	}
 	else{
 		if(resto_pag >0 && resto_pag < 5){
-			return cociente +2;
+			return cociente +1;// decia mas 2 pero creo que es solo 1
 		}else{
 		return cociente +1;
 
@@ -661,7 +663,7 @@ retorno = segmento->base + (config_muse->tamanio_pagina*ultima_pagina->numero + 
 						}
 					}else{
 						void* puntero = punteroMemoria + ultima_pagina->marco*config_muse->tamanio_pagina + (ultima_pagina->ultimo_header + 5 + tamanio);
-						desperdicio(sob_pag, puntero, ultima_pagina);
+						desperdicio(sob_pag, puntero, ultima_pagina, ultima_pagina->ultimo_header);
 
 					ultima_pagina->esFinPag = 1;
 					ultima_pagina->tamanio_header = 0;
@@ -718,7 +720,7 @@ retorno = segmento->base + (config_muse->tamanio_pagina*ultima_pagina->numero + 
 
 					}else{
 						//Voy a desperdiciar si sobra menos de 5 #$%$#
-						desperdicio(sobrante,  punteroMemoria + (pagina->marco*config_muse->tamanio_pagina + tamanio), pagina);
+						desperdicio(sobrante,  punteroMemoria + (pagina->marco*config_muse->tamanio_pagina + tamanio), pagina, pagina->ultimo_header);
 
 					}
 
@@ -1001,6 +1003,7 @@ void atenderConexiones(int parametros){
 			uint32_t tamanio = recibirUint32_t(proceso->cliente);
 				if(tamanio == 0){
 					enviarUint32_t(proceso->cliente,  0);
+					break;
 				}
 			uint32_t posicion = mallocMuse(tamanio, proceso->bloquesLibres, proceso->segmentos);
 			if(posicion == 0){
