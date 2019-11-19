@@ -168,7 +168,7 @@ void* convertir(uint32_t posicion,int marco);
 
 void freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesLibres);
 void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres);
-void vaciarSegmento(t_segmento* segmento, t_list* bloquesLibres );
+void vaciarSegmento(t_segmento* segmento, t_list* bloquesLibres, t_list* tabla_segmentos );
 
 size_t highestOneBitPosition(uint32_t a);
 bool addition_is_safe(uint32_t a, uint32_t b) ;
