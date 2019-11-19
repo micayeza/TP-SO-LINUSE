@@ -21,28 +21,33 @@
 
 //Librerias propias
 #include <libs.h>
-//#include <sockets.h>
 #include <conexion.h>
-
-//------------------------- SECCION CONEXION -------------------------------
 
 //------------------------- SECCION CONEXION -------------------------------
 void atenderPedidos();
 
-// -------------------------- FIN SECCIÓN PLANIFICACIÓN --------------------
+// -------------------------- SECCIÓN PLANIFICACIÓN --------------------
 pthread_t mainThread;
-pthread_mutex_t mutexColaEjecucion;
-int proximo_pcb_id;
+pthread_mutex_t mutexColaNew;
+
+typedef enum {
+	NEW,
+	READY,
+	EXEC,
+	BLOCKED,
+	EXIT
+} estadoDeEjecucion;
 
 typedef struct {
 	int socket;
 	t_dictionary* TCBs;
-	int proximo_tcb_id;
+	estadoDeEjecucion estado;
 } t_PCB;
 
 typedef struct {
 	int id;
-	void* funcion;
+	estadoDeEjecucion estado;
+	t_PCB* procesoPadre;
 } t_TCB;
 
 t_dictionary* PCBs;

@@ -1,5 +1,6 @@
-LIBS = -lcommons -lpthread
-CFLAGS = -g -Wall
+LIBS = -lcommons -lpthread -llibs
+CFLAGS = -g -Wall -I /home/utnso/workspace/libs
+LDFLAGS = -L /home/utnso/workspace/libs/Debug
 TARGET= SUSE
 
 .PHONY: default all clean
@@ -10,11 +11,11 @@ all: default
 OBJECTS = $(patsubst %.c, %.o, $(wildcard *.c))
 HEADERS = $(wildcard *.h)
 
+$(TARGET): $(OBJECTS) 
+	gcc $(OBJECTS) $(LDFLAGS) $(LIBS) -o $@
+
 %.o: %.c $(HEADERS)
 	gcc $(CFLAGS) -c $< -o $@
-
-$(TARGET): $(OBJECTS) 
-	gcc ../libs/*.c $(OBJECTS) $(CFLAGS) $(LIBS) -o $@
 
 clean: 
 	-rm -f *.o
