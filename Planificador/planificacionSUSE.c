@@ -7,11 +7,11 @@ void atenderPrograma(t_PCB* pcb){
 		switch(operacionRecibida){
 			case CREATE_HILO:{
 				int tid = recibirEntero(pcb->socket, log_interno);
-				create_hilo(tid);//Hacer los pasos para un Create Hilo.
+				create_hilo(tid); //Hacer los pasos para un Create Hilo.
 				break;
 			}
 			case SCHEDULE_NEXT:{
-				int nextTid = next_hilo();//Hacer los pasos para un Schedule Next.
+				int nextTid = next_hilo(); //Hacer los pasos para un Schedule Next.
 				int resNext = enviarEntero(pcb->socket, nextTid,  log_interno);
 				break;
 			}
@@ -28,14 +28,14 @@ void atenderPrograma(t_PCB* pcb){
 			case WAIT:{
 				int tid = recibirEntero(pcb->socket, log_interno);
 				char* semName = recibirTexto(pcb->socket, log_interno);
-				int resultadoWait = wait_hilo(tid,semName);//Hacer los pasos para un Wait.
+				int resultadoWait = wait_hilo(tid,semName); //Hacer los pasos para un Wait.
 				int resWait = enviarEntero(pcb->socket, resultadoWait,  log_interno);
 				break;
 			}
 			case SIGNAL:{
 				int tid = recibirEntero(pcb->socket, log_interno);
 				char* semName = recibirTexto(pcb->socket, log_interno);
-				signal_hilo(tid,semName);//Hacer los pasos para un Signal.
+				signal_hilo(tid,semName); //Hacer los pasos para un Signal.
 				break;
 			}
 		}
@@ -68,9 +68,9 @@ void signal_hilo(int tid, char* semName){
 
 void encolarEnNew(t_TCB* TCB){
 
-	pthread_mutex_lock(&mutexColaEjecucion);
+	pthread_mutex_lock(&mutexColaNew);
 	queue_push(colaNew, TCB);
-	pthread_mutex_unlock(&mutexColaEjecucion);
+	pthread_mutex_unlock(&mutexColaNew);
 }
 
 void transicionNewAReady(int idHilo){
@@ -87,7 +87,7 @@ t_PCB* create_PCB(int socket){
 	t_PCB* PCB = malloc(sizeof(t_PCB));
 	PCB->socket = socket;
 	PCB->TCBs = dictionary_create();
-	PCB->proximo_tcb_id = 0;
+	PCB->estado = NEW;
 	return PCB;
 }
 
@@ -96,17 +96,24 @@ void free_PCB(t_PCB* PCB){
 	free(PCB);
 }
 
-t_TCB* create_TCB_en_PCB(t_PCB* PCB, void* funcion){
+t_TCB* create_TCB_en_PCB(t_PCB* PCB){
 	t_TCB* TCB = malloc(sizeof(t_TCB));
-	TCB->id = PCB->proximo_tcb_id;
-	TCB->funcion = funcion;
+	TCB->id = cantidadTCBsEnPCB; //Si la PCB ya tiene tres hilos, el ID del nuevo será 3.
+	TCB->procesoPadre = PCB;
 	dictionary_put(PCB->TCBs,string_itoa(TCB->id),TCB);
-	(PCB->proximo_tcb_id)++;
 	return TCB;
 }
 void free_TCB(t_TCB* TCB){
-	free(TCB->funcion);
+	//No libero 'procesoPadre' porque me liberaría la PCB y no corresponde.
 	free(TCB);
+}
+
+int cantidadTCBsEnPCB(t_PCB* PCB){
+	return dictionary_size(PCB->TCBs);
+}
+
+int cantidadHilosEnEjecucion(){
+	//TODO: Acá devuelvo todos los TCBs que se encuentran en estado READY o EXEC.
 }
 
 //Se me ocurrio hacer una cola "ejecución" que tenga a las colas "bloqueado", "ready" y "ejecutando" adentro. Contando todos los hilos que están corriendo adentro
