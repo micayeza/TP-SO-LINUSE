@@ -185,13 +185,17 @@ void freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesL
 		//Veo si hay desperdicio
 		if(config_muse->tamanio_pagina - (desplazamiento1 + 5 + head1->size) < 5 ){
 			head1->size += (config_muse->tamanio_pagina - (desplazamiento1 + 5 + head1->size));
-			pagina1->ultimo_header = desplazamiento1;
+			pagina1->ultimo_header = desplazamiento1 + 5;
 		}
 			//Si era el ultimo header de la ultima pagina aca muere mi operación
-			if(pagina1->esFinPag == 1 && pagina1->ultimo_header == desplazamiento1){
+			if(pagina1->esFinPag == 1 && pagina1->ultimo_header == (desplazamiento1+5)){
 				pagina1->tamanio_header = head1->size;
 				//si no es el ultimo segmento hay que actualizar el bloques libres
+				if(segmento->ultimo){
+					vaciarSegmento(segmento, bloquesLibres, tabla_segmentos);
+				}else{
 				actualizar_bloque_libre(pag1, segmento, desplazamiento1, head1->size, bloquesLibres);
+				}
 				return;
 			}
 
@@ -223,7 +227,7 @@ void freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesL
 				if(pag1 == pag2){
 					if(pagina1->esFinPag == 1){
 						//Si el segundo header es el ultimo , pasa a ser el primero, sumo tamanio
-						if(desplazamiento2 == pagina1->ultimo_header){
+						if(desplazamiento2 == (pagina1->ultimo_header-5)){
 							if(posicionAliberar == segmento->base){
 								vaciarSegmento(segmento, bloquesLibres, tabla_segmentos);
 								return;
@@ -231,7 +235,7 @@ void freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesL
 
 							head1->size += (head2->size + 5);
 
-							pagina1->ultimo_header = desplazamiento1;
+							pagina1->ultimo_header = desplazamiento1 +5;
 							pagina1->tamanio_header = head1->size;
 							actualizar_bloque_libre(pag1, segmento, desplazamiento2, head1->size, bloquesLibres);
 							remover_bloque_libre(bloquesLibres, pag1, segmento->segmento, desplazamiento2 );
@@ -241,7 +245,7 @@ void freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesL
 
 				} else{ // Si son paginas distintas pero la segunda es la ultima
 					if(pagina2->esFinPag == 1){
-						if(pagina2->ultimo_header == desplazamiento2){
+						if((pagina2->ultimo_header-5) == desplazamiento2 ){
 
 							if(posicionAliberar == segmento->base){
 								//Si entra acá significa que en la siguiente pagina solo estaba un header free, asique LA ELIMINO sin importar desperdicio
@@ -251,7 +255,7 @@ void freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesL
 	//El nuevo ultimo header pasa a ser el 1 y lo restante lo armo en otro segmento
 							head1->size -=(config_muse->tamanio_pagina - (desplazamiento1 + 5));
 							pagina1->esFinPag = 1;
-							pagina1->ultimo_header = desplazamiento1;
+							pagina1->ultimo_header = desplazamiento1 + 5;
 							pagina1->tamanio_header = head1->size;
 //Bien, el nuevo size es solo de la pagina pero, cuantas paginas ocupaba antes el size? debo eliminarlas
 							for(int i= pag1+1; i<=pag2;i++){
@@ -323,7 +327,7 @@ void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres){
 			pag1 = posicion1/config_muse->tamanio_pagina;
 
 			pagina1 = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag1);
-				if(pagina1->esFinPag == 1 && pagina1->ultimo_header == posicion1){
+				if(pagina1->esFinPag == 1 && (pagina1->ultimo_header -5) == posicion1){
 					fin = true;
 					continue;
 				}
@@ -378,9 +382,9 @@ void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres){
 				if(pag1 == pag2){
 					if(pagina1->esFinPag == 1){
 						//Si el segundo header es el ultimo , pasa a ser el primero, sumo tamanio
-						if(desplazamiento2 == pagina1->ultimo_header){
+						if(desplazamiento2 == (pagina1->ultimo_header-5)){
 
-							pagina1->ultimo_header = desplazamiento1;
+							pagina1->ultimo_header = desplazamiento1 + 5;
 							pagina1->tamanio_header = head1->size;
 
 							if(posicion1 ==  segmento->base){
@@ -408,7 +412,7 @@ void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres){
 
 				} else{ // Si son paginas distintas pero la segunda es la ultima
 					if(pagina2->esFinPag == 1){
-						if(pagina2->ultimo_header == desplazamiento2){
+						if((pagina2->ultimo_header -5) == desplazamiento2){
 //Si entra acá significa que en la siguiente pagina solo estaba un header free, asique LA ELIMINO sin importar desperdicio
 							if(posicion1 == segmento->base){
 								vaciarSegmento(segmento, bloquesLibres, tabla_segmentos);
@@ -417,7 +421,7 @@ void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres){
 							}
 							head1->size -=(config_muse->tamanio_pagina - (desplazamiento1 + 5));
 							pagina1->esFinPag = 1;
-							pagina1->ultimo_header = desplazamiento1;
+							pagina1->ultimo_header = desplazamiento1 +5;
 							pagina1->tamanio_header = head1->size;
 
 //Bien, el nuevo size es solo de la pagina pero, cuantas paginas ocupaba antes el size? debo eliminarlas
@@ -462,6 +466,7 @@ void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres){
 
 void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamAnterior, uint32_t tamanio,  t_list* tabla_segmentos, t_list* bloquesLibres, int fin){
 
+	posicion -= 5;
 	//Busco la pagina a actualizar y la traigo a memoria
 	t_pagina* pag = buscar_segmento_pagina(tabla_segmentos,segmento, pagina );
 
@@ -473,9 +478,9 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 
 	//Tengo que actualizar la nueva "Cola" primero veo si necesito una cola.
 	if(tamAnterior == tamanio){
-		if(pag->esFinPag == 1){
+		if(posicion == (pag->ultimo_header-5)){
 			pag->tamanio_header = 0;
-			pag->ultimo_header  = posicion;
+			pag->ultimo_header  = posicion +5;
 		}
 		return;
 	}
@@ -483,7 +488,7 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 	//Necesito cola --> entra en la pagina actual?
 
 	uint32_t ubicacionCola = posicion + 5 + tamanio;
-	uint32_t sobrantePag   = config_muse->tamanio_pagina - posicion;
+	uint32_t sobrantePag   = config_muse->tamanio_pagina - (posicion + 5);
 	if(config_muse->tamanio_pagina > ubicacionCola){
 		uint32_t sobrante = config_muse->tamanio_pagina - ubicacionCola;
 		//si lo que sobra de la pagina actual es menor que 5 lo desperdicio
@@ -507,7 +512,7 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 						pag->esFinPag       = 0;
 						sigPagina->esFinPag = 1;
 						sigPagina->tamanio_header = tamAnterior -5;
-						sigPagina->ultimo_header  = 0;
+						sigPagina->ultimo_header  = 5;
 					} else{
 
 						agregar_bloque_libre(bloquesLibres, sigPagina->numero, segmento, 0, tamAnterior -5);
@@ -520,9 +525,10 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 			t_header* cola = convertir(ubicacionCola,pag->marco);
 			cola->isFree   = true;
 			cola->size     = tamAnterior - tamanio -5;
-			if(fin ==1){
+
+			if(fin ==1 || (pag->ultimo_header-5) == posicion){
 				pag->tamanio_header = tamAnterior - tamanio -5;
-				pag->ultimo_header  = ubicacionCola;
+				pag->ultimo_header  = ubicacionCola + 5;
 			}else{
 				agregar_bloque_libre(bloquesLibres, pag->numero, segmento, ubicacionCola,tamAnterior - tamanio -5 );
 			}
@@ -546,7 +552,7 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 			if(sobrante <5 ){
 				void* puntero = punteroMemoria + (config_muse->tamanio_pagina*ultPagina->marco + tamanio);
 
-				desperdicio(sobrante, puntero,ultPagina, config_muse->tamanio_pagina -sobrante);
+				desperdicio(sobrante, puntero,ultPagina, ultPagina->ultimo_header);
 				//Me quedo tamanio libre del espacio original?
 
 				if(libreOtraPag > 0){
@@ -562,6 +568,7 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 					t_header* cola = puntero;
 					cola->isFree   = true;
 					cola->size     = libreOtraPag-5;
+
 					agregar_bloque_libre(bloquesLibres, ultPagina->numero, segmento, 0, libreOtraPag-5);
 				}
 			}
@@ -569,6 +576,10 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 				t_header* cola = punteroMemoria + (config_muse->tamanio_pagina*ultPagina->marco + tamanio);
 				cola->isFree   = true;
 				cola->size     = libreOtraPag-5;
+				if((ultPagina->ultimo_header-5)<tamanio){
+					ultPagina->ultimo_header  = tamanio + 5;
+					ultPagina->tamanio_header = libreOtraPag-5;
+				}
 				agregar_bloque_libre(bloquesLibres, ultPagina->numero, segmento, tamanio, libreOtraPag-5);
 			}
 
@@ -637,23 +648,23 @@ uint32_t crearPaginas(int cant_pag, uint32_t tamanio, t_segmento* segmento, t_li
 					}
 				ultima_pagina->p=1;
 
-				t_header* head = convertir(ultima_pagina->ultimo_header, ultima_pagina->marco);
+				t_header* head = convertir((ultima_pagina->ultimo_header-5), ultima_pagina->marco);
 
-retorno = segmento->base + (config_muse->tamanio_pagina*ultima_pagina->numero + (ultima_pagina->ultimo_header + 5));
+retorno = segmento->base + (config_muse->tamanio_pagina*ultima_pagina->numero + (ultima_pagina->ultimo_header));
 				head->isFree = false;
 				head->size   = tamanio;
 
-				uint32_t sob_pag = config_muse->tamanio_pagina - (ultima_pagina->ultimo_header + 5);
+				uint32_t sob_pag = config_muse->tamanio_pagina - (ultima_pagina->ultimo_header);
 				if(sob_pag<tamanio){
 					tamanio = tamanio  - sob_pag;
 					ultima_pagina->esFinPag = 0;
 					ultima_pagina->tamanio_header = 0;
-					ultima_pagina->ultimo_header  = 0;
+//					ultima_pagina->ultimo_header  = 0;
 
 				}else{
 					sob_pag -= tamanio;
 					if(sob_pag>=5){
-						t_header* cola = convertir(ultima_pagina->ultimo_header + 5+tamanio,ultima_pagina->marco );
+						t_header* cola = convertir(ultima_pagina->ultimo_header+tamanio,ultima_pagina->marco );
 						cola->isFree   = true;
 						cola->size     = sob_pag-5;
 						ultima_pagina->esFinPag = 1;
@@ -663,12 +674,11 @@ retorno = segmento->base + (config_muse->tamanio_pagina*ultima_pagina->numero + 
 							agregar_bloque_libre(bloques_libres, ultima_pagina->numero, segmento->segmento, ultima_pagina->ultimo_header, ultima_pagina->tamanio_header);
 						}
 					}else{
-						void* puntero = punteroMemoria + ultima_pagina->marco*config_muse->tamanio_pagina + (ultima_pagina->ultimo_header + 5 + tamanio);
+						void* puntero = punteroMemoria + ultima_pagina->marco*config_muse->tamanio_pagina + (ultima_pagina->ultimo_header + tamanio);
 						desperdicio(sob_pag, puntero, ultima_pagina, ultima_pagina->ultimo_header);
 
-					ultima_pagina->esFinPag = 1;
-					ultima_pagina->tamanio_header = 0;
-//					ultima_pagina->ultimo_header  = 0;
+						ultima_pagina->esFinPag = 1;
+
 					}
 
 				}
@@ -698,15 +708,19 @@ retorno = segmento->base + (config_muse->tamanio_pagina*ultima_pagina->numero + 
 			retorno = segmento->base + (config_muse->tamanio_pagina* size_tabla + 5);
 			head->isFree = false;
 			head->size   = tamanio - 5;
-
-
 	   }
 		pagina->numero   = size_tabla;
 		pagina->esFinPag = 0;
+		pagina->tamanio_header = 0;
+		pagina->ultimo_header  = 0;
 
 		if(tamanio>config_muse->tamanio_pagina){
 					faltante = tamanio - config_muse->tamanio_pagina;
 					tamanio  = faltante;
+						if(i==1){
+							pagina->ultimo_header  = 5;
+							pagina->tamanio_header = 0;
+						}
 					}
 				else{
 					sobrante = config_muse->tamanio_pagina -tamanio;
@@ -714,19 +728,18 @@ retorno = segmento->base + (config_muse->tamanio_pagina*ultima_pagina->numero + 
 						t_header* cola = punteroMemoria + (pagina->marco*config_muse->tamanio_pagina + tamanio);
 						cola->isFree = true;
 						cola->size   = sobrante-5;
-						pagina->ultimo_header = tamanio;
+						pagina->ultimo_header = tamanio +5;
 						pagina->tamanio_header = sobrante-5;
 						pagina->esFinPag =1;
 						if(!segmento->ultimo){
-							agregar_bloque_libre(bloques_libres,pagina->numero, segmento->segmento, pagina->ultimo_header, pagina->tamanio_header);
+							agregar_bloque_libre(bloques_libres,pagina->numero, segmento->segmento, (pagina->ultimo_header-5), pagina->tamanio_header);
 						}
 
 					}else{
 						//Voy a desperdiciar si sobra menos de 5 #$%$#
 						desperdicio(sobrante,  punteroMemoria + (pagina->marco*config_muse->tamanio_pagina + tamanio), pagina, pagina->ultimo_header);
 						pagina->esFinPag       = 1;
-						pagina->ultimo_header  = 0;
-						pagina->tamanio_header = tamanio - 5;
+
 					}
 
 				}
@@ -844,12 +857,14 @@ uint32_t mallocMuse(uint32_t tamanio, t_list* bloquesLibres, t_list* tabla_segme
 
 						if(ult_pag->tamanio_header >= (tamanio)){
 
-							uint32_t retorno = ult_segmento->base + (ult_pag->numero*config_muse->tamanio_pagina + (ult_pag->ultimo_header + 5));
+							uint32_t retorno = ult_segmento->base + (ult_pag->numero*config_muse->tamanio_pagina + (ult_pag->ultimo_header));
 						    actualizar_header(ult_segmento->segmento, ult_pag->numero,ult_pag->ultimo_header, ult_pag->tamanio_header, tamanio, tabla_segmentos, bloquesLibres, 1);
 
 							return retorno;
 
 						} else{
+							ult_pag->esFinPag = 0;
+
 							uint32_t extra ;
 							if(ult_pag->tamanio_header!=0){
 								extra = tamanio - ult_pag->tamanio_header;
@@ -864,16 +879,18 @@ uint32_t mallocMuse(uint32_t tamanio, t_list* bloquesLibres, t_list* tabla_segme
 								}
 
 								ult_segmento->tamanio += tam*config_muse->tamanio_pagina;
-								if(ult_pag->tamanio_header!=0){
-									tam++;
-								}
+
 								//sobrepasa los 32 bits?
 								uint32_t actual = ult_segmento->base + (config_muse->tamanio_pagina * list_size(ult_segmento->paginas));
 								if(addition_is_safe(actual, config_muse->tamanio_pagina * tam )){
+									if(ult_pag->tamanio_header!=0){
+										tam++;
+									}
 									uint32_t res = crearPaginas(tam, tamanio, ult_segmento,bloquesLibres);
 
 									return res;
 								}else{//sobrepasa los 32 bits
+
 									int seg = -1;
 									for(int i = 0; i<list_size(tabla_segmentos); i++){
 										t_segmento* segmentoVacio = list_get(tabla_segmentos, i);
@@ -1039,12 +1056,21 @@ void atenderConexiones(int parametros){
 
 		}break;
 		case VER:{
-			char* cero = string_new();
-//			cero = '\0';
-			memcpy(punteroMemoria+config_muse->tamanio_total, cero, 1);
-//			char* string = malloc(config_muse->tamanio_total);
-//			memcpy(string, punteroMemoria, config_muse->tamanio_total);
-//			(char*)punteroMemoria +  config_muse->tamanio_total = '\0';
+
+			int i= 0;
+			while(i<list_size(proceso->segmentos)){
+				t_segmento* seg = list_get(proceso->segmentos, i);
+				printf("Segmento %d \n", seg->segmento);
+				printf("Pagina | ultima | presencia | marco | header | tamanio \n");
+				for(int x=0; x<list_size(seg->paginas); x++){
+					t_pagina* pag = list_get(seg->paginas, x);
+					printf("%d      | %d      | %d         | %d     | %d      | %d   \n",
+					pag->numero, pag->esFinPag, pag->p, pag->marco, (pag->ultimo_header-5), pag->tamanio_header );
+
+				}
+
+				i++;
+			}
 			printf("%s ", (char*)punteroMemoria);
 
 		}break;
