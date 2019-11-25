@@ -56,7 +56,7 @@ void agregar_bloque_libre(t_list* bloquesLibres, int pagina,int segmento,uint32_
 	t_libres* newLibre = malloc(sizeof(t_libres));
 	  		  newLibre->pagina   = pagina;
 	  		  newLibre->segmento = segmento;
-	  		  newLibre->posicion = posicionEnPagina;
+	  		  newLibre->posicion = posicionEnPagina + 5 ;
 	  		  newLibre->tamanio  = tamanioLibre;
 
 	  		  list_add(bloquesLibres, newLibre);
@@ -92,6 +92,19 @@ void desperdicio(uint32_t sobrante, void* posicion, t_pagina* pag, uint32_t head
 	  pag->ultimo_header  = header;
 	  pag->tamanio_header = 0;
 	  free(desperdicio);
+}
+
+bool hayHashtag(int marco, int i){
+	char* letra = malloc(1);
+	void* puntero = punteroMemoria + (config_muse->tamanio_pagina * marco + (i));
+	memmove(letra, puntero, 1);
+		if(letra=='#'){
+			free(letra);
+			return true;
+		}else{
+			free(letra);
+			return false;
+		}
 }
 
 t_pagina* buscar_segmento_pagina(t_list* segmentos , int seg, int pag){
@@ -194,7 +207,7 @@ void freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesL
 				if(segmento->ultimo){
 					vaciarSegmento(segmento, bloquesLibres, tabla_segmentos);
 				}else{
-				actualizar_bloque_libre(pag1, segmento, desplazamiento1, head1->size, bloquesLibres);
+				actualizar_bloque_libre(pag1, segmento, desplazamiento1 + 5, head1->size, bloquesLibres);
 				}
 				return;
 			}
@@ -205,7 +218,7 @@ void freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesL
 			 if(desplazamiento1 + 5 + head1->size == config_muse->tamanio_pagina){
 				 pagina2 = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag2);
 				 for(int i= 0; i<5; i++){
-					 if((char*)(punteroMemoria + (config_muse->tamanio_pagina * pagina1->marco + (i)))!='#'){
+					 if(!hayHashtag(pagina2->marco, i)){
 							posicion2 += i;
 							head1->size += i;
 							break;
@@ -237,7 +250,7 @@ void freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesL
 
 							pagina1->ultimo_header = desplazamiento1 +5;
 							pagina1->tamanio_header = head1->size;
-							actualizar_bloque_libre(pag1, segmento, desplazamiento2, head1->size, bloquesLibres);
+							actualizar_bloque_libre(pag1, segmento, desplazamiento2 + 5, head1->size, bloquesLibres);
 							remover_bloque_libre(bloquesLibres, pag1, segmento->segmento, desplazamiento2 );
 							return;
 						}
@@ -265,7 +278,7 @@ void freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesL
 							paginas_usadas --;
 							}
 							if(!segmento->ultimo){
-								actualizar_bloque_libre(pag1, segmento, desplazamiento1, head1->size, bloquesLibres);
+								actualizar_bloque_libre(pag1, segmento, desplazamiento1 + 5, head1->size, bloquesLibres);
 								remover_bloque_libre(bloquesLibres, pag1, segmento->segmento, desplazamiento2);
 								t_segmento* nuevoSegmento = malloc(sizeof(t_segmento));
 								nuevo_segmento(nuevoSegmento, segmento->base + segmento->tamanio, true, true, list_size(tabla_segmentos), true, config_muse->tamanio_pagina * (pag2-pag1), false);
@@ -348,7 +361,7 @@ void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres){
 							pag2 = posicion2/config_muse->tamanio_pagina;
 							pagina2 = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag2);
 							for(int i = 0; i<5;i++){
-								if((char*)(punteroMemoria + (config_muse->tamanio_pagina * pagina1->marco + (i)))!='#'){
+								if(!hayHashtag(pagina2->marco, i)){
 									posicion2 += i;
 									break;
 								}
@@ -402,7 +415,7 @@ void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres){
 							if(segmento->ultimo){
 								remover_bloque_libre(bloquesLibres, pag1, segmento->segmento, desplazamiento1);
 							} else{
-								actualizar_bloque_libre(pag1, segmento, desplazamiento1, head1->size, bloquesLibres);
+								actualizar_bloque_libre(pag1, segmento, desplazamiento1 + 5, head1->size, bloquesLibres);
 								remover_bloque_libre(bloquesLibres, pag1, segmento->segmento, desplazamiento2);
 							}
 
@@ -433,7 +446,7 @@ void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres){
 							}
 							if(!segmento->ultimo){
 								//Si no es el ultimo segmento --> va todo en libres, ambos exitian, el 2 lo elimino y el uno lo actualizo
-							    actualizar_bloque_libre(pag1, segmento, desplazamiento1, head1->size, bloquesLibres);
+							    actualizar_bloque_libre(pag1, segmento, desplazamiento1 + 5, head1->size, bloquesLibres);
 							    remover_bloque_libre(bloquesLibres, pag1, segmento->segmento, desplazamiento2);
 
 								t_segmento* nuevoSegmento = malloc(sizeof(t_segmento));
@@ -452,7 +465,7 @@ void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres){
 				}
 			//Si ni la pag1 ni la 2 son ultimas , pero estan libres, elimino la 2 de los libres y edito la 1
 
-				actualizar_bloque_libre(pag1, segmento, desplazamiento1, head1->size, bloquesLibres);
+				actualizar_bloque_libre(pag1, segmento, desplazamiento1 + 5, head1->size, bloquesLibres);
 				remover_bloque_libre(bloquesLibres, pag2, segmento->segmento, desplazamiento2);
 				//LA posicion1 queda igual
 		}
@@ -467,6 +480,7 @@ void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres){
 void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamAnterior, uint32_t tamanio,  t_list* tabla_segmentos, t_list* bloquesLibres, int fin){
 
 	posicion -= 5;
+
 	//Busco la pagina a actualizar y la traigo a memoria
 	t_pagina* pag = buscar_segmento_pagina(tabla_segmentos,segmento, pagina );
 
@@ -529,6 +543,9 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 			if(fin ==1 || (pag->ultimo_header-5) == posicion){
 				pag->tamanio_header = tamAnterior - tamanio -5;
 				pag->ultimo_header  = ubicacionCola + 5;
+					if(fin != 1){
+					agregar_bloque_libre(bloquesLibres, pag->numero, segmento, ubicacionCola,tamAnterior - tamanio -5 );
+					}
 			}else{
 				agregar_bloque_libre(bloquesLibres, pag->numero, segmento, ubicacionCola,tamAnterior - tamanio -5 );
 			}
@@ -834,7 +851,7 @@ uint32_t mallocMuse(uint32_t tamanio, t_list* bloquesLibres, t_list* tabla_segme
 			actualizar_header(valor_libre->segmento, valor_libre->pagina,valor_libre->posicion, valor_libre->tamanio, tamanio, tabla_segmentos, bloquesLibres, 0 );
 
 			t_segmento* segmento  = list_find(tabla_segmentos, &(buscar_seg));
-			uint32_t retorno = segmento->base + (config_muse->tamanio_pagina * valor_libre->pagina + (valor_libre->posicion + 5));
+			uint32_t retorno = segmento->base + (config_muse->tamanio_pagina * valor_libre->pagina + (valor_libre->posicion));
 			remover_bloque_libre(bloquesLibres,valor_libre->pagina, valor_libre->segmento, valor_libre->posicion);
 			return  retorno;
 
