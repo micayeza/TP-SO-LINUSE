@@ -24,6 +24,7 @@
 #include <time.h>
 #include <libs.h>
 #include <mensajes.h>
+#include <conexion.h>
 #include <math.h>
 
 
@@ -87,7 +88,8 @@ typedef struct {
 typedef struct{
 	int id;
 	char* ip;
-	int segmento;
+	int seg;
+	int pag;
 	int u;
 	int m;
 } t_clock;
@@ -147,15 +149,17 @@ void atenderConexiones(int);
 void ip_de_programa(int,char*);
 
 
-uint32_t mallocMuse(uint32_t tam, t_list* bloquesLibres, t_list* segmentos);
+uint32_t mallocMuse(uint32_t tam, t_proceso* proceso);
 void remover_bloque_libre(t_list* bloque_libre , int pag, int seg, uint32_t pos);
 void nuevo_segmento(t_segmento* nuevo, uint32_t base,bool dinamico,bool empty,int numero,bool compartido,uint32_t tamanio,bool ultimo );
-uint32_t crearSegmentoDinamico(uint32_t tamanio, t_list* tabla_segmentos, t_list* bloques_libres);
-uint32_t crearPaginas(int tam, uint32_t tamanio, t_segmento* segmento, t_list* bloques_libres);
+uint32_t crearSegmentoDinamico(uint32_t tamanio, t_list* tabla_segmentos, t_list* bloques_libres, t_proceso* proceso);
+uint32_t crearPaginas(int tam, uint32_t tamanio, t_segmento* segmento, t_list* bloques_libres, t_proceso* proceso);
 int calcular_paginas_malloc(uint32_t tamanio);
 int buscar_marco_libre(char* bitmap);
 
 int swap(int pag_swap);
+void agregar_pag_clock(int id, char* ip, int m ,int u, int seg, int pag);
+t_clock* buscar_clock(t_proceso* proceso, int seg, int  pag);
 
 void actualizar_header(int seg, int pag,uint32_t posicion, uint32_t tamAnterior, uint32_t tamanio, t_list* tabla_segmentos, t_list* bloquesLibres, int fin);
 void actualizar_bloque_libre(int pag, t_segmento* seg, uint32_t desplazamiento, uint32_t tamanio, t_list* bloquesLibres);
@@ -167,9 +171,13 @@ uint32_t sobrante_pagina(uint32_t base_segmento, int numero_pagina, uint32_t des
 
 void* convertir(uint32_t posicion,int marco);
 
-void freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesLibres);
-void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres);
-void vaciarSegmento(t_segmento* segmento, t_list* bloquesLibres, t_list* tabla_segmentos );
+void freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesLibres,t_proceso* proceso);
+void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres, t_proceso* proceso);
+void vaciarSegmento(t_segmento* segmento, t_list* bloquesLibres, t_list* tabla_segmentos, t_proceso* proceso );
+
+int copiarMuse(uint32_t posicionACopiar,int  bytes,char* copia,t_list* tabla_segmentos, t_proceso* proceso);
+
+char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos);
 
 size_t highestOneBitPosition(uint32_t a);
 bool addition_is_safe(uint32_t a, uint32_t b) ;

@@ -24,7 +24,7 @@ typedef enum {
 	CERRAR,
 	RESERVAR,
 	LIBERAR,
-	OBTEBER,
+	OBTENER,
 	COPIAR,
 	MAPEAR,
 	SINCRO,

@@ -97,9 +97,9 @@ int enviarString(int destinatario, char* loQueEnvio){
 
 char* recibirString(int destinatario){
 
-		void * buffer;
-		int size;
-		recv(destinatario, size, sizeof(int), MSG_WAITALL);
+		char* buffer;
+		int size;// = recibirInt(destinatario);
+		recv(destinatario, &size, sizeof(int), MSG_WAITALL);
 		buffer = malloc(size);
 		recv(destinatario, buffer, size, MSG_WAITALL);
 

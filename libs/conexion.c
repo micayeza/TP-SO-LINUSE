@@ -83,12 +83,15 @@ int enviarTexto(int fdDestinatario, char* textoEnviar,  t_log* logger){
 		log_error(logger, "Hubo un error al enviar Tamanio a %i", fdDestinatario);
 		return ERROR;
 	}
+	if(tamanio != 0){
 	int resTexto = send(fdDestinatario, (void*)textoEnviar, tamanio, MSG_WAITALL);
 	if(resTexto == ERROR){
 		log_error(logger, "Hubo un error al enviar el Texto a %i", fdDestinatario);
 		return ERROR;
 	}
 	return resTexto;
+	}
+	return 0;
 }
 
 int recibirEntero(int fdOrigen, t_log* logger){
@@ -106,6 +109,9 @@ char* recibirTexto(int fdOrigen, t_log* logger){
 	int resTamanio = recv(fdOrigen, &tamanio, sizeof(int), MSG_WAITALL);
 	if(resTamanio == ERROR){
 		log_error(logger, "Hubo un error al recibir Tamanio de Texto de %i", fdOrigen);
+		return NULL;
+	}
+	if(tamanio == 0){
 		return NULL;
 	}
 	char* textoRecibido = malloc(tamanio);

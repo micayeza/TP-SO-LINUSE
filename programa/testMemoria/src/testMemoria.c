@@ -14,6 +14,32 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
+char*  palabras_a_copiar(char* contenido){
+
+		    int letra_final  = 0;
+			int letra_actual = 0;
+
+				while(contenido[letra_actual] != '"'){
+
+					letra_actual++;
+				}
+					letra_actual++;
+					letra_final = letra_actual;
+					while(contenido[letra_final] != '"'){
+
+						letra_final++;
+				}
+
+				char* palabra =	string_substring(contenido, letra_actual, letra_final-1);
+				int len = letra_final -letra_actual;
+				palabra[len] = '\0';
+
+				return palabra;
+
+
+
+}
+
 char** descomponer_operacion(char* contenido){
 
 	int cantidad_de_palabras = 0;
@@ -55,10 +81,6 @@ char** descomponer_operacion(char* contenido){
 
 	}
 
-//	for(int i = 0; i < cantidad_de_palabras; i++){
-//		printf("Palabra %d: %s\n", i, retorno[i]);
-
-//	}
 	retorno[cantidad_de_palabras] = NULL;
 	return retorno;
 }
@@ -85,16 +107,40 @@ int main(void) {
 		uint32_t tam = atoi(palabras[1]);
 		uint32_t resultado = muse_alloc(tam);
 		printf("%d \n", resultado);
-
+		//break;
 	}
 	if( strcmp(palabras[0] ,"VER")==0){
         muse_enviar();
+        //break;
 	}
 	if( strcmp(palabras[0] ,"FREE")==0){
 		uint32_t pos = atoi(palabras[1]);
 		muse_free(pos);
+		//break;
 	}
+	if( strcmp(palabras[0] ,"COPY")==0){
+		uint32_t pos = atoi(palabras[1]);
+		int      n   = atoi(palabras[2]);
+
+		char* frase = palabras_a_copiar(entrada);
+
+		void* puntero;
+		puntero = frase;
+
+		int resultado =  muse_cpy(pos, puntero, n);
+		printf("%d \n", resultado);
+		//break;
+	}
+	if( strcmp(palabras[0] ,"GET")==0){
+		uint32_t pos = atoi(palabras[1]);
+		int      n   = atoi(palabras[2]);
+		char* frase = malloc(n);
+		void * puntero = frase;
+		int result = muse_get(puntero, pos, n);
+		//break;
 	}
 
-	return EXIT_SUCCESS;
+
+}
+	//return EXIT_SUCCESS;
 }
