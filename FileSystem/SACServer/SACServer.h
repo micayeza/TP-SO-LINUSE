@@ -59,5 +59,8 @@ t_cliente* create_cliente(int socket);
 //FUNCIONES ATENCION CLIENTE
 void atenderCliente(t_cliente* cliente);
 
+//FUNCIONES FILESYSTEM
+
+
 
 #endif /* SACSERVER_H_ */

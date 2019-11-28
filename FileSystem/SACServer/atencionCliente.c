@@ -28,7 +28,7 @@ void atenderCliente(t_cliente* cliente){
 				break;
 			}
 			case SYS_MKDIR:{
-
+				printf("PINTO UN MKDIR PERRO");
 				break;
 			}
 			case SYS_READDIR:{
