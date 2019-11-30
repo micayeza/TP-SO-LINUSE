@@ -26,6 +26,9 @@
 #include <mensajes.h>
 #include <conexion.h>
 #include <math.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 
 
@@ -86,12 +89,14 @@ typedef struct {
 }t_pagina;
 
 typedef struct{
+	int marco;
 	int id;
 	char* ip;
 	int seg;
 	int pag;
 	int u;
 	int m;
+	int p; //--> p de puntero
 } t_clock;
 
 
@@ -124,12 +129,13 @@ t_configuracion *config_muse;
 t_config *config_ruta;
 t_log *logMuse;
 
-FILE * archivoSwap;
+//FILE * archivoSwap;
+void* punteroSwap;
 bool activo;
 int  paginas_usadas;
 char* bitmap_marcos;
 char* bitmap_swap;
-
+char* aux_swap;
 
 
 bool existeArchivoConfig(char*);
@@ -138,7 +144,7 @@ int crearConfigMemoria();
 
 void inicializarMemoria();
 void inicializarTablas();
-void inicializarSwap();
+void* inicializarSwap();
 void crearHiloParalelos();
 
 int aceptarClienteMemoria(int);
@@ -157,9 +163,11 @@ uint32_t crearPaginas(int tam, uint32_t tamanio, t_segmento* segmento, t_list* b
 int calcular_paginas_malloc(uint32_t tamanio);
 int buscar_marco_libre(char* bitmap);
 
-int swap(int pag_swap);
-void agregar_pag_clock(int id, char* ip, int m ,int u, int seg, int pag);
-t_clock* buscar_clock(t_proceso* proceso, int seg, int  pag);
+int swap(int pag_swap, bool nueva);
+void agregar_pag_clock(int id, char* ip, int m ,int u, int seg, int pag, int marco);
+t_clock* buscar_clock(int marco);
+void remover_clocky(int marco, t_proceso* proceso);
+void modificar_clock_bitmap(t_pagina* pagina, int segmento, t_proceso* proceso);
 
 void actualizar_header(int seg, int pag,uint32_t posicion, uint32_t tamAnterior, uint32_t tamanio, t_list* tabla_segmentos, t_list* bloquesLibres, int fin);
 void actualizar_bloque_libre(int pag, t_segmento* seg, uint32_t desplazamiento, uint32_t tamanio, t_list* bloquesLibres);
