@@ -8,6 +8,7 @@ t_configSAC* getConfigSAC(char* path){
 	t_configSAC* structConfig = malloc(sizeof(t_configSAC));
 
 	structConfig->listenPort = config_get_int_value(config, "LISTEN_PORT"); //int
+	structConfig->pathFs = config_get_string_value(config, "PATH_FS");
 
 	config_destroy(config);
 
@@ -15,5 +16,6 @@ t_configSAC* getConfigSAC(char* path){
 }
 
 void freeConfig(t_configSAC* config){
+	//free(config->pathFs);
 	free(config);
 }
