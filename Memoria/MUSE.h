@@ -200,8 +200,14 @@ char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos, t_proceso
 
 uint32_t  mappearMuse(char* path, size_t len,int flag,t_proceso* proceso);
 int tamanioArchivo(char* rutaArchivo);
-void crearPaginasmapeadas(int tam,size_t len,t_segmento* segmentoVacio,t_proceso* proceso, int flag, char* path);
+int crearPaginasmapeadas(int tam,size_t len,t_segmento* segmentoVacio,t_proceso* proceso, int flag, char* path);
 uint32_t  crearSegmentoMapeado(int len,t_proceso* proceso, int flag, char* path);
+
+int syncMuse(uint32_t fd,size_t len,t_proceso* proceso);
+bool mapeoElArchivo(t_segmento* seg, t_proceso* proceso);
+
+void liberarTodo(t_proceso* proceso);
+int unmapMuse(uint32_t  fd,t_proceso* proceso);
 
 size_t highestOneBitPosition(uint32_t a);
 bool addition_is_safe(uint32_t a, uint32_t b) ;

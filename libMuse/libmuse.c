@@ -106,6 +106,9 @@ int muse_get(void* dst, uint32_t src, size_t n){
 
 uint32_t muse_map(char *path, size_t length, int flags){
 
+	if(length == 0){
+		return 0;
+	}
 	enviarInt(muse , MAPEAR);
 	enviarInt(muse, flags);
 	enviarSizet(muse,  length);
@@ -122,6 +125,25 @@ uint32_t muse_map(char *path, size_t length, int flags){
 
 }
 
+
+int muse_sync(uint32_t addr, size_t len){
+
+	enviarInt(muse, SINCRO);
+	enviarSizet(muse, len);
+
+	enviarUint32_t(muse, addr);
+	int result = recibirInt(muse);
+
+	return result;
+}
+
+int muse_unmap(uint32_t dir){
+
+	enviarInt(muse, DESMAP);
+	enviarUint32_t(muse,  dir);
+
+	return recibirInt(muse);
+}
 
 
 void muse_enviar(){

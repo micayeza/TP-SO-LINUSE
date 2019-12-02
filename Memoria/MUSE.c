@@ -74,6 +74,8 @@ void remover_clocky(int marco, t_proceso* proceso){
 	t_clock* clock = list_get(tabla_clock, marco);//buscar_clock(proceso, seg, pag);
 	clock->id = -1;
 	free(clock->ip);
+	clock->m = 0;
+	clock->u = 0;
 }
 
 void actualizar_bloque_libre(int pag, t_segmento* seg, uint32_t desplazamiento, uint32_t tamanio, t_list* bloquesLibres){
@@ -381,10 +383,11 @@ int swap(int pag_swap, bool nueva){
 
 void vaciarSegmento(t_segmento* segmento, t_list* bloquesLibres, t_list* tabla_segmentos , t_proceso* proceso){
 
-		for(int i = 0; i<list_size(segmento->paginas);i++){
+		while(list_size(segmento->paginas)>0){
+//		for(int i = 0; i<list_size(segmento->paginas);i++){
 			paginas_usadas --;
-			t_pagina* pagina = list_remove(segmento->paginas, i);
-				modificar_clock_bitmap(pagina, segmento->segmento, proceso);
+			t_pagina* pagina = list_remove(segmento->paginas, 0);
+			modificar_clock_bitmap(pagina, segmento->segmento, proceso);
 			free(pagina);
 		}
 		bool buscar_por_segmento(void* bloque_libre){
@@ -406,6 +409,27 @@ void vaciarSegmento(t_segmento* segmento, t_list* bloquesLibres, t_list* tabla_s
 		if(!segmento->ultimo){
 			segmento->dinamico = true;
 			segmento->empty    = true;
+			//VER SI ESTO ESTA OK +******************************************************
+			bool emp = true;
+			uint32_t posSig = segmento->base + segmento->tamanio;
+			while(emp){
+				t_segmento* sigiente = buscar_segmento(posSig, tabla_segmentos);
+				 emp = sigiente->empty;
+				 if(emp){
+					bool numerito_seg(void* segmento){
+						return   ((t_segmento*)segmento)->segmento == sigiente->segmento;
+					}
+
+					segmento->tamanio += sigiente->tamanio;
+					posSig = sigiente->base + sigiente->tamanio;
+					sigiente = list_remove_by_condition(tabla_segmentos, &numerito_seg);
+					free(sigiente);
+
+				 }
+			}
+
+
+
 		} else{
 			bool buscar_por_segmento_seg(void* seg){
 
@@ -607,6 +631,7 @@ void freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesL
 				//si no es el ultimo segmento hay que actualizar el bloques libres
 				if(segmento->ultimo){
 					vaciarSegmento(segmento, bloquesLibres, tabla_segmentos, proceso);
+
 					log_info(logMuse, "Se libero el semgento %d \n", segmento);
 				}else{
 				actualizar_bloque_libre(pag1, segmento, desplazamiento1 + 5, head1->size, bloquesLibres);
@@ -812,12 +837,7 @@ void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres, t_proceso* proce
 
 							if(posicion1 ==  segmento->base){
 								vaciarSegmento(segmento, bloquesLibres, tabla_segmentos, proceso);
-								t_segmento* anterior = list_get(tabla_segmentos, i--);
-								if(anterior->empty){
-									anterior->tamanio += segmento->tamanio;
-									segmento = list_remove(tabla_segmentos, i);
-									free(segmento);
-								}
+
 								fin = true;
 								continue;
 							}
@@ -1015,8 +1035,203 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 
 }
 
+
+bool mapeoElArchivo(t_segmento* seg, t_proceso* proceso){
+	bool busco_archivo(void* arch){
+				return (strcmp(((t_archivo*)arch)->nombre,seg->path) ==0) ;
+			}
+
+	t_archivo* archivo = list_find(tabla_archivos, &busco_archivo);
+
+	if(archivo != NULL){
+
+		bool busco_id_ip(void* pro){
+					return (strcmp(((t_ip_id*)pro)->ip,proceso->ip) ==0) &&
+						   ((t_ip_id*)pro)->id == proceso->id;
+				}
+		t_ip_id* existe = list_find(archivo->proceso, &busco_id_ip);
+		if(existe!= NULL){
+			return true;
+		}else{
+			return false;
+		}
+
+	}else{
+		return false;
+	}
+
+
+}
+
+int unmapMuse(uint32_t  fd,t_proceso* proceso){
+	 fd -=5;
+	 t_segmento* seg = buscar_segmento(fd, proceso->segmentos);
+
+	 if(seg == NULL){
+		 log_error(logMuse, "No es una posicion valida \n");
+		 return -1;
+	 }
+	 if(seg->dinamico){
+		 log_error(logMuse, "No es una posicion mappeada \n");
+		 return -1;
+	 }
+
+	 if(seg->shared == SHARED ){
+		 if(seg->path == NULL){
+		 log_error(logMuse, "No esta completo el path en el segmento \n");
+		 return -1;}
+	 }
+	 //Tengo que desligar la memoria
+	 bool busco_archivoo(void* arch){
+	 				return (strcmp(((t_archivo*)arch)->nombre,seg->path) ==0) ;
+	 			}
+
+	 	t_archivo* archivo = list_find(tabla_archivos, &busco_archivoo);
+	 	if(archivo == NULL){
+			 log_error(logMuse, "El archivo no se encuentra en la tabla de archivos abiertos \n");
+			 return -1;
+	 	}
+
+	 	bool busco_id_ips(void* pro){
+	 						return (strcmp(((t_ip_id*)pro)->ip,proceso->ip) ==0) &&
+	 							   ((t_ip_id*)pro)->id == proceso->id;
+	 					}
+
+	 	//Elimino de la tabla de procesos del archivo al proceso
+	 	t_ip_id* existe = list_remove_by_condition(archivo->proceso, &busco_id_ips);
+	 	if(existe == NULL){
+			 log_error(logMuse, "El archivo no habia sido mapeado por el proceso o ya realizo muse_unmap \n");
+			 return -1;
+	 	}
+	    //Vaciar el segmento mappeado en  el proceso SIN eliminar la tabla de paginas
+
+	 	if(seg->ultimo){
+		 	bool numero_seg(void* segmento){
+				return   ((t_segmento*)segmento)->segmento == seg->segmento;
+			}
+	 		seg = list_remove_by_condition(proceso->segmentos, &numero_seg);
+	 		if(seg->shared == SHARED) free(seg->path);
+	 		free(seg);
+	 	}else{
+	 		seg->dinamico = true;
+	 		seg->empty    = true;
+	 		seg->paginas  = NULL;
+	 		if(seg->shared == SHARED) free(seg->path);
+
+	 		bool emp = true;
+			uint32_t posSig = seg->base + seg->tamanio;
+	 		while(emp){
+	 			t_segmento* sigiente = buscar_segmento(posSig, proceso->segmentos);
+	 				bool numero_sigiente(void* segmento){
+						return   ((t_segmento*)segmento)->segmento == sigiente->segmento;
+					}
+					seg->tamanio += sigiente->tamanio;
+					posSig = sigiente->base + sigiente->tamanio;
+					sigiente = list_remove_by_condition(proceso->segmentos, &numero_sigiente);
+
+					free(sigiente);
+
+	 		}
+	 	}
+
+	 	//Elimino al proceso del registro del archivo en la tabla de archivos
+	 	free(existe->ip);
+	 	free(existe);
+
+	 	if(list_size(archivo->proceso)>0){
+	 		log_info(logMuse, "Hay mas procesos mapeando aun al archivo \n");
+	 		return 0;
+	 	}
+
+	 	//Si la tabla de procesos del archivo quedo vacio tengo que eliminar el segmento del proceso fantasma y
+	 	// eliminar cualquier pag que este en el clock
+
+	 	log_info(logMuse, "NO Hay mas procesos mapeando aun al archivo, elimino las paginas \n");
+	 	t_proceso* fantasma = list_get(tabla_procesos, 0);
+	 	bool es_seg(void* segmento){
+				return   ((t_segmento*)segmento)->segmento == archivo->seg;
+			}
+	 	t_segmento* segFantasma = list_remove_by_condition(fantasma->segmentos, &es_seg);
+
+	 	for(int i = 0; i<list_size(segFantasma->paginas);i++){
+			paginas_usadas --;
+			t_pagina* pagina = list_remove(segFantasma->paginas, i);
+			modificar_clock_bitmap(pagina, segFantasma->segmento, fantasma);
+			free(pagina);
+		}
+
+		free(segFantasma->path);
+
+		return 0;
+
+
+}
+
+
+int syncMuse(uint32_t fd,size_t len,t_proceso* proceso){
+
+	 fd -=5;
+	 t_segmento* seg = buscar_segmento(fd, proceso->segmentos);
+
+	 if(seg == NULL){
+		 log_error(logMuse, "No es una posicion valida \n");
+		 return -1;
+	 }
+	 if(seg->dinamico){
+		 log_error(logMuse, "No es una posicion mappeada \n");
+		 return -1;
+	 }
+
+	 if(seg->shared == SHARED ){
+		 if(seg->path == NULL){
+		 log_error(logMuse, "No esta completo el path en el segmento \n");
+		 return -1;}
+
+		 if(!mapeoElArchivo(seg, proceso)){
+			 log_error(logMuse, "El proceso no mmapeo el archivo o ya realizo munmap \n");
+			 return -1;
+		 }
+	 }
+	 if(seg->tamanio < len){
+		 log_error(logMuse, "El proceso se mapeo con menos tamanio que el que se quiere sincrinizar \n");
+		 return -1;
+	 }
+
+	 int tam = calcular_paginas_malloc(len);//necesito saber cuantas paginas escribir
+	 if(tam > list_size(seg->paginas)) tam = list_size(seg->paginas);
+
+		FILE* buffer_archivo = fopen(seg->path, "w+"); // Creo un nuevo archivo para persistir el bloque (píso el anterior si existe)
+		if ( buffer_archivo == NULL){
+			log_error(logMuse, "No se pudo abrir el archivo, verificar que aun existe. \n");
+			return -1;
+		}
+
+		char mode[] = "0777"; // Permisos totales
+		int permisos = strtol(mode, 0, 8); // Administración para los permisos
+		chmod(seg->path, permisos); // Aplico permisos al archivo
+
+
+	 for(int i = 0; i<tam;i++){
+		 t_pagina* pag = buscar_segmento_pagina(proceso->segmentos, seg->segmento, i, proceso);
+		 void* puntero = punteroMemoria + (config_muse->tamanio_pagina * pag->marco);
+
+		 fwrite(puntero, CHAR, config_muse->tamanio_pagina, buffer_archivo); // Escribo el contenido del bloque en el archivo
+
+		 t_clock* clock = buscar_clock(pag->marco);
+		 clock->m = 0;
+
+	 }
+
+	 fclose(buffer_archivo);
+	 return 0;
+
+}
+
+
+
+
 //Voy a asumir que el len es siempre igual para todos los que comparten sino me vuelvo loca
-void crearPaginasmapeadas(int tam,size_t len,t_segmento* segmento,t_proceso* proceso, int flag, char* path){
+int crearPaginasmapeadas(int tam,size_t len,t_segmento* segmento,t_proceso* proceso, int flag, char* path){
 
 	t_segmento * seg;
 	char mode[] = "0777"; // Permisos totales
@@ -1024,6 +1239,13 @@ void crearPaginasmapeadas(int tam,size_t len,t_segmento* segmento,t_proceso* pro
 
 	int fd_archivo = open(path, O_RDWR | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH);
 
+	if(fd_archivo == -1){
+		//vacio el segmento y deberia devolver error
+		segmento->dinamico =  true;
+		segmento->empty    =  true;
+		free(segmento->path);
+		return -1;
+	}
 	chmod(path, permisos); // Aplico permisos al archivo
 
 //	int tamanio_archivo = tamanioArchivo(path);
@@ -1045,17 +1267,21 @@ void crearPaginasmapeadas(int tam,size_t len,t_segmento* segmento,t_proceso* pro
 		seg->tamanio = config_muse->tamanio_pagina * tam;
 		seg->paginas =list_create();
 	}
-
+	void* punteroAux;
 	t_pagina* pagina;
 	for(int i=0; i<tam; i++){
+		paginas_usadas++;
 		pagina = malloc(sizeof(t_pagina));
 
 		pagina->numero = i;
 		pagina->p      = 0;
 		pagina->marco  = buscar_marco_libre(bitmap_swap);
+
+		punteroAux = punteroSwap + (config_muse->tamanio_pagina * pagina->marco);
 		if(pagina->marco == -1){
 			pagina->marco  = buscar_marco_libre(bitmap_marcos);
 			pagina->p = 1;
+			punteroAux = punteroMemoria + (config_muse->tamanio_pagina * pagina->marco);
 		}
 		if(flag == SHARED){
 			list_add(seg->paginas , pagina); // Creo la lista de paginas en el segmento fantasma
@@ -1065,11 +1291,15 @@ void crearPaginasmapeadas(int tam,size_t len,t_segmento* segmento,t_proceso* pro
 		void* contenido = malloc(config_muse->tamanio_pagina);
 		size_t res =read(fd_archivo, contenido, config_muse->tamanio_pagina);
 		if(res != 0){
-			void* punteroAux = punteroSwap + (config_muse->tamanio_pagina * pagina->marco);
+
 			memmove(punteroAux, contenido, config_muse->tamanio_pagina);
 		}
 		else{
-			char* dest = punteroSwap + (config_muse->tamanio_pagina * pagina->marco);
+			char* dest;
+			if(pagina->p == 0) dest = punteroSwap + (config_muse->tamanio_pagina * pagina->marco);
+
+			if(pagina->p == 1) dest = punteroMemoria + (config_muse->tamanio_pagina * pagina->marco);
+
 	        int i= 0;
 			while(i<config_muse->tamanio_pagina){
 	            dest[i] = '\0';
@@ -1092,17 +1322,19 @@ void crearPaginasmapeadas(int tam,size_t len,t_segmento* segmento,t_proceso* pro
 	}
 
 	close(fd_archivo);
+	return 0;
 
 }
 
 uint32_t  crearSegmentoMapeado(int len,t_proceso* proceso, int flag, char* path){
 
-
+	int res = 0;
 	int size = list_size(proceso->segmentos) -1;
 	int tam = calcular_paginas_malloc(len);
 	if(paginas_usadas + tam > config_muse->paginas_totales){
 		return 0;
 	}
+
 
 	t_segmento* segmento =  malloc(sizeof(t_segmento));
 	if(list_size(proceso->segmentos) > 0){
@@ -1114,6 +1346,13 @@ uint32_t  crearSegmentoMapeado(int len,t_proceso* proceso, int flag, char* path)
 		segmento->base = seg_anterior->base + seg_anterior->tamanio;
 		t_segmento* seg_ultimo_agregado = list_get(proceso->segmentos, size);
 		segmento->segmento      = seg_ultimo_agregado->segmento;
+
+		uint32_t empieza = seg_anterior->base + seg_anterior->tamanio;
+		uint32_t fin     = tam * config_muse->tamanio_pagina;
+		if(!addition_is_safe(empieza, fin)){
+				free(segmento);
+				return 0;
+			}
 
 	}else{
 		segmento->base = 0;
@@ -1127,33 +1366,41 @@ uint32_t  crearSegmentoMapeado(int len,t_proceso* proceso, int flag, char* path)
 
 	if(flag == PRIVATE){
 		segmento->paginas = list_create();
-	 	crearPaginasmapeadas(tam, len, segmento, proceso, flag, path);
+	 	res = crearPaginasmapeadas(tam, len, segmento, proceso, flag, path);
+	 	if(res >0) list_add(proceso->segmentos, segmento );
 	}
 	else{
-		segmento->path = malloc(strlen(path)+1);
-		memcpy(segmento->path, path, strlen(path));
-		segmento->path[strlen(path)]='\0';
 
 		bool buscar_archivo(void* arch){
 					return (strcmp(((t_archivo*)arch)->nombre,path) ==0) ;
 				}
 		t_archivo* archivo = list_find(tabla_archivos, &buscar_archivo);
 		if(archivo == NULL){
-		 crearPaginasmapeadas(tam, len, segmento, proceso, flag, path);
+		res = crearPaginasmapeadas(tam, len, segmento, proceso, flag, path);
 		}else{
 			segmento->paginas = archivo->puntero_a_pag;
 		}
+		if(res >0){
+			segmento->path = malloc(strlen(path)+1);
+			memcpy(segmento->path, path, strlen(path));
+			segmento->path[strlen(path)]='\0';
 
-		t_ip_id* nuevo = malloc(sizeof(t_ip_id));
-		nuevo->id = proceso->id;
-		nuevo->ip = malloc(strlen(proceso->ip)+1);
-		memcpy(nuevo->ip, proceso->ip, strlen(proceso->ip));
-		nuevo->ip[strlen(proceso->ip)]='\0';
-		list_add(archivo->proceso, nuevo);
-
+			list_add(proceso->segmentos, segmento );
+			t_ip_id* nuevo = malloc(sizeof(t_ip_id));
+			nuevo->id = proceso->id;
+			nuevo->ip = malloc(strlen(proceso->ip)+1);
+			memcpy(nuevo->ip, proceso->ip, strlen(proceso->ip));
+			nuevo->ip[strlen(proceso->ip)]='\0';
+			list_add(archivo->proceso, nuevo);
+		}
+	}
+	if(res>=0) {
+		return segmento->base + 5;
+	}else{
+		return 0;
 	}
 
-	return segmento->base + 5;
+
 
 }
 
@@ -1161,7 +1408,8 @@ uint32_t  crearSegmentoMapeado(int len,t_proceso* proceso, int flag, char* path)
 uint32_t  mappearMuse(char* path, size_t len,int flag,t_proceso* proceso){
 
 	//busco un segmento vacio en donde entre, sino creo uno
-	int seg = -1;
+	int result = 0;
+	int seg    = -1;
 		for(int i = 0; i<list_size(proceso->segmentos); i++){
 			t_segmento* segmentoVacio = list_get(proceso->segmentos, i);
 			if(segmentoVacio->empty && segmentoVacio->tamanio >= len){
@@ -1185,29 +1433,30 @@ uint32_t  mappearMuse(char* path, size_t len,int flag,t_proceso* proceso){
 				 	crearPaginasmapeadas(tam, len, segmentoVacio, proceso, flag, path);
 				}
 				else{
-					segmentoVacio->path = malloc(strlen(path)+1);
-					memcpy(segmentoVacio->path, path, strlen(path));
-					segmentoVacio->path[strlen(path)]='\0';
-
 					bool buscar_archivo(void* arch){
 								return (strcmp(((t_archivo*)arch)->nombre,path) ==0) ;
 							}
 					t_archivo* archivo = list_find(tabla_archivos, &buscar_archivo);
 					if(archivo == NULL){
-					 crearPaginasmapeadas(tam, len, segmentoVacio, proceso, flag, path);
+					 result = crearPaginasmapeadas(tam, len, segmentoVacio, proceso, flag, path);
 					}else{
 						segmentoVacio->paginas = archivo->puntero_a_pag;
 					}
+					if(result >0){
+						segmentoVacio->path = malloc(strlen(path)+1);
+						memcpy(segmentoVacio->path, path, strlen(path));
+						segmentoVacio->path[strlen(path)]='\0';
 
-					t_ip_id* nuevo = malloc(sizeof(t_ip_id));
-					nuevo->id = proceso->id;
-					nuevo->ip = malloc(strlen(proceso->ip)+1);
-					memcpy(nuevo->ip, proceso->ip, strlen(proceso->ip));
-					nuevo->ip[strlen(proceso->ip)]='\0';
-					list_add(archivo->proceso, nuevo);
 
+						t_ip_id* nuevo = malloc(sizeof(t_ip_id));
+						nuevo->id = proceso->id;
+						nuevo->ip = malloc(strlen(proceso->ip)+1);
+						memcpy(nuevo->ip, proceso->ip, strlen(proceso->ip));
+						nuevo->ip[strlen(proceso->ip)]='\0';
+						list_add(archivo->proceso, nuevo);
+					}
 				}
-
+				if(result >=0){
 					 uint32_t tam_anterior   = segmentoVacio->tamanio;
 					 segmentoVacio->empty    = false;
 					 segmentoVacio->dinamico = false;
@@ -1221,7 +1470,10 @@ uint32_t  mappearMuse(char* path, size_t len,int flag,t_proceso* proceso){
 						 }
 
 					return segmentoVacio->base +5;
-					}
+				} else{
+					return 0;
+				}
+			}
 
 
 
@@ -1641,8 +1893,48 @@ uint32_t mallocMuse(uint32_t tamanio, t_proceso* proceso){
 	return 0;
 }
 
+void liberarTodo(t_proceso* proceso){
+	while(list_size(proceso->segmentos) > 0){
 
 
+		t_segmento* seg = list_get(proceso->segmentos , 0);
+
+		if(seg->dinamico){
+			seg = list_remove(proceso->segmentos , 0);
+			while(list_size(seg->paginas) > 0){
+					paginas_usadas --;
+					t_pagina* pagina = list_remove(seg->paginas, 0);
+					modificar_clock_bitmap(pagina, seg->segmento, proceso);
+					free(pagina);
+				}
+			free(seg->paginas);
+
+		} else{ //Es un segmento mapeado
+			int res = unmapMuse(seg->base, proceso);
+			if(res < 0){
+				seg = list_remove(proceso->segmentos , 0);
+			}
+		}
+
+     }//Cierra el while
+
+	while(list_size(proceso->bloquesLibres) > 0){
+		t_libres* libre = list_remove(proceso->bloquesLibres, 0);
+		free(libre);
+	}
+
+
+	bool buscar_pro(void* pro){
+				return (strcmp(((t_proceso*)pro)->ip,proceso->ip) ==0) &&
+						((t_proceso*)pro)->id == proceso->id;
+			}
+	t_proceso* elProc = list_remove_by_condition(tabla_procesos, &buscar_pro);
+	free(elProc->ip);
+	free(elProc->segmentos);
+	free(elProc->bloquesLibres);
+	free(elProc);
+
+}
 
 
 void atenderConexiones(int parametros){
@@ -1677,8 +1969,8 @@ void atenderConexiones(int parametros){
 		}break;
 		case CERRAR:{
 			//TEngo que liberar absolutamente todo
-
 			log_info(logMuse,"Se desconecto el proceso: \n");
+			liberarTodo(proceso);
 
 			pthread_exit("CHAU");
 		}break;
@@ -1716,6 +2008,7 @@ void atenderConexiones(int parametros){
 				log_error(logMuse, "No se pudo obtener el dato solicitado");
 			}else if(strcmp(frase,  "SG MICA")==0){
 				//La funcion que cierre todo
+				liberarTodo(proceso);
 				pthread_exit("CHAU");
 			}
 			else{
@@ -1745,15 +2038,30 @@ void atenderConexiones(int parametros){
 
 			uint32_t result = mappearMuse(path, len, flag, proceso);
 
+			if(result ==  0){
+				log_error(logMuse,"Comienza compactacion por falta de espacio: \n");
+				compactar(proceso->segmentos, proceso->bloquesLibres, proceso);
+				result = mappearMuse(path, len, flag, proceso);
+				if(result == 0) log_error(logMuse, "Memoria llena por favor finalice algun proceso \n");
+
+			}
 			enviarUint32_t(proceso->cliente, result);
 
 
 		}break;
 		case SINCRO:{
+			size_t   len = recibirSizet(proceso->cliente);
+			uint32_t fd  = recibirUint32_t(proceso->cliente);
 
+			int result = syncMuse(fd, len, proceso);
+
+			enviarInt(proceso->cliente, result);
 		} break;
 		case DESMAP:{
+			uint32_t fd = recibirUint32_t(proceso->cliente);
 
+			int result = unmapMuse( fd, proceso);
+			enviarInt(proceso->cliente, result);
 		}break;
 		case VER:{
 
@@ -1819,9 +2127,6 @@ void ip_de_programa(int s, char* ip){
 	}
 
 	memcpy(ip, &(ipstr), INET6_ADDRSTRLEN);
-
-//	log_info(logMuse, "Peer IP address: %s \n", ip);
-
 }
 
 int crearSocketMEmoria() {
