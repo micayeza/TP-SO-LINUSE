@@ -30,43 +30,41 @@ void modificar_clock_bitmap(t_pagina* pagina, int segmento, t_proceso* proceso){
 }
 
 
-void agregar_pag_clock(int id, char* ip, int m ,int u, int seg, int pag, int marco){
+void agregar_pag_clock(int id, char* ip, int m ,int u, t_segmento* seg, int pag, int marco){
 //Busco el clock que tenga el puntero
 	t_clock* clock = list_get(tabla_clock, marco);
 
-	clock->ip      = malloc(strlen(ip)+1);
-	memcpy(clock->ip, ip, strlen(ip));
-	clock->ip[strlen(ip)]='\0';
+	if(seg->dinamico && seg->shared == SHARED){
+		t_proceso* proceso = list_get(tabla_procesos, 0);
 
-	clock->id  	 = id;
+		bool buscar_path(void* arch){
+					return (strcmp(((t_segmento*)arch)->path,seg->path) ==0) ;
+				}
+		t_segmento* segmento = list_find(proceso->segmentos, &buscar_path);
+
+
+		clock->ip      = malloc(strlen("0.0.0")+1);
+		memcpy(clock->ip, ip, strlen(ip));
+		clock->ip[strlen(ip)]='\0';
+		clock->seg 	 = segmento->segmento;
+		clock->pag 	 = pag;//La pagina si es igual para todos
+
+	}else{
+		clock->ip      = malloc(strlen(ip)+1);
+		memcpy(clock->ip, ip, strlen(ip));
+		clock->ip[strlen(ip)]='\0';
+		clock->seg 	 = seg->segmento;
+		clock->pag 	 = pag;
+		clock->id  	 = id;
+	}
 	clock->m   	 = m;
 	clock->u   	 = u;
-	clock->seg 	 = seg;
-	clock->pag 	 = pag;
-//Lo comento, de esta manera si hay que mover el puntero si habia pag vacia descomentar
-//	clock->p   	 = 0;
-
-//	t_clock* clock_sig;
-//	if(marco +1 == cantidad_paginas){
-//		clock_sig = list_get(tabla_clock, 0 );
-//	}else{
-//		clock_sig = list_get(tabla_clock, marco +1 );
-//
-//	}
-//	clock_sig->p = 1;
 
 
 }
 
 t_clock* buscar_clock(int  marco){
-//	bool buscar_clocky (void* clo){
-//		return (((t_clock*)clo)->id  == proceso->id &&
-//			   strcmp(((t_clock*)clo)->ip ,  proceso->ip)==0 &&
-//			   ((t_clock*)clo)->pag  == pag        &&
-//			   ((t_clock*)clo)->seg  == seg);
-//	}
 
-//	t_clock* clock = list_find(tabla_clock, &buscar_clocky);
 	t_clock* clock = list_get(tabla_clock, marco);
 	return clock;
 
@@ -168,7 +166,7 @@ bool hayHashtag(int marco, int i){
 		}
 }
 
-t_pagina* buscar_segmento_pagina(t_list* segmentos , int seg, int pag){
+t_pagina* buscar_segmento_pagina(t_list* segmentos , int seg, int pag, t_proceso* proceso){
 
 	bool buscar_seg(void* elSeg){
 
@@ -186,7 +184,13 @@ t_pagina* buscar_segmento_pagina(t_list* segmentos , int seg, int pag){
 	if(pagina->p != 1){
 		pagina->marco = swap(pagina->marco, false);
 		pagina->p = 1;
+		agregar_pag_clock(proceso->id, proceso->ip, 0, 1, segmento, pag, pagina->marco);
+	}else{
+		t_clock* clock = buscar_clock(pagina->marco);
+		clock->u = 1;
 	}
+
+
 
 	return pagina;
 
@@ -194,16 +198,11 @@ t_pagina* buscar_segmento_pagina(t_list* segmentos , int seg, int pag){
 
 int swap(int pag_swap, bool nueva){
 	//Libero el marco de swap ya que va a venir a la memoria
+
 	bitmap_swap[pag_swap] = '0';
 	//Busco a la vistima, primero veo si tengo un marco libre
 
 	int marco = buscar_marco_libre(bitmap_marcos);
-	if(marco != -1){
-		int marco_aux = marco ++;
-		if(marco_aux == cantidad_paginas){
-			marco_aux = 0;
-		}
-	}
 
 	if(marco == -1){
 		//Aplico algoritmo, primero veo donde arajo esta el puntero
@@ -223,10 +222,13 @@ int swap(int pag_swap, bool nueva){
 		clock = list_get(tabla_clock, i);
 		if(clock->u == 0 && clock->m == 0 ){
 			marco = clock->marco;
-			i = i++ == cantidad_paginas? 0:i++;
-			clock = list_get(tabla_clock, i);
-
-			clock->p = 1;
+			if(i+1 == cantidad_paginas){
+				i = 0;
+			}else{
+				i++;
+			}
+			t_clock* sig = list_get(tabla_clock, i);
+			sig->p = 1;
 			break;
 		}
 		i++;
@@ -241,9 +243,13 @@ int swap(int pag_swap, bool nueva){
 			clock= list_get(tabla_clock, i);
 			if(clock->u == 0 && clock->m == 1){
 				marco = clock->marco;
-				i = i++ == cantidad_paginas? 0:i++;
-				clock = list_get(tabla_clock, i);
-				clock->p = 1;
+				if(i+1 == cantidad_paginas){
+					i = 0;
+				}else{
+					i++;
+				}
+				t_clock* sig = list_get(tabla_clock, i);
+				sig->p = 1;
 				break;
 			}
 			clock->u = 0;
@@ -260,9 +266,13 @@ int swap(int pag_swap, bool nueva){
 			clock = list_get(tabla_clock, i);
 			if(clock->u == 0 && clock->m == 0 ){
 				marco = clock->marco;
-				i = i++ == cantidad_paginas? 0:i++;
-				clock = list_get(tabla_clock, i);
-				clock->p = 1;
+				if(i+1 == cantidad_paginas){
+					i = 0;
+				}else{
+					i++;
+				}
+				t_clock* sig = list_get(tabla_clock, i);
+				sig->p = 1;
 				break;
 			}
 			i++;
@@ -279,9 +289,14 @@ int swap(int pag_swap, bool nueva){
 			clock= list_get(tabla_clock, i);
 			if(clock->u == 0 && clock->m == 1){
 				marco = clock->marco;
-				i = (i++ == cantidad_paginas)? 0:i++;
-				clock = list_get(tabla_clock, i);
-				clock->p = 1;
+				if(i+1 == cantidad_paginas){
+					i = 0;
+				}else{
+					i++;
+				}
+				t_clock* sig = list_get(tabla_clock, i);
+				sig->p = 1;
+
 				break;
 			}
 			clock->u = 0;
@@ -292,7 +307,7 @@ int swap(int pag_swap, bool nueva){
 		}
 	}
 
-	//En que marco de swap lo pongo? en el que viene por parametro
+	//En que marco de swap esta lo que busco? en el que viene por parametro
 		void* punteroAux = punteroSwap + (config_muse->tamanio_pagina * pag_swap);
 		void* salida;
 		//Lo que estaba en swap lo meti en un char auxiliar
@@ -304,7 +319,10 @@ int swap(int pag_swap, bool nueva){
 		}
 
 	}
-		//Lo que estaba en memoria lo pase a swap
+		//Lo que estaba en memoria lo pase a swap, que marco? lo busco
+		int marco_swap = buscar_marco_libre(bitmap_swap);
+		punteroAux= punteroSwap + (config_muse->tamanio_pagina * marco_swap);
+
 		void* punteroMem = punteroMemoria + (config_muse->tamanio_pagina * marco);
 		salida = memcpy(punteroAux, punteroMem ,config_muse->tamanio_pagina);
 		if(salida == punteroAux){
@@ -322,7 +340,33 @@ int swap(int pag_swap, bool nueva){
 			i++;
 			}
 	}
-	//Swap deberia poner uso en 1 pero el mod ponerlo del otro lado
+	//El ultimo clock es el de la pagina que se fue, asique vamos a buscarla para ponerle marco y ṕ
+	bool buscar_proceso(void* proceso){
+
+				return (((t_proceso*)proceso)->id == clock->id) &&
+						(strcmp(((t_proceso*)proceso)->ip , clock->ip)==0);
+				}
+	t_proceso* proceso = list_find(tabla_procesos, &buscar_proceso);
+
+	bool buscar_seg(void* seg){
+
+				return (((t_segmento*)seg)->segmento == clock->seg);
+				}
+	t_segmento* segmento = list_find(proceso->segmentos, &buscar_seg);
+	bool buscar_pag(void* pag){
+
+				return (((t_pagina*)pag)->numero == clock->pag);
+				}
+	t_pagina* pagina = list_find(segmento->paginas, &buscar_pag);
+
+	pagina->p 	  = 0;
+	pagina->marco = marco_swap;
+	free(clock->ip);
+	clock->id  = -1;
+	clock->m   =  0;
+	clock->pag = -1;
+	clock->seg = -1;
+	clock->u   =  0;
 
 	}
 
@@ -380,35 +424,66 @@ int copiarMuse(uint32_t posicionACopiar,int  bytes,char* src,t_list* tabla_segme
 	posicionACopiar -= 5;
 	t_segmento* segmento = buscar_segmento(posicionACopiar, tabla_segmentos);
 		if(segmento == NULL){
+			log_error(logMuse, "No existe el segmento \n");
 			return -1;
 		}
+	 if((posicionACopiar +5) + bytes > segmento->base + segmento->tamanio){
+		 log_error(logMuse, "Segmentation Fault \n");
+		 return -1;
+
+	 }
+
 
 	int      pag         	= posicionACopiar/config_muse->tamanio_pagina;
 	uint32_t desplazamiento = posicionACopiar%config_muse->tamanio_pagina;
 
-	t_pagina* pagina = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag);
+	t_pagina* pagina = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag, proceso);
 
-	t_header* head = punteroMemoria + ((config_muse->tamanio_pagina * pagina->marco) + desplazamiento );
-	if(head->isFree){
-		log_error(logMuse, "La posición en la que solicitan copiar esta libre \n" );
-		return -1;
+	if(segmento->dinamico){
+		t_header* head = punteroMemoria + ((config_muse->tamanio_pagina * pagina->marco) + desplazamiento );
+		if(head->isFree){
+			log_error(logMuse, "La posición en la que solicitan copiar esta libre \n" );
+			return -1;
+		}
+		if(head->size < bytes){//Si  que quieren copiar es mayor a lo que hay
+			log_error(logMuse, "No hay suficiente espacio en  %d \n", posicionACopiar);
+			return -1;
+		}
+		 desplazamiento += 5;
 	}
-	if(head->size < bytes){//Si  que quieren copiar es mayor a lo que hay
-		log_error(logMuse, "No hay suficiente espacio en  %d \n", posicionACopiar);
-		return -1;
-	}
-	char* dest = punteroMemoria + ((config_muse->tamanio_pagina * pagina->marco) + desplazamiento +5 );
+	char* dest = punteroMemoria + ((config_muse->tamanio_pagina * pagina->marco) + desplazamiento);
 
 	t_clock* clock = buscar_clock(pagina->marco);
-
 	clock->m = 1;
 
         size_t i;
 
-        for (i = 0; i < bytes && src[i] != '\0'; i++)
-            dest[i] = src[i];
-        for ( ; i < bytes; i++)
-            dest[i] = '\0';
+        for (i = 0; i < bytes && src[i] != '\0'; i++){
+            if(posicionACopiar < config_muse->tamanio_pagina ){
+          	  dest[i] = src[i];
+            }else{
+          	  pag++;
+          	  pagina = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag, proceso);
+          	  src = punteroMemoria + ((config_muse->tamanio_pagina * pagina->marco) + desplazamiento);
+          	  posicionACopiar = 0;
+          	  clock = buscar_clock(pagina->marco);
+          	  clock->m = 1;
+          	  dest[i] = src[i];
+            }
+        	 }
+        for ( ; i < bytes; i++){
+      	  if(posicionACopiar < config_muse->tamanio_pagina ){
+      		  dest[i] = '\0';
+      	  }else{
+          	  pag++;
+          	  pagina = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag, proceso);
+          	  src = punteroMemoria + ((config_muse->tamanio_pagina * pagina->marco) + desplazamiento);
+          	  posicionACopiar = 0;
+          	  clock = buscar_clock(pagina->marco);
+          	  clock->m = 1;
+          	  dest[i] = src[i];
+      	  }
+        }
 
         //Tengo que ponerle flag de modificada a la pagina.
         log_info(logMuse, "Se copio correctamente \n" );
@@ -416,40 +491,73 @@ int copiarMuse(uint32_t posicionACopiar,int  bytes,char* src,t_list* tabla_segme
 
 }
 
-char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos){
+char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos, t_proceso* proceso){
+
 
  posicion -=5;
 
  t_segmento* seg = buscar_segmento(posicion, tabla_segmentos);
  if(seg == NULL){
+	 log_error(logMuse, "No existe el segmento \n");
 	 return NULL;
+ }
+
+ if((posicion +5) + bytes > seg->base + seg->tamanio){
+	 log_error(logMuse, "Segmentation Fault \n");
+	 return "SG MICA";
+
  }
 
  int pagina = posicion/config_muse->tamanio_pagina;
  uint32_t desplazamiento = posicion%config_muse->tamanio_pagina;
 
- t_pagina* pag = buscar_segmento_pagina(tabla_segmentos, seg->segmento, pagina);
+ t_pagina* pag = buscar_segmento_pagina(tabla_segmentos, seg->segmento, pagina, proceso);
 
- t_header* head = punteroMemoria + ((config_muse->tamanio_pagina * pag->marco) + desplazamiento);
 
-  if(head->isFree){
-	  log_error(logMuse, "Lo que solicitan esta libre" );
-	  return NULL;
-  }
-  if(head->size < bytes){
-	  log_error(logMuse, "Lo que solicitan pisa otra asignacion");
-	  return NULL;
-  }
+
+ if(seg->dinamico){
+	 t_header* head = punteroMemoria + ((config_muse->tamanio_pagina * pag->marco) + desplazamiento);
+
+	  if(head->isFree){
+		  log_error(logMuse, "Lo que solicitan esta libre" );
+		  return NULL;
+	  }
+	  if(head->size < bytes){
+		  log_error(logMuse, "Lo que solicitan pisa otra asignacion");
+		  return NULL;
+	  }
+	  desplazamiento += 5;
+ }
 
   char* dest = malloc(bytes);
 
-  char* src = punteroMemoria + ((config_muse->tamanio_pagina * pag->marco) + desplazamiento + 5);
+  char* src = punteroMemoria + ((config_muse->tamanio_pagina * pag->marco) + desplazamiento);
   size_t i;
 
-          for (i = 0; i < bytes && src[i] != '\0'; i++)
-              dest[i] = src[i];
-          for ( ; i < bytes; i++)
-              dest[i] = '\0';
+  //Cuanto leo de esta pagina
+
+          for (i = 0; i < bytes && src[i] != '\0'; i++){
+              if(posicion < config_muse->tamanio_pagina ){
+            	  dest[i] = src[i];
+              }else{
+            	  pagina++;
+            	  pag = buscar_segmento_pagina(tabla_segmentos, seg->segmento, pagina, proceso);
+            	  src = punteroMemoria + ((config_muse->tamanio_pagina * pag->marco) + desplazamiento);
+            	  posicion = 0;
+            	  dest[i] = src[i];
+              }
+          	 }
+          for ( ; i < bytes; i++){
+        	  if(posicion < config_muse->tamanio_pagina ){
+        		  dest[i] = '\0';
+        	  }else{
+            	  pagina++;
+            	  pag = buscar_segmento_pagina(tabla_segmentos, seg->segmento, pagina, proceso);
+            	  src = punteroMemoria + ((config_muse->tamanio_pagina * pag->marco) + desplazamiento);
+            	  posicion = 0;
+            	  dest[i] = src[i];
+        	  }
+          }
 
 
      return dest;
@@ -462,7 +570,11 @@ void freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesL
 	//Primero libero lo que pidieron
 	t_segmento* segmento = buscar_segmento(posicionAliberar, tabla_segmentos);
 	if(segmento == NULL){
-		log_info(logMuse, "Posicion inexistente \n");
+		log_error(logMuse, "Posicion inexistente \n");
+		return;
+	}
+	if(!segmento->dinamico){
+		log_error(logMuse, "No se liberan los archivos mapeados mediante free. Use munmmap \n");
 		return;
 	}
 	uint32_t desplazamiento1,desplazamiento2 , posicion2;
@@ -474,7 +586,7 @@ void freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesL
 
 	pag1 = posicionAliberar/config_muse->tamanio_pagina;
 
-	pagina1         = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag1);
+	pagina1         = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag1, proceso);
     desplazamiento1 = posicionAliberar%config_muse->tamanio_pagina;
 	head1 		    = punteroMemoria + (config_muse->tamanio_pagina * pagina1->marco + desplazamiento1);
 	if(head1->isFree){
@@ -506,7 +618,7 @@ void freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesL
 			pag2      = posicion2/config_muse->tamanio_pagina;
 			//Si no era la ultima pagina hay otra y esa puede tener desperdicio
 			 if(desplazamiento1 + 5 + head1->size == config_muse->tamanio_pagina){
-				 pagina2 = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag2);
+				 pagina2 = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag2, proceso);
 				 for(int i= 0; i<5; i++){
 					 if(!hayHashtag(pagina2->marco, i)){
 							posicion2 += i;
@@ -519,7 +631,7 @@ void freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesL
 					if(pag2 == pag1){
 						marco2 = pagina1->marco;
 					} else {
-						pagina2 = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag2);
+						pagina2 = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag2, proceso);
 						marco2 = pagina2->marco;
 					}
 	desplazamiento2 = posicion2%config_muse->tamanio_pagina;
@@ -637,7 +749,7 @@ void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres, t_proceso* proce
 		while(fin){
 			pag1 = posicion1/config_muse->tamanio_pagina;
 
-			pagina1 = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag1);
+			pagina1 = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag1, proceso);
 				if(pagina1->esFinPag == 1 && pagina1->ultimo_header == (posicion1 +5) ){
 					fin = true;
 					continue;
@@ -657,7 +769,7 @@ void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres, t_proceso* proce
 						//Se desperdicio lo primero?
 						if(posicion2 == config_muse->tamanio_pagina){
 							pag2 = posicion2/config_muse->tamanio_pagina;
-							pagina2 = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag2);
+							pagina2 = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag2, proceso);
 							for(int i = 0; i<5;i++){
 								if(!hayHashtag(pagina2->marco, i)){
 									posicion2 += i;
@@ -673,7 +785,7 @@ void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres, t_proceso* proce
 					if(pag2 == pag1){
 						marco2 = pagina1->marco;
 					} else {
-						pagina2 = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag2);
+						pagina2 = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag2, proceso);
 						marco2 = pagina2->marco;
 					}
 
@@ -776,12 +888,12 @@ void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres, t_proceso* proce
 
 
 
-void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamAnterior, uint32_t tamanio,  t_list* tabla_segmentos, t_list* bloquesLibres, int fin){
+void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamAnterior, uint32_t tamanio,  t_list* tabla_segmentos, t_list* bloquesLibres, int fin, t_proceso* proceso){
 
 	posicion -= 5;
 
 	//Busco la pagina a actualizar y la traigo a memoria
-	t_pagina* pag = buscar_segmento_pagina(tabla_segmentos,segmento, pagina );
+	t_pagina* pag = buscar_segmento_pagina(tabla_segmentos,segmento, pagina , proceso);
 
 
 	//Actualizo el header que ya existia, empieza en posicion
@@ -811,7 +923,7 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 			//sumando al tamanio lo desperdiciado, todavia sobra tamAnterior? esta en la otra pag
 			if(tamAnterior >sobrantePag){
 				tamAnterior -= sobrantePag;
-				t_pagina* sigPagina = buscar_segmento_pagina(tabla_segmentos, segmento, pag->numero + 1);
+				t_pagina* sigPagina = buscar_segmento_pagina(tabla_segmentos, segmento, pag->numero + 1, proceso);
 
 				//Entra en el sobrante de esta pagina un header?
 				if(tamAnterior < 5){
@@ -861,7 +973,7 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 
 		tamanio -= (config_muse->tamanio_pagina * cociente);
 		cociente ++;
-		t_pagina* ultPagina = buscar_segmento_pagina(tabla_segmentos, segmento, cociente);
+		t_pagina* ultPagina = buscar_segmento_pagina(tabla_segmentos, segmento, cociente, proceso);
 
 			uint32_t sobrante     = config_muse->tamanio_pagina - tamanio;
 			uint32_t libreOtraPag = tamAnterior-reservado-sobrante;
@@ -872,7 +984,7 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 				//Me quedo tamanio libre del espacio original?
 
 				if(libreOtraPag > 0){
-					ultPagina = buscar_segmento_pagina(tabla_segmentos, segmento, cociente+1);
+					ultPagina = buscar_segmento_pagina(tabla_segmentos, segmento, cociente+1, proceso);
 
 						puntero = punteroMemoria + config_muse->tamanio_pagina*ultPagina->marco;
 				}
@@ -903,6 +1015,218 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 
 }
 
+//Voy a asumir que el len es siempre igual para todos los que comparten sino me vuelvo loca
+void crearPaginasmapeadas(int tam,size_t len,t_segmento* segmento,t_proceso* proceso, int flag, char* path){
+
+	t_segmento * seg;
+	char mode[] = "0777"; // Permisos totales
+	int permisos = strtol(mode, 0, 8); // Administración para los permisos
+
+	int fd_archivo = open(path, O_RDWR | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH);
+
+	chmod(path, permisos); // Aplico permisos al archivo
+
+//	int tamanio_archivo = tamanioArchivo(path);
+	//Busco el proceso fantasma
+
+	if(flag == SHARED){
+		t_proceso* proceso = list_get(tabla_procesos, 0);
+		 seg = malloc(sizeof(t_segmento));
+		t_segmento * anterior = list_get(proceso->segmentos, list_size(proceso->segmentos)-1);
+	if(anterior != NULL){
+		seg->base =  anterior->base * anterior->tamanio;
+		seg->segmento = anterior->segmento +1;
+	}else{
+		seg->base = 0;
+		seg->segmento = 0;
+	}
+		seg->empty   = false;
+		seg->shared  = true;
+		seg->tamanio = config_muse->tamanio_pagina * tam;
+		seg->paginas =list_create();
+	}
+
+	t_pagina* pagina;
+	for(int i=0; i<tam; i++){
+		pagina = malloc(sizeof(t_pagina));
+
+		pagina->numero = i;
+		pagina->p      = 0;
+		pagina->marco  = buscar_marco_libre(bitmap_swap);
+		if(pagina->marco == -1){
+			pagina->marco  = buscar_marco_libre(bitmap_marcos);
+			pagina->p = 1;
+		}
+		if(flag == SHARED){
+			list_add(seg->paginas , pagina); // Creo la lista de paginas en el segmento fantasma
+		}else{
+			list_add(segmento->paginas, pagina);
+		}
+		void* contenido = malloc(config_muse->tamanio_pagina);
+		size_t res =read(fd_archivo, contenido, config_muse->tamanio_pagina);
+		if(res != 0){
+			void* punteroAux = punteroSwap + (config_muse->tamanio_pagina * pagina->marco);
+			memmove(punteroAux, contenido, config_muse->tamanio_pagina);
+		}
+		else{
+			char* dest = punteroSwap + (config_muse->tamanio_pagina * pagina->marco);
+	        int i= 0;
+			while(i<config_muse->tamanio_pagina){
+	            dest[i] = '\0';
+	            i++;
+			}
+		}
+		free(contenido);
+
+	}
+	if(flag == SHARED){
+		 segmento->paginas = seg->paginas;
+		 t_archivo* archivo = malloc(sizeof(t_archivo));
+		 archivo->nombre = malloc(strlen(path)+1);
+		 memcpy(archivo->nombre, path, strlen(path));
+		 archivo->nombre[strlen(path)]= '\0';
+		 archivo->proceso = list_create();
+		 archivo->puntero_a_pag = seg->paginas;
+		 archivo->seg = seg->segmento;
+		 list_add(tabla_archivos, archivo);
+	}
+
+	close(fd_archivo);
+
+}
+
+uint32_t  crearSegmentoMapeado(int len,t_proceso* proceso, int flag, char* path){
+
+
+	int size = list_size(proceso->segmentos) -1;
+	int tam = calcular_paginas_malloc(len);
+	if(paginas_usadas + tam > config_muse->paginas_totales){
+		return 0;
+	}
+
+	t_segmento* segmento =  malloc(sizeof(t_segmento));
+	if(list_size(proceso->segmentos) > 0){
+		bool es_ultimo(void* seg){
+			return ((t_segmento*)seg)->ultimo;
+		}
+		t_segmento* seg_anterior = list_find(proceso->segmentos, &es_ultimo);
+		seg_anterior->ultimo = false;
+		segmento->base = seg_anterior->base + seg_anterior->tamanio;
+		t_segmento* seg_ultimo_agregado = list_get(proceso->segmentos, size);
+		segmento->segmento      = seg_ultimo_agregado->segmento;
+
+	}else{
+		segmento->base = 0;
+		segmento->segmento = 0;
+	}
+	segmento->dinamico = false;
+	segmento->empty    = false;
+	segmento->shared   = flag;
+	segmento->ultimo   = true;
+	segmento->tamanio  = config_muse->tamanio_pagina * tam;
+
+	if(flag == PRIVATE){
+		segmento->paginas = list_create();
+	 	crearPaginasmapeadas(tam, len, segmento, proceso, flag, path);
+	}
+	else{
+		segmento->path = malloc(strlen(path)+1);
+		memcpy(segmento->path, path, strlen(path));
+		segmento->path[strlen(path)]='\0';
+
+		bool buscar_archivo(void* arch){
+					return (strcmp(((t_archivo*)arch)->nombre,path) ==0) ;
+				}
+		t_archivo* archivo = list_find(tabla_archivos, &buscar_archivo);
+		if(archivo == NULL){
+		 crearPaginasmapeadas(tam, len, segmento, proceso, flag, path);
+		}else{
+			segmento->paginas = archivo->puntero_a_pag;
+		}
+
+		t_ip_id* nuevo = malloc(sizeof(t_ip_id));
+		nuevo->id = proceso->id;
+		nuevo->ip = malloc(strlen(proceso->ip)+1);
+		memcpy(nuevo->ip, proceso->ip, strlen(proceso->ip));
+		nuevo->ip[strlen(proceso->ip)]='\0';
+		list_add(archivo->proceso, nuevo);
+
+	}
+
+	return segmento->base + 5;
+
+}
+
+
+uint32_t  mappearMuse(char* path, size_t len,int flag,t_proceso* proceso){
+
+	//busco un segmento vacio en donde entre, sino creo uno
+	int seg = -1;
+		for(int i = 0; i<list_size(proceso->segmentos); i++){
+			t_segmento* segmentoVacio = list_get(proceso->segmentos, i);
+			if(segmentoVacio->empty && segmentoVacio->tamanio >= len){
+				seg = i;
+				break;
+			}
+
+		}
+
+		if(seg == -1){
+			log_info(logMuse, "Se crea un nuevo segmento mapeado\n");
+			uint32_t res = crearSegmentoMapeado(len, proceso, flag, path);
+			return res;
+		}else{
+				log_info(logMuse, "Ocupa el segmento vacio: %d \n", seg);
+				t_segmento* segmentoVacio = list_get(proceso->segmentos, seg);
+				int tam = calcular_paginas_malloc(len);
+
+				if(flag == PRIVATE){
+					segmentoVacio->paginas = list_create();
+				 	crearPaginasmapeadas(tam, len, segmentoVacio, proceso, flag, path);
+				}
+				else{
+					segmentoVacio->path = malloc(strlen(path)+1);
+					memcpy(segmentoVacio->path, path, strlen(path));
+					segmentoVacio->path[strlen(path)]='\0';
+
+					bool buscar_archivo(void* arch){
+								return (strcmp(((t_archivo*)arch)->nombre,path) ==0) ;
+							}
+					t_archivo* archivo = list_find(tabla_archivos, &buscar_archivo);
+					if(archivo == NULL){
+					 crearPaginasmapeadas(tam, len, segmentoVacio, proceso, flag, path);
+					}else{
+						segmentoVacio->paginas = archivo->puntero_a_pag;
+					}
+
+					t_ip_id* nuevo = malloc(sizeof(t_ip_id));
+					nuevo->id = proceso->id;
+					nuevo->ip = malloc(strlen(proceso->ip)+1);
+					memcpy(nuevo->ip, proceso->ip, strlen(proceso->ip));
+					nuevo->ip[strlen(proceso->ip)]='\0';
+					list_add(archivo->proceso, nuevo);
+
+				}
+
+					 uint32_t tam_anterior   = segmentoVacio->tamanio;
+					 segmentoVacio->empty    = false;
+					 segmentoVacio->dinamico = false;
+					 segmentoVacio->ultimo   = false;
+					 segmentoVacio->shared   = flag;
+					 segmentoVacio->tamanio  = config_muse->tamanio_pagina * tam;
+						 if(tam_anterior - segmentoVacio->tamanio > 0){
+						 t_segmento* nuevo = malloc(sizeof(t_segmento));
+						 nuevo_segmento(nuevo, segmentoVacio->base + segmentoVacio->tamanio, true, true,list_size(proceso->segmentos), true, tam_anterior - segmentoVacio->tamanio, false );
+						 list_add(proceso->segmentos, nuevo);
+						 }
+
+					return segmentoVacio->base +5;
+					}
+
+
+
+}
+
 
 int calcular_paginas_malloc(uint32_t tamanio){
 
@@ -924,8 +1248,6 @@ int calcular_paginas_malloc(uint32_t tamanio){
 }
 
 int buscar_marco_libre(char* bitmap){
-//	if(!string_contains("0", bitmap_marcos)){
-//		return -1;}
 	//reviso si hay un marco libre
 	int i;
 	for( i = 0; i<strlen(bitmap); i++){
@@ -1016,7 +1338,7 @@ retorno = segmento->base + (config_muse->tamanio_pagina*ultima_pagina->numero + 
 
 		if(pagina->marco != -1){ //Lo agrego al clock
 
-			agregar_pag_clock(proceso->id, proceso->ip, 0, 1, segmento->segmento, pagina->numero, pagina->marco);
+			agregar_pag_clock(proceso->id, proceso->ip, 0, 1, segmento, pagina->numero, pagina->marco);
 
 		}
 		if(pagina->marco == -1){
@@ -1026,7 +1348,7 @@ retorno = segmento->base + (config_muse->tamanio_pagina*ultima_pagina->numero + 
 		   	   if(i==cant_pag || i==1){
 		   		    pagina->marco = swap(pagina->marco, true);
 					pagina->p=1;
-					agregar_pag_clock(proceso->id, proceso->ip, 0, 1, segmento->segmento, pagina->numero, pagina->marco);
+					agregar_pag_clock(proceso->id, proceso->ip, 0, 1, segmento, pagina->numero, pagina->marco);
 		   			}
 
 				}
@@ -1092,9 +1414,14 @@ uint32_t crearSegmentoDinamico(uint32_t tamanio, t_list* tabla_segmentos, t_list
 	t_segmento* seg_nuevo = malloc(sizeof(t_segmento));
 
 	if(ind>0){
-		t_segmento* seg_anterior = list_get(tabla_segmentos, ind);
+		bool es_ultimo(void* seg){
+			return ((t_segmento*)seg)->ultimo;
+		}
+		t_segmento* seg_anterior = list_find(tabla_segmentos, &es_ultimo);
+		seg_anterior->ultimo     = false;
 		seg_nuevo->base          = seg_anterior->base + seg_anterior->tamanio;
-		seg_nuevo->segmento      = seg_anterior->segmento;
+		t_segmento* seg_ultimo_agregado = list_get(tabla_segmentos, ind);
+		seg_nuevo->segmento      = seg_ultimo_agregado->segmento +1;
 	}else{
 		seg_nuevo->base          = 0;
 		seg_nuevo->segmento      = 0;
@@ -1158,7 +1485,7 @@ uint32_t mallocMuse(uint32_t tamanio, t_proceso* proceso){
 				}
 
 			log_info(logMuse, "Habia hueco libre \n");
-			actualizar_header(valor_libre->segmento, valor_libre->pagina,valor_libre->posicion, valor_libre->tamanio, tamanio, tabla_segmentos, bloquesLibres, 0 );
+			actualizar_header(valor_libre->segmento, valor_libre->pagina,valor_libre->posicion, valor_libre->tamanio, tamanio, tabla_segmentos, bloquesLibres, 0 , proceso);
 
 			t_segmento* segmento  = list_find(tabla_segmentos, &(buscar_seg));
 			uint32_t retorno = segmento->base + (config_muse->tamanio_pagina * valor_libre->pagina + (valor_libre->posicion));
@@ -1187,12 +1514,12 @@ uint32_t mallocMuse(uint32_t tamanio, t_proceso* proceso){
 
 							log_info(logMuse, "Habia hueco libre \n");
 							uint32_t retorno = ult_segmento->base + (ult_pag->numero*config_muse->tamanio_pagina + (ult_pag->ultimo_header));
-						    actualizar_header(ult_segmento->segmento, ult_pag->numero,ult_pag->ultimo_header, ult_pag->tamanio_header, tamanio, tabla_segmentos, bloquesLibres, 1);
+						    actualizar_header(ult_segmento->segmento, ult_pag->numero,ult_pag->ultimo_header, ult_pag->tamanio_header, tamanio, tabla_segmentos, bloquesLibres, 1,   proceso);
 
 							return retorno;
 
 						} else{
-							log_info(logMuse, "Se extiende el segmento \n");
+							log_info(logMuse, "Se extiende el segmento %d \n", ult_segmento->segmento);
 							ult_pag->esFinPag = 0;
 
 							uint32_t extra ;
@@ -1272,7 +1599,7 @@ uint32_t mallocMuse(uint32_t tamanio, t_proceso* proceso){
 				}
 
 				if(seg == -1){
-				log_info(logMuse, "Se crea un nuevo segmento \n");
+				log_info(logMuse, "Se crea un nuevo segmento dinamico \n");
 				uint32_t res = crearSegmentoDinamico(tamanio, tabla_segmentos, bloquesLibres, proceso);
 				if(res == 0){
 					return 0;
@@ -1302,7 +1629,7 @@ uint32_t mallocMuse(uint32_t tamanio, t_proceso* proceso){
 			}
 	} else { // no existia ningun segmento --> creo uno nuevo
 		//antes fijarme si no tengo uno vacio, si no habia segmento poque habria uno vacio? ajajjajaajajaj
-						log_info(logMuse, "Se crea un nuevo segmento \n");
+						log_info(logMuse, "Se crea un nuevo segmento dinamico \n");
 						uint32_t res = crearSegmentoDinamico(tamanio, tabla_segmentos, bloquesLibres, proceso);
 						if(res == 0){
 							return 0;
@@ -1384,10 +1711,14 @@ void atenderConexiones(int parametros){
 			uint32_t posicion = recibirUint32_t(proceso->cliente);
 			size_t   bytes    = recibirSizet(proceso->cliente );
 			log_info(logMuse, "GET %d ", posicion);
-			char* frase = getMuse(posicion, bytes, proceso->segmentos);
+			char* frase = getMuse(posicion, bytes, proceso->segmentos, proceso);
 			if(frase == NULL){
 				log_error(logMuse, "No se pudo obtener el dato solicitado");
-			}else{
+			}else if(strcmp(frase,  "SG MICA")==0){
+				//La funcion que cierre todo
+				pthread_exit("CHAU");
+			}
+			else{
 				log_info(logMuse, "Dato solicitado %s \n", frase );
 			}
 
@@ -1408,6 +1739,14 @@ void atenderConexiones(int parametros){
 
 		}break;
 		case MAPEAR: {
+			int flag   = recibirInt(proceso->cliente);
+			size_t len = recibirSizet(proceso->cliente);
+			char* path = recibirTexto(proceso->cliente, logMuse);
+
+			uint32_t result = mappearMuse(path, len, flag, proceso);
+
+			enviarUint32_t(proceso->cliente, result);
+
 
 		}break;
 		case SINCRO:{
@@ -1617,19 +1956,25 @@ void inicializarMemoria(){
 		list_add(tabla_clock, clock);
 	}
 
-
-
-
+	t_proceso* proceso = malloc(sizeof(t_proceso));
+	proceso->bloquesLibres = NULL;
+	proceso->cliente       = -1;
+	proceso->id			   = -1;
+	proceso->ip            = "0.0.0";
+	proceso->segmentos     = list_create();
+	list_add(tabla_procesos, proceso);
 }
 
 
 void* inicializarSwap(){
+
 
 	paginas_swap = config_muse->tamanio_swap / config_muse->tamanio_pagina;
 	bitmap_swap  = string_repeat('0', paginas_swap);
 
 	remove("archivoSwap.txt");
 
+	if(config_muse->tamanio_swap>0){
 	char mode[] = "0777"; // Permisos totales
 	int permisos = strtol(mode, 0, 8); // Administración para los permisos
 
@@ -1648,8 +1993,9 @@ void* inicializarSwap(){
 		close(fd_archivo); // Cerramos el archivo pues ya lo tenemos mapeado en memoria, no es necesario mantenerlo abierto
 
 		return archivo_mapeado;
+	}
 
-
+	return NULL;
 
 }
 

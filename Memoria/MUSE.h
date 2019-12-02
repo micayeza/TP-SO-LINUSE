@@ -37,7 +37,7 @@
 #define rutaConfigMuse "/home/utnso/workspace/tp-2019-2c-capitulo-2/configs/muse.cfg"
 #define rutaSwap "swap.txt"
 #define ERROR -1
-
+#define CHAR (sizeof(char))
 typedef struct {
 	int puerto;
 	int tamanio_total;
@@ -67,6 +67,7 @@ typedef struct{
 	bool      ultimo;
 	bool      dinamico;//Si el segmneto esdinamico 0, si es map 1
 	bool      shared;  // Si map = 1, 1 es compartido, 0 privado, sino ignorar
+	char*     path;
 	t_list*   paginas;
 } t_segmento;
 
@@ -99,12 +100,22 @@ typedef struct{
 	int p; //--> p de puntero
 } t_clock;
 
+typedef struct {
+	char* ip;
+	int   id;
+}t_ip_id;
 
 typedef struct {
 	char* nombre;
-	int   flag;
-	void* puntero_a_pag;
-}t_archivos;
+	int   seg;//Segmento
+	t_list* proceso;
+	t_list* puntero_a_pag;
+}t_archivo;
+
+typedef enum{
+	SHARED,
+	PRIVATE
+}comparticion;
 
 typedef struct {
 	int segmento;
@@ -164,14 +175,14 @@ int calcular_paginas_malloc(uint32_t tamanio);
 int buscar_marco_libre(char* bitmap);
 
 int swap(int pag_swap, bool nueva);
-void agregar_pag_clock(int id, char* ip, int m ,int u, int seg, int pag, int marco);
+void agregar_pag_clock(int id, char* ip, int m ,int u, t_segmento* seg, int pag, int marco);
 t_clock* buscar_clock(int marco);
 void remover_clocky(int marco, t_proceso* proceso);
 void modificar_clock_bitmap(t_pagina* pagina, int segmento, t_proceso* proceso);
 
-void actualizar_header(int seg, int pag,uint32_t posicion, uint32_t tamAnterior, uint32_t tamanio, t_list* tabla_segmentos, t_list* bloquesLibres, int fin);
+void actualizar_header(int seg, int pag,uint32_t posicion, uint32_t tamAnterior, uint32_t tamanio, t_list* tabla_segmentos, t_list* bloquesLibres, int fin, t_proceso* proceso);
 void actualizar_bloque_libre(int pag, t_segmento* seg, uint32_t desplazamiento, uint32_t tamanio, t_list* bloquesLibres);
-t_pagina* buscar_segmento_pagina(t_list* segmentos , int seg, int pag);
+t_pagina* buscar_segmento_pagina(t_list* segmentos , int seg, int pag, t_proceso* proceso);
 void desperdicio(uint32_t sobrante, void* posicion, t_pagina* pag, uint32_t posHeader);
 bool hayHashtag(int marco, int i);
 void agregar_bloque_libre(t_list* bloquesLibres, int pagina,int segmento,uint32_t posicionEnPagina, uint32_t tamanioLibre);
@@ -185,7 +196,12 @@ void vaciarSegmento(t_segmento* segmento, t_list* bloquesLibres, t_list* tabla_s
 
 int copiarMuse(uint32_t posicionACopiar,int  bytes,char* copia,t_list* tabla_segmentos, t_proceso* proceso);
 
-char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos);
+char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos, t_proceso* proceso);
+
+uint32_t  mappearMuse(char* path, size_t len,int flag,t_proceso* proceso);
+int tamanioArchivo(char* rutaArchivo);
+void crearPaginasmapeadas(int tam,size_t len,t_segmento* segmentoVacio,t_proceso* proceso, int flag, char* path);
+uint32_t  crearSegmentoMapeado(int len,t_proceso* proceso, int flag, char* path);
 
 size_t highestOneBitPosition(uint32_t a);
 bool addition_is_safe(uint32_t a, uint32_t b) ;

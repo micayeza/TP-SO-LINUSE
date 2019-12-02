@@ -29,10 +29,6 @@ int muse_init(int id, char* ip, int puerto){
 				return -1;
 			}
 		else {
-	//		//Enviar a MUSE el id para que lo guarde en algun lado
-//			mensaje* mensaje = armarMensaje(HANDSHAKE,sizeof(int), &id);
-//			int result = enviarMensaje(cliente, mensaje);
-//			printf("result %d", result);
 
 			int res = enviarInt(muse, SALUDO);
 			if(res < 0){
@@ -80,7 +76,6 @@ int muse_cpy(uint32_t dst, void* src, int n){
 	enviarInt(muse, COPIAR);
 	enviarUint32_t(muse, dst);
 	enviarInt(muse, n );
-//	enviarString(muse, frase);
 	enviarTexto(muse, frase, logLib);
 
 	return recibirInt(muse);
@@ -108,6 +103,24 @@ int muse_get(void* dst, uint32_t src, size_t n){
 
 }
 
+
+uint32_t muse_map(char *path, size_t length, int flags){
+
+	enviarInt(muse , MAPEAR);
+	enviarInt(muse, flags);
+	enviarSizet(muse,  length);
+	int res = enviarTexto(muse, path, logLib);
+	if(res>0){
+		uint32_t resultado = recibirUint32_t(muse);
+		return resultado;
+	}
+	else {
+		return 0;
+	}
+
+
+
+}
 
 
 
