@@ -1,14 +1,44 @@
 #include "SUSE.h"
 
-void inicializacion(){
+int inicializacion(){
 	configPath = string_new();
 	string_append(&configPath, "../configs/SUSE.config");
 
 	log_interno = log_create("log_interno.txt", "LOG-INT", false, LOG_LEVEL_INFO);
+	config_suse = malloc(sizeof(t_configSUSE));
+	config_ruta = config_create(configPath);
 
-	PCBs = dictionary_create();
-	colaNew = queue_create();
-	pthread_mutex_init(&mutexColaNew, NULL);
+	if (config_ruta != NULL){
+
+		config_suse->puerto 	    = config_get_int_value(config_ruta, "LISTEN_PORT");
+		config_suse->metricas	 	= config_get_int_value(config_ruta, "METRICS_TIMER");
+		config_suse->multiprog		= config_get_int_value(config_ruta, "MAX_MULTIPROG");
+		config_suse->semId		 	= config_get_array_value(config_ruta, "SEM_IDS");
+		config_suse->semInit	 	= config_get_array_value(config_ruta, "SEM_INIT");
+		config_suse->semMax		 	= config_get_array_value(config_ruta, "SEM_MAX");
+		config_suse->alpha 			= config_get_double_value(config_ruta, "ALPHA_SJF");
+
+
+	}
+
+	if(config_suse == NULL){
+		log_error(log_interno, "ERROR No se pudo levantar el archivo de configuración de SUSE \n");
+		return -1;
+	}
+
+	config_destroy(config_ruta);
+
+
+	tabla_programas = list_create();
+	tabla_new       = list_create();
+	tabla_lock	    = list_create();
+	tabla_exit      = list_create();
+
+
+    return 0;
+//	PCBs = dictionary_create();
+//	colaNew = queue_create();
+//	pthread_mutex_init(&mutexColaNew, NULL);
 
 }
 
@@ -20,35 +50,35 @@ void finalizacion(){
 
 void aceptarClientes(){
 
-	t_configSUSE* config = getConfigSUSE(configPath);
-	int socket_escucha = crearSocketEscucha(config->listenPort, log_interno);
-
 	int cliente = 0;
 	while((cliente = aceptarCliente(socket_escucha, log_interno)) > 0){
+		int operacionRecibida = recibirInt(cliente);
+				if(operacionRecibida == INIT) {
 
-		TipoOperacion operacionRecibida = (TipoOperacion) recibirEntero(cliente, log_interno);
-		if(operacionRecibida == INIT) {
+					t_programa* programa = malloc(sizeof(t_programa));
+					programa->programa  = cliente;
+					programa->hijos     = list_create();
 
-			t_PCB* nuevoPCB = create_PCB(cliente);
+					list_add(tabla_new, programa);
 
-			dictionary_put(PCBs, cliente, nuevoPCB); //Utilizo el número de cliente como ID del PCB.
+					pthread_t hiloPrograma;
+					pthread_create(&hiloPrograma, NULL, (void*)&atenderPrograma, (void*) cliente);
 
-			pthread_t hiloPrograma;
-			pthread_create(&hiloPrograma, NULL, (void*)&atenderPrograma, (void*) nuevoPCB);
-			//No se hace el join porque sino esperaría hasta que termine este para aceptar a otro
-		} else {
-			log_info(log_interno, "Operación incorrecta - Se debe invocar a la función 'hilolay_init' primero");
+
+				}
 		}
 
-	}
 
 }
 
 
-
-int main(void) {
+int main() {
 	inicializacion();
-	aceptarClientes();
 
-	//finalizacion();
+	socket_escucha = crearSocketEscucha(config_suse->puerto, log_interno);
+
+	aceptarClientes(); //Planificador de largo plazo, fifo
+
+
+	finalizacion();
 }

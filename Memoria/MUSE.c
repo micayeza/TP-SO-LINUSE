@@ -384,7 +384,6 @@ int swap(int pag_swap, bool nueva){
 void vaciarSegmento(t_segmento* segmento, t_list* bloquesLibres, t_list* tabla_segmentos , t_proceso* proceso){
 
 		while(list_size(segmento->paginas)>0){
-//		for(int i = 0; i<list_size(segmento->paginas);i++){
 			paginas_usadas --;
 			t_pagina* pagina = list_remove(segmento->paginas, 0);
 			modificar_clock_bitmap(pagina, segmento->segmento, proceso);
@@ -431,11 +430,16 @@ void vaciarSegmento(t_segmento* segmento, t_list* bloquesLibres, t_list* tabla_s
 
 
 		} else{
+			//Si es el ultimo segmento tengo que poner el anterior como ultimo
 			bool buscar_por_segmento_seg(void* seg){
 
 						return (((t_segmento*)seg)->segmento == segmento->segmento);
 						}
 			t_segmento* seg = list_remove_by_condition(tabla_segmentos, &buscar_por_segmento_seg);
+			if(seg->base !=0){
+				t_segmento* anterior = buscar_segmento(seg->base - config_muse->tamanio_pagina, proceso->segmentos);
+				anterior->ultimo = true;
+			}
 			free(seg);
 
 
@@ -629,7 +633,7 @@ void freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesL
 			if(pagina1->esFinPag == 1 && pagina1->ultimo_header == (desplazamiento1+5)){
 				pagina1->tamanio_header = head1->size;
 				//si no es el ultimo segmento hay que actualizar el bloques libres
-				if(segmento->ultimo){
+				if(segmento->ultimo && posicionAliberar == segmento->base){
 					vaciarSegmento(segmento, bloquesLibres, tabla_segmentos, proceso);
 
 					log_info(logMuse, "Se libero el semgento %d \n", segmento);
@@ -756,14 +760,6 @@ void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres, t_proceso* proce
 	while(i<list_size(tabla_segmentos)){
 	segmento = list_get(tabla_segmentos, i);
 		if(!segmento->dinamico || segmento->empty){
-			if(segmento->empty){
-				t_segmento* anterior = list_get(tabla_segmentos, i--);
-				if(anterior->empty){
-					anterior->tamanio += segmento->tamanio;
-					segmento = list_remove(tabla_segmentos, i);
-					free(segmento);
-				}
-			}
 			continue;
 		}
 
@@ -902,6 +898,44 @@ void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres, t_proceso* proce
 		}
 
 	}
+
+	//Voy a unir segmentos vacios
+	int x = 0;
+
+	segmento = buscar_segmento(0, tabla_segmentos);
+	bool seg_seg(void* asd){
+						return ((t_segmento*)asd)->segmento == segmento->segmento;
+					}
+
+
+	while(x<list_size(tabla_segmentos)){
+
+		if(!segmento->empty){
+		  segmento = buscar_segmento(segmento->base + segmento->tamanio, tabla_segmentos);
+		  x++;
+		}
+		if(segmento->ultimo){
+			segmento = list_remove_by_condition(tabla_segmentos, &seg_seg);
+			free(segmento);
+		}
+		t_segmento* sig = buscar_segmento(segmento->base + segmento->tamanio, tabla_segmentos);
+		bool seg_sig(void* asd){
+							return ((t_segmento*)asd)->segmento == sig->segmento;
+						}
+		if(sig->empty){
+			segmento->tamanio += sig->tamanio;
+			sig = list_remove_by_condition(tabla_segmentos, &seg_sig);
+			free(sig);
+			x++;
+		}else{
+			segmento = buscar_segmento(sig->base + sig->tamanio, tabla_segmentos);
+			x++;
+		}
+
+
+	}
+
+
 }
 
 
@@ -1106,12 +1140,19 @@ int unmapMuse(uint32_t  fd,t_proceso* proceso){
 	    //Vaciar el segmento mappeado en  el proceso SIN eliminar la tabla de paginas
 
 	 	if(seg->ultimo){
+
+
 		 	bool numero_seg(void* segmento){
 				return   ((t_segmento*)segmento)->segmento == seg->segmento;
 			}
 	 		seg = list_remove_by_condition(proceso->segmentos, &numero_seg);
+	 		t_segmento* anterior = buscar_segmento(seg->base - config_muse->tamanio_pagina, proceso->segmentos);
+	 		anterior->ultimo = true;
+
 	 		if(seg->shared == SHARED) free(seg->path);
 	 		free(seg);
+
+
 	 	}else{
 	 		seg->dinamico = true;
 	 		seg->empty    = true;

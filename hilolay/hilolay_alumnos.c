@@ -56,11 +56,22 @@ static struct hilolay_operations hiloops = {
 };
 
 void hilolay_init(void){
+
+	char* configPath = string_new();
+	string_append(&configPath, "../configs/hilolay.cfg");
+	t_config* ruta = config_create(configPath);
+
+	char* ip 	 = config_get_string_value(ruta, "IP");
+	int   puerto = config_get_int_value(ruta, "PUERTO");
+
+
 	log_interno = log_create("log_interno.txt", "LOG-INT", false, LOG_LEVEL_INFO);
-	socketServidor = crearSocketCliente("127.0.0.1", 5003, log_interno); //Está hardcodeado - Habría que obtener IP y puerto del archivo de configuración?
+	socketServidor = crearSocketCliente(ip, puerto, log_interno); //Está hardcodeado - Habría que obtener IP y puerto del archivo de configuración?
 
 	//Enviar mensaje con un INIT. No recibo respuesta.
-	int resOperacion = enviarEntero(socketServidor, INIT,  log_interno);
+	enviarEntero(socketServidor, INIT,  log_interno);
 
 	init_internal(&hiloops);
+
+	config_destroy(ruta);
 }
