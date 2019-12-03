@@ -26,6 +26,7 @@
 #include <time.h>
 #include <commons/bitarray.h>
 #include <commons/collections/list.h>
+#include <math.h>
 //Librerias propias
 #include <conexion.h>
 
@@ -35,12 +36,6 @@
 #define TAM_BLOQUE 4096
 #define TAM_TABLA_NODOS 1024
 #define TAM_P_BLOQUE 4
-#define TAM_RELLENO_HEADER 4081
-
-//const unsigned long TamBloque = 4096;
-//const unsigned long CantidadBloques = 0;
-//const unsigned long CantidadMaxArchivos = 1024;
-//const unsigned long CaracteresMaximosNombre = 71;
 
 char* configPath;
 t_log* log_resultados;
@@ -67,9 +62,16 @@ typedef struct {
 } t_nodo;
 
 typedef struct {
+	long T;
 	char* identificador;
 	int version;
-	void* inicio_bitmap; //Almaceno una direccion
+	long bitmap_byte_inicio;
+	long bitmap_byte_tam;
+	long tabla_nodos_byte_inicio;
+	long tabla_nodos_byte_tam;
+	long bloque_datos_byte_inicio;
+	long bloque_datos_byte_tam;
+	int inicio_bitmap; //Almaceno una direccion
 	int tam_bitmap;
 } t_header;
 

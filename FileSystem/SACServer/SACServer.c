@@ -84,6 +84,7 @@ void free_cliente(t_cliente* cliente){
 }
 
 void abrirFS(){
+	long pos;
 	/*long pos = ftell(archivo);
 	fseek(archivo,3,SEEK_CUR);
 	pos = ftell(archivo);
@@ -93,6 +94,27 @@ void abrirFS(){
 	t_configSAC* config = getConfigSAC(configPath);
 	FILE* archivo = fopen(config->pathFs,"r");
 
+	//Tamanio Archivo
+	fseek(archivo, 0, SEEK_END); //Me paro al final del archivo
+	fs_header->T = ftell(archivo); //Veo en que byte estoy parado
+	fseek(archivo, 0, SEEK_SET); //Vuelvo el puntero al primer byte para seguir trabajando
+
+	/*
+	//ESTA INFO POR AHI NO SIRVA, POR LAS DUDAS LA DEJO CALCULADA
+	//bitmap_byte_inicio
+	fs_header->bitmap_byte_inicio = TAM_BLOQUE*1;
+	//bitmap_byte_tam
+	fs_header->bitmap_byte_tam = fs_header->T / TAM_BLOQUE; //2560 en ej de 10MB
+	//tabla_nodos_byte_inicio
+	int bloques_bm = ceil( (float)fs_header->bitmap_byte_tam / (float)TAM_BLOQUE); //Cantidad bloques que ocupa el Bitmap
+	fs_header->tabla_nodos_byte_inicio = fs_header->bitmap_byte_inicio + bloques_bm * TAM_BLOQUE;
+	//tabla_nodos_byte_tam
+	fs_header->tabla_nodos_byte_tam = TAM_TABLA_NODOS * TAM_BLOQUE;
+	//bloque_datos_byte_inicio
+	fs_header->bloque_datos_byte_inicio = fs_header->tabla_nodos_byte_inicio + fs_header->tabla_nodos_byte_tam;
+	//bloque_datos_byte_tam
+	fs_header->bloque_datos_byte_tam = ((fs_header->T / TAM_BLOQUE) - 1 - bloques_bm - TAM_TABLA_NODOS) * TAM_BLOQUE;
+	*/
 
 	//Identificador
 	int tam = 3;
@@ -104,7 +126,7 @@ void abrirFS(){
 	fread(&(fs_header->version),sizeof(int),1,archivo);
 
 	//Inicio bitmap
-	fread(&(fs_header->inicio_bitmap),sizeof(void*),1,archivo);
+	fread(&(fs_header->inicio_bitmap),sizeof(int),1,archivo);
 
 	//Tamanio bitmap
 	fread(&(fs_header->tam_bitmap),sizeof(int),1,archivo);
