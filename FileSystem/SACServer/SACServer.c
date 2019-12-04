@@ -86,18 +86,18 @@ void free_cliente(t_cliente* cliente){
 void abrirFS(){
 	long pos;
 	/*long pos = ftell(archivo);
-	fseek(archivo,3,SEEK_CUR);
+	fseek(archivo,3,SEEK_CUR); //Se mueve desde donde quedó.
 	pos = ftell(archivo);
 	char* letra = malloc(sizeof(char));
 	fread(letra,sizeof(char),1,archivo);*/
 
 	t_configSAC* config = getConfigSAC(configPath);
-	FILE* archivo = fopen(config->pathFs,"r");
+	archivo_fs = fopen(config->pathFs,"r");
 
 	//Tamanio Archivo
-	fseek(archivo, 0, SEEK_END); //Me paro al final del archivo
-	fs_header->T = ftell(archivo); //Veo en que byte estoy parado
-	fseek(archivo, 0, SEEK_SET); //Vuelvo el puntero al primer byte para seguir trabajando
+	fseek(archivo_fs, 0, SEEK_END); //Me paro al final del archivo
+	fs_header->T = ftell(archivo_fs); //Veo en que byte estoy parado
+	fseek(archivo_fs, 0, SEEK_SET); //Vuelvo el puntero al primer byte para seguir trabajando
 
 	/*
 	//ESTA INFO POR AHI NO SIRVA, POR LAS DUDAS LA DEJO CALCULADA
@@ -117,29 +117,74 @@ void abrirFS(){
 	*/
 
 	//Identificador
-	int tam = 3;
-	fs_header->identificador = malloc(tam+1);
-	fread(fs_header->identificador,sizeof(char),tam,archivo);
-	fs_header->identificador[tam] = '\0';
+	int tam = 4;
+	fs_header->identificador = malloc(tam);
+	fread(fs_header->identificador,sizeof(char),tam,archivo_fs);
 
 	//Version
-	fread(&(fs_header->version),sizeof(int),1,archivo);
+	fread(&(fs_header->version),sizeof(int),1,archivo_fs);
 
 	//Inicio bitmap
-	fread(&(fs_header->inicio_bitmap),sizeof(int),1,archivo);
+	fread(&(fs_header->inicio_bitmap),sizeof(int),1,archivo_fs);
 
 	//Tamanio bitmap
-	fread(&(fs_header->tam_bitmap),sizeof(int),1,archivo);
+	fread(&(fs_header->tam_bitmap),sizeof(int),1,archivo_fs);
 
-	fclose(archivo);
+	//inicio_tabla_nodos
+	fs_header->inicio_tabla_nodos = 1 + fs_header->tam_bitmap;
+
+	//Cant_bloques_datos
+	fs_header->tam_bloques_datos = (fs_header->T / TAM_BLOQUE) - 1 - TAM_TABLA_NODOS - fs_header->tam_bitmap;
+
+
 	freeConfig(config);
 }
+
+//Retorna uno de los nodos (metadata) de los 1024 archivos
+t_nodo* obtenerNodo(int numeroNodo){
+	t_nodo* nodo = malloc(sizeof(t_nodo));
+	fseek(archivo_fs, fs_header->tam_bitmap * TAM_BLOQUE, SEEK_SET);
+	fseek(archivo_fs, numeroNodo * TAM_BLOQUE, SEEK_CUR);
+	nodo->estado = malloc(1);
+	fread(nodo->estado,sizeof(char),1,archivo_fs);
+	nodo->nombre_archivo = malloc(71);
+	fread(nodo->nombre_archivo,sizeof(char),71,archivo_fs);
+	fread(&(nodo->bloque_padre),sizeof(int),1,archivo_fs);
+	fread(&(nodo->fecha_creacion),sizeof(struct timeval),1,archivo_fs);
+	fread(&(nodo->fecha_modificacion),sizeof(struct timeval),1,archivo_fs);
+	nodo->p_indirectos = malloc(sizeof(int)*1000);
+	fread(nodo->p_indirectos,sizeof(int)*1000,1,archivo_fs);
+
+	return nodo;
+}
+
+int obtenerBloqueDesocupado(){
+	long pos;
+	char* info = malloc(1);
+	info = "h"; //01101000
+	int val;
+	t_bitarray* bitarrayPrueba = bitarray_create_with_mode(info,8,MSB_FIRST);
+
+
+	int tamanio = fs_header->tam_bitmap * TAM_BLOQUE;
+	char* infoBitmap = malloc(tamanio);
+	pos = ftell(archivo_fs);
+	fseek(archivo_fs, TAM_BLOQUE, SEEK_SET);
+	pos = ftell(archivo_fs);
+	fread(infoBitmap,320,1,archivo_fs);
+	pos = ftell(archivo_fs);
+	t_bitarray* bitarray = bitarray_create_with_mode(infoBitmap,320,LSB_FIRST);
+
+}
+
 
 int main(){
 	inicializacion();
 	abrirFS();
+	t_nodo* nodo = obtenerNodo(3);
+	obtenerBloqueDesocupado();
 	aceptarClientes();
-	//crearHiloParalelos();
+	fclose(archivo_fs);
 };
 
 

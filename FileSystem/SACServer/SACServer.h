@@ -27,6 +27,7 @@
 #include <commons/bitarray.h>
 #include <commons/collections/list.h>
 #include <math.h>
+#include <sys/time.h>
 //Librerias propias
 #include <conexion.h>
 
@@ -37,9 +38,13 @@
 #define TAM_TABLA_NODOS 1024
 #define TAM_P_BLOQUE 4
 
+typedef enum e_estado {BORRADO, OCUPADO, DIRECTORIO} e_estado;
+
 char* configPath;
 t_log* log_resultados;
 t_log* log_interno;
+FILE* archivo_fs;
+
 
 typedef struct {
 	int listenPort; //Puerto TCP utilizado para recibir las conexiones de CPU y I/O.
@@ -52,27 +57,30 @@ typedef struct {
 } t_cliente;
 
 typedef struct {
-	char estado;
-	char nombre_archivo[TAM_MAX_NOMBRE_ARCHIVO];
-	char bloque_padre[TAM_P_BLOQUE];
-	char tam_archivo[4];
-	char fecha_creacion[8];
-	char fecha_modificacion[8];
-	t_list* p_indirectos;
+	int id_nodo;
+	char* estado;
+	char* nombre_archivo;
+	int bloque_padre;
+	int tam_archivo;
+	struct timeval* fecha_creacion;
+	struct timeval* fecha_modificacion;
+	int* p_indirectos;
 } t_nodo;
 
 typedef struct {
 	long T;
 	char* identificador;
 	int version;
-	long bitmap_byte_inicio;
+	int inicio_bitmap; //Almaceno el numero de bloque
+	int tam_bitmap;
+	int inicio_tabla_nodos; //Numero de bloque
+	int tam_bloques_datos;
+	/*long bitmap_byte_inicio;
 	long bitmap_byte_tam;
 	long tabla_nodos_byte_inicio;
 	long tabla_nodos_byte_tam;
 	long bloque_datos_byte_inicio;
-	long bloque_datos_byte_tam;
-	int inicio_bitmap; //Almaceno una direccion
-	int tam_bitmap;
+	long bloque_datos_byte_tam;*/
 } t_header;
 
 typedef struct {
