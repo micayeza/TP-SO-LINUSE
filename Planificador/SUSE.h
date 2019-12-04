@@ -39,7 +39,7 @@ typedef enum {
 	EXEC,
 	BLOCKED,
 	EXIT
-} estadoDeEjecucion;
+} estado;
 
 
 //typedef struct {
@@ -80,9 +80,10 @@ typedef struct {
 	int metricas; //Intervalo de tiempo en segundos entre cada loggeo de métricas.
 	int multiprog; //Grado máximo de Multiprogramación del Sistema.
 	char** semId; //Identificador alfanumérico de cada semáforo del sistema. Cada posición del array representa un semáforo.
-	char** semInit; //Valor inicial de cada semáforo definido en SEM_IDS, según su posición.
-	char** semMax; //Valor máximo de cada semáforo definido en SEM_IDS, según su posición.
+	int* semInit; //Valor inicial de cada semáforo definido en SEM_IDS, según su posición.
+	int* semMax; //Valor máximo de cada semáforo definido en SEM_IDS, según su posición.
 	double alpha; //Parámetro de peso relativo del algoritmo SJF
+	int    cantSem;
 } t_configSUSE;
 
 //t_configSUSE* getConfigSUSE(char* configPath);
@@ -102,10 +103,18 @@ typedef struct{
 }t_programa;
 
 typedef struct{
-	int  programa;
-	int	 hijos;
+	int    programa;
+	int	   id;
 	double estimado;
 }t_new;
+
+typedef struct{
+	int    programa;
+	int	   id;
+	double estimado;
+	int    tid;
+	char*  sem;
+}t_block;
 
 t_list* tabla_new;
 t_list* tabla_lock;
@@ -113,32 +122,48 @@ t_list* tabla_exit;
 t_list* tabla_programas;
 
 typedef struct{
-	int 	     hijo;
-	estadoDeEjecucion  estado;
-	double        real;
-	double        estimadoActual;
-	double		  estimadoAnterior;
-	double		 deNaR;
-	clock_t      initNew;
-	double		 dNaM;
-	double		 enReady;
-	clock_t		 initReady;
-	double		 enExec;
-	clock_t	     initExec;
-	double		 enLock;
-	clock_t		 initLock;
+	int 	id;
+	estado  estado;
+	double  real;
+	double  estimadoActual;
+	double	estimadoAnterior;
+	double	deNaR;
+	clock_t initNew;
+	double	dNaM;
+	double	enReady;
+	clock_t	initReady;
+	double	enExec;
+	clock_t	initExec;
+	double	enLock;
+	clock_t	initLock;
 }t_hilo;
+
+typedef struct{
+	char* name;
+	int   init;
+	int   max;
+//	int   asigandos;
+}t_semaforos;
+
+//array de valores de semaforos para las primitivas signal y wait de Ansisop
+int* sem_values;
+//array de colas de procesos bloqueados en semaforos
+t_queue** sem_blocked;
+
 
 //int mult;
 
 pthread_mutex_t sem_new;
-pthread_mutex_t sem_bloked;
+pthread_mutex_t sem_lock;
 pthread_mutex_t sem_exit;
+pthread_mutex_t multi;
+pthread_mutex_t wt;
+pthread_mutex_t sl;
 
 int socket_escucha;
 int cant_programas;
 
-void atenderPrograma(t_programa* cliente);
+void atenderPrograma(void* cliente);
 void join_hilo(int tid, t_new* hilo_exec);
 void planificadorLargo(t_list* tabla_ready, pthread_mutex_t sem_ready);
 t_hilo* buscar_prog_hilo(int programa, int hilo);
@@ -146,9 +171,14 @@ void create_hilo(int tid, t_programa* programa, pthread_mutex_t tabla_hijos);
 int next_hilo(t_list* tabla_ready, pthread_mutex_t sem_ready,t_new* hilo_exec,  pthread_mutex_t sem_exec);
 void recalcularEstimado(t_hilo* hilo);
 //FALTAN
-void close_hilo(int tid);
+void close_hilo(int tid, int programa, t_list* tabla_ready, t_new* hilo_exec);
 int wait_hilo(int tid,char* semName);
-void signal_hilo(int tid, char* semName);
+t_block* signal_hilo(int tid, char* semName, t_list* tabla_ready);
+void inicializarSemaforos();
+int posicionSemaforo(char* sem_id);
+void bloquearEnSemaforo(t_block* block, char* sem_id);
+t_block* getNextFromSemaforo(int sem_pos);
+void printefearMetricas();
 // ------------------------ FIN SECCIÓN MICA ------------------------
 
 #endif /* SUSE_H_ */
