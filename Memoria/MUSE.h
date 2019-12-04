@@ -29,6 +29,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <signal.h>
 
 
 
@@ -190,24 +191,24 @@ uint32_t sobrante_pagina(uint32_t base_segmento, int numero_pagina, uint32_t des
 
 void* convertir(uint32_t posicion,int marco);
 
-void freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesLibres,t_proceso* proceso);
+int freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesLibres,t_proceso* proceso, bool sg);
 void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres, t_proceso* proceso);
 void vaciarSegmento(t_segmento* segmento, t_list* bloquesLibres, t_list* tabla_segmentos, t_proceso* proceso );
 
-int copiarMuse(uint32_t posicionACopiar,int  bytes,char* copia,t_list* tabla_segmentos, t_proceso* proceso);
+int copiarMuse(uint32_t posicionACopiar,int  bytes,char* copia,t_list* tabla_segmentos, t_proceso* proceso, bool sg);
 
-char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos, t_proceso* proceso);
+char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos, t_proceso* proceso, bool sg);
 
 uint32_t  mappearMuse(char* path, size_t len,int flag,t_proceso* proceso);
 int tamanioArchivo(char* rutaArchivo);
 int crearPaginasmapeadas(int tam,size_t len,t_segmento* segmentoVacio,t_proceso* proceso, int flag, char* path);
 uint32_t  crearSegmentoMapeado(int len,t_proceso* proceso, int flag, char* path);
 
-int syncMuse(uint32_t fd,size_t len,t_proceso* proceso);
+int syncMuse(uint32_t fd,size_t len,t_proceso* proceso, bool sg);
 bool mapeoElArchivo(t_segmento* seg, t_proceso* proceso);
 
 void liberarTodo(t_proceso* proceso);
-int unmapMuse(uint32_t  fd,t_proceso* proceso);
+int unmapMuse(uint32_t  fd,t_proceso* proceso, bool sg);
 
 size_t highestOneBitPosition(uint32_t a);
 bool addition_is_safe(uint32_t a, uint32_t b) ;

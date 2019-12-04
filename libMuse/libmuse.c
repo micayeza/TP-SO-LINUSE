@@ -7,6 +7,7 @@
 
 #include "libmuse.h"
 
+
 int muse_init(int id, char* ip, int puerto){
 		logLib = log_create("LIB.txt", "LOG", true, LOG_LEVEL_INFO);
 		//int cliente;
@@ -64,12 +65,21 @@ void muse_free(uint32_t posicion){
 	if (res >0){
 		enviarUint32_t(muse, posicion);
 	}
+	res=recibirInt(muse);
+	if(res == -1){
+		res = recibirInt(muse);
+		if(res == 0){
+			printf("[SEGMENTATION FAULT] Abortando programa.... \n");
 
+			close(muse);
+		}
+	}
 
 }
 
 
 int muse_cpy(uint32_t dst, void* src, int n){
+
 	char* frase = malloc(n);
 	strncpy(frase, src, n);
 	frase[n]='\0';
@@ -78,8 +88,16 @@ int muse_cpy(uint32_t dst, void* src, int n){
 	enviarInt(muse, n );
 	enviarTexto(muse, frase, logLib);
 
-	return recibirInt(muse);
+	int res = recibirInt(muse);
+	if(res == -1){
+	int res2 = recibirInt(muse);
+			if(res2 == 0){
+				printf("[SEGMENTATION FAULT] Abortando programa.... \n");
 
+				close(muse);
+			}
+	}
+	return res;
 }
 
 int muse_get(void* dst, uint32_t src, size_t n){
@@ -93,8 +111,14 @@ int muse_get(void* dst, uint32_t src, size_t n){
 		return -1;
 	}else{
 	char* result = strcpy(dst, copiar);
-	printf("El dato obtenido fue: %s\n", dst);
+	printf("El dato obtenido fue: %s \n", dst);
 		if(result == NULL){
+			int res = recibirInt(muse);
+					if(res == 0){
+						printf("[SEGMENTATION FAULT] Abortando programa.... \n");
+
+						close(muse);
+					}
 			return -1;
 		}
 	return 0;
@@ -142,7 +166,16 @@ int muse_unmap(uint32_t dir){
 	enviarInt(muse, DESMAP);
 	enviarUint32_t(muse,  dir);
 
-	return recibirInt(muse);
+	int res =recibirInt(muse);
+	if(res == -1){
+	int res2 = recibirInt(muse);
+			if(res2 == 0){
+				printf("[SEGMENTATION FAULT] Abortando programa.... \n");
+
+				int clo = close(muse);
+			}
+	}
+	return res;
 }
 
 

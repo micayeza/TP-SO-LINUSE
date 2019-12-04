@@ -28,8 +28,9 @@
 	#include <stdio.h>
 	#include <libs.h>
 	#include <mensajes.h>
+    #include <conexion.h>
 	#include <commons/log.h>
-
+    #include <signal.h>
 
 int muse;
 t_log* logLib;
