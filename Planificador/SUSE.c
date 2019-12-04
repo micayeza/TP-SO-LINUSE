@@ -1,5 +1,17 @@
 #include "SUSE.h"
 
+void inicializarSemaforos(){
+	sem_values = malloc(sizeof(int)*config_suse->cantSem);
+	sem_blocked = malloc(sizeof(t_queue*)*config_suse->cantSem);
+	int i;
+	for(i=0; i<config_suse->cantSem; i++){
+		sem_values[i] = config_suse->semInit[i];
+		sem_blocked[i] = queue_create();
+	}
+}
+
+
+
 int inicializacion(){
 	configPath = string_new();
 	string_append(&configPath, "../configs/SUSE.config");
@@ -14,11 +26,24 @@ int inicializacion(){
 		config_suse->metricas	 	= config_get_int_value(config_ruta, "METRICS_TIMER");
 		config_suse->multiprog		= config_get_int_value(config_ruta, "MAX_MULTIPROG");
 		config_suse->semId		 	= config_get_array_value(config_ruta, "SEM_IDS");
-		config_suse->semInit	 	= config_get_array_value(config_ruta, "SEM_INIT");
-		config_suse->semMax		 	= config_get_array_value(config_ruta, "SEM_MAX");
+		char** semInitAux		 	= config_get_array_value(config_ruta, "SEM_INIT");
+		char** semMaxAux	     	= config_get_array_value(config_ruta, "SEM_MAX");
 		config_suse->alpha 			= config_get_double_value(config_ruta, "ALPHA_SJF");
 
-
+		int len=0;
+		while(config_suse->semId[len]!=NULL){
+			len++;
+		}
+		config_suse->cantSem = len;
+		config_suse->semInit = malloc(sizeof(int)*len);
+		for(int i=0; i<len; i++){
+			config_suse->semInit[i] = atoi(semInitAux[i]);
+			free(semInitAux[i]);
+			config_suse->semMax[i] = atoi(semMaxAux[i]);
+			free(semMaxAux[i]);
+		}
+		free(semInitAux);
+		free(semMaxAux);
 	}
 
 	if(config_suse == NULL){
@@ -33,6 +58,13 @@ int inicializacion(){
 	tabla_new       = list_create();
 	tabla_lock	    = list_create();
 	tabla_exit      = list_create();
+
+	pthread_mutex_init(&sem_new ,NULL);
+	pthread_mutex_init(&sem_lock ,NULL);
+	pthread_mutex_init(&sem_exit,NULL);
+	pthread_mutex_init(&multi ,NULL);
+	pthread_mutex_init(&wt ,NULL);
+	pthread_mutex_init(&sl ,NULL);
 
 
     return 0;
@@ -59,14 +91,24 @@ void aceptarClientes(){
 					programa->programa  = cliente;
 					programa->hijos     = list_create();
 
-					list_add(tabla_new, programa);
+					list_add(tabla_programas, programa);
 
 					pthread_t hiloPrograma;
-					pthread_create(&hiloPrograma, NULL, (void*)&atenderPrograma, (void*) cliente);
+					pthread_create(&hiloPrograma, NULL, (void*)&atenderPrograma, (void*)&programa);
 
 
 				}
 		}
+
+
+}
+void atenderMetricas(){
+
+	while(1){
+		usleep(config_suse->metricas);
+		printefearMetricas();
+
+	}
 
 
 }
@@ -75,7 +117,12 @@ void aceptarClientes(){
 int main() {
 	inicializacion();
 
+	inicializarSemaforos();
+
 	socket_escucha = crearSocketEscucha(config_suse->puerto, log_interno);
+
+	pthread_t hiloMetricas;
+	pthread_create(&hiloMetricas, NULL, (void*)&atenderMetricas, NULL);
 
 	aceptarClientes(); //Planificador de largo plazo, fifo
 
