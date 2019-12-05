@@ -74,6 +74,7 @@ typedef struct {
 	int inicio_bitmap; //Almaceno el numero de bloque
 	int tam_bitmap;
 	int inicio_tabla_nodos; //Numero de bloque
+	int inicio_bloques_datos;
 	int tam_bloques_datos;
 	/*long bitmap_byte_inicio;
 	long bitmap_byte_tam;
