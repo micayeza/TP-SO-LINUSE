@@ -92,7 +92,7 @@ void abrirFS(){
 	fread(letra,sizeof(char),1,archivo);*/
 
 	t_configSAC* config = getConfigSAC(configPath);
-	archivo_fs = fopen(config->pathFs,"r");
+	archivo_fs = fopen(config->pathFs,"r+");
 
 	//Tamanio Archivo
 	fseek(archivo_fs, 0, SEEK_END); //Me paro al final del archivo
@@ -130,10 +130,13 @@ void abrirFS(){
 	//Tamanio bitmap
 	fread(&(fs_header->tam_bitmap),sizeof(int),1,archivo_fs);
 
-	//inicio_tabla_nodos
+	//Inicio_tabla_nodos
 	fs_header->inicio_tabla_nodos = 1 + fs_header->tam_bitmap;
 
-	//Cant_bloques_datos
+	////Inicio_bloques_datos
+	fs_header->inicio_bloques_datos = 1 + fs_header->tam_bitmap + TAM_TABLA_NODOS;
+
+	//Tam_bloques_datos
 	fs_header->tam_bloques_datos = (fs_header->T / TAM_BLOQUE) - 1 - TAM_TABLA_NODOS - fs_header->tam_bitmap;
 
 
@@ -158,31 +161,44 @@ t_nodo* obtenerNodo(int numeroNodo){
 	return nodo;
 }
 
-int obtenerBloqueDesocupado(){
-	long pos;
-	char* info = malloc(1);
-	info = "h"; //01101000
-	int val;
-	t_bitarray* bitarrayPrueba = bitarray_create_with_mode(info,8,MSB_FIRST);
-
-
+t_bitarray* obtenerBitmap(){
 	int tamanio = fs_header->tam_bitmap * TAM_BLOQUE;
-	char* infoBitmap = malloc(tamanio);
-	pos = ftell(archivo_fs);
-	fseek(archivo_fs, TAM_BLOQUE, SEEK_SET);
-	pos = ftell(archivo_fs);
-	fread(infoBitmap,320,1,archivo_fs);
-	pos = ftell(archivo_fs);
-	t_bitarray* bitarray = bitarray_create_with_mode(infoBitmap,320,LSB_FIRST);
+	char* bytesArch = malloc(tamanio);
+	fseek(archivo_fs, TAM_BLOQUE, SEEK_SET); //Me desplazo hasta terminar el header
 
+	fread(bytesArch,tamanio,1,archivo_fs);
+	return bitarray_create_with_mode(bytesArch,TAM_BLOQUE,MSB_FIRST);
+	//Byte 127)  11111111
+	//Byte 128)  11000000 -->Hasta bloque 1025 ocupado. Bloque 1026 libre.
+}
+
+void persistirBitmap(t_bitarray* bitarray){
+	fseek(archivo_fs, TAM_BLOQUE, SEEK_SET);
+	fwrite(bitarray->bitarray,1,fs_header->tam_bitmap * TAM_BLOQUE,archivo_fs);
+}
+
+int ocuparBloqueLibreBitmap(t_bitarray* bitarray){
+	int id_primer_bloque_datos = fs_header->inicio_bloques_datos;
+	int id_ultimo_bloque = 1 + fs_header->tam_bitmap + TAM_TABLA_NODOS + fs_header->tam_bloques_datos - 1;
+	for(int i = id_primer_bloque_datos; i <= id_ultimo_bloque; i++){
+		if(bitarray_test_bit(bitarray,i) == 0){
+			bitarray_set_bit(bitarray, i);
+			return i;
+		}
+		i++;
+	}
+	return -1;
 }
 
 
 int main(){
 	inicializacion();
 	abrirFS();
-	t_nodo* nodo = obtenerNodo(3);
-	obtenerBloqueDesocupado();
+	//t_nodo* nodo = obtenerNodo(3);
+	t_bitarray* bitarray = obtenerBitmap();
+	ocuparBloqueLibreBitmap(bitarray);
+	persistirBitmap(bitarray);
+	fclose(archivo_fs);
 	aceptarClientes();
 	fclose(archivo_fs);
 };
