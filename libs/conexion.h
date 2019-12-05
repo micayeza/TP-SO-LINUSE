@@ -5,6 +5,8 @@
 #include <sys/socket.h>
 #include <arpa/inet.h> //INADDR_ANY e INET_ADDR
 #include <commons/log.h>
+#include <string.h>
+#include <stdlib.h>
 
 #define ERROR -1 // Las system-calls de sockets retornan -1 en caso de error
 

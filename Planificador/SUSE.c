@@ -36,6 +36,7 @@ int inicializacion(){
 		}
 		config_suse->cantSem = len;
 		config_suse->semInit = malloc(sizeof(int)*len);
+		config_suse->semMax  = malloc(sizeof(int)*len);
 		for(int i=0; i<len; i++){
 			config_suse->semInit[i] = atoi(semInitAux[i]);
 			free(semInitAux[i]);

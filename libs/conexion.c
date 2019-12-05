@@ -120,6 +120,7 @@ char* recibirTexto(int fdOrigen, t_log* logger){
 		log_error(logger, "Hubo un error al recibir Texto de %i", fdOrigen);
 		return NULL;
 	}
+	textoRecibido[tamanio-1] = '\0';
 	return textoRecibido;
 }
 

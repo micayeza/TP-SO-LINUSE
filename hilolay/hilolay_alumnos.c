@@ -58,7 +58,7 @@ static struct hilolay_operations hiloops = {
 void hilolay_init(void){
 
 	char* configPath = string_new();
-	string_append(&configPath, "../configs/hilolay.cfg");
+	string_append(&configPath, "../configs/SUSE.cfg");
 	t_config* ruta = config_create(configPath);
 
 	char* ip 	 = config_get_string_value(ruta, "IP");
