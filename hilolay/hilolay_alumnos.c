@@ -58,11 +58,11 @@ static struct hilolay_operations hiloops = {
 void hilolay_init(void){
 
 	char* configPath = string_new();
-	string_append(&configPath, "../configs/SUSE.cfg");
+	string_append(&configPath, "/home/utnso/workspace/tp-2019-2c-capitulo-2/configs/SUSE.config");
 	t_config* ruta = config_create(configPath);
 
 	char* ip 	 = config_get_string_value(ruta, "IP");
-	int   puerto = config_get_int_value(ruta, "PUERTO");
+	int   puerto = config_get_int_value(ruta, "LISTEN_PORT");
 
 
 	log_interno = log_create("log_interno.txt", "LOG-INT", false, LOG_LEVEL_INFO);
