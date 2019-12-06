@@ -64,7 +64,7 @@ typedef struct {
 	int tam_archivo;
 	struct timeval* fecha_creacion;
 	struct timeval* fecha_modificacion;
-	int* p_indirectos;
+	int p_indirectos[1000];
 } t_nodo;
 
 typedef struct {
