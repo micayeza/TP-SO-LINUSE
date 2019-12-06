@@ -80,13 +80,24 @@ void muse_free(uint32_t posicion){
 
 int muse_cpy(uint32_t dst, void* src, int n){
 
-	char* frase = malloc(n);
-	strncpy(frase, src, n);
-	frase[n]='\0';
+//	char* frase;
+//	if(n==4){
+//		int a = *(int*)src;
+//		frase = string_itoa(a);
+//	}else{
+//		frase =  malloc(n);
+//		memcpy(frase, src, n);
+//	}
+
+	void* frase = malloc(n);
+	memcpy(frase, src, n);
+
+
 	enviarInt(muse, COPIAR);
 	enviarUint32_t(muse, dst);
 	enviarInt(muse, n );
 	enviarTexto(muse, frase, logLib);
+//	enviarVoid(muse, frase, n);
 
 	int res = recibirInt(muse);
 	if(res == -1){
@@ -107,12 +118,14 @@ int muse_get(void* dst, uint32_t src, size_t n){
 	enviarSizet(muse, n);
 
 	char* copiar = recibirTexto(muse, logLib);
+//	void* copiar = recibirVoid(muse);
 	if(copiar == NULL){
 		return -1;
 	}else{
-	char* result = strcpy(dst, copiar);
+//	char* result = strcpy(dst, copiar);
+	memcpy(dst, copiar, n);
 	printf("El dato obtenido fue: %s \n", dst);
-		if(result == NULL){
+		if(copiar == NULL){
 			int res = recibirInt(muse);
 					if(res == 0){
 						printf("[SEGMENTATION FAULT] Abortando programa.... \n");
@@ -172,10 +185,14 @@ int muse_unmap(uint32_t dir){
 			if(res2 == 0){
 				printf("[SEGMENTATION FAULT] Abortando programa.... \n");
 
-				int clo = close(muse);
+				close(muse);
 			}
 	}
 	return res;
+}
+
+void muse_close(){
+	enviarInt(muse,  CERRAR);
 }
 
 

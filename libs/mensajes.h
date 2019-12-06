@@ -45,5 +45,8 @@ size_t recibirSizet(int destinatario);
 char* recibirString(int destinatario);
 int enviarString(int destinatario, char* loQueEnvio);
 
+char* recibirVoid(int destinatario);
+int enviarVoid(int destinatario, void* loQueEnvio, int tam);
+
 
 #endif /* MENSAJES_H_ */

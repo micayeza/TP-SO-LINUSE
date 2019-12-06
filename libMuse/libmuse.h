@@ -30,7 +30,8 @@
 	#include <mensajes.h>
     #include <conexion.h>
 	#include <commons/log.h>
-    #include <signal.h>
+#include <stdlib.h>
+
 
 int muse;
 t_log* logLib;

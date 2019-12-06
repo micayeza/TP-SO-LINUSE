@@ -196,6 +196,7 @@ void compactar(t_list*  tabla_segmentos, t_list* bloquesLibres, t_proceso* proce
 void vaciarSegmento(t_segmento* segmento, t_list* bloquesLibres, t_list* tabla_segmentos, t_proceso* proceso );
 
 int copiarMuse(uint32_t posicionACopiar,int  bytes,char* copia,t_list* tabla_segmentos, t_proceso* proceso, bool sg);
+//int copiarMuse(uint32_t posicionACopiar,int  bytes, void* copia,t_list* tabla_segmentos, t_proceso* proceso, bool sg);
 
 char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos, t_proceso* proceso, bool sg);
 

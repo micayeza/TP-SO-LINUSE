@@ -108,6 +108,39 @@ char* recibirString(int destinatario){
 
 }
 
+int enviarVoid(int destinatario, void* textoEnviar, int tam){
+
+
+	int res = enviarInt(destinatario, tam);
+	if(res != 0){
+	  res = send(destinatario, textoEnviar, tam, MSG_WAITALL);
+	if(res == -1){
+
+		return -1;
+	}
+	return res;
+	}
+	return 0;
+}
+
+
+
+char* recibirVoid(int fdOrigen){
+	int tamanio;
+
+	tamanio = recibirInt(fdOrigen);
+	if(tamanio == 0){
+		return NULL;
+	}
+	void* textoRecibido = malloc(tamanio);
+	int resTexto = recv(fdOrigen, textoRecibido, tamanio, MSG_WAITALL);
+	if(resTexto == -1){
+		return NULL;
+	}
+
+	return textoRecibido;
+}
+
 
 
 

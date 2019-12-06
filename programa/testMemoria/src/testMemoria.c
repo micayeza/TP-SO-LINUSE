@@ -86,61 +86,120 @@ char** descomponer_operacion(char* contenido){
 }
 
 
-int main(void) {
-	puts("!!!Hola Mica!!!\n"); /* prints !!!Hello World!!! */
-
-	int result = muse_init(1, "127.0.0.1", 5003);
-	printf("%d \n", result);
-
-
-	char* entrada;
-	while(1){
-
-	entrada = readline("Operación> ");
-	add_history(entrada);
-	entrada[strlen(entrada)] = '\0';
-
-	char** palabras = descomponer_operacion(entrada);
-
-
-	if( strcmp(palabras[0] ,"MALLOC")==0){
-		uint32_t tam = atoi(palabras[1]);
-		uint32_t resultado = muse_alloc(tam);
-		printf("%d \n", resultado);
-		//break;
-	}
-	if( strcmp(palabras[0] ,"VER")==0){
-        muse_enviar();
-        //break;
-	}
-	if( strcmp(palabras[0] ,"FREE")==0){
-		uint32_t pos = atoi(palabras[1]);
-		muse_free(pos);
-		//break;
-	}
-	if( strcmp(palabras[0] ,"COPY")==0){
-		uint32_t pos = atoi(palabras[1]);
-		int      n   = atoi(palabras[2]);
-
-		char* frase = palabras_a_copiar(entrada);
-
-		void* puntero;
-		puntero = frase;
-
-		int resultado =  muse_cpy(pos, puntero, n);
-		printf("%d \n", resultado);
-		//break;
-	}
-	if( strcmp(palabras[0] ,"GET")==0){
-		uint32_t pos = atoi(palabras[1]);
-		int      n   = atoi(palabras[2]);
-		char* frase = malloc(n);
-		void * puntero = frase;
-		int result = muse_get(puntero, pos, n);
-		//break;
-	}
-
-
-}
+//int main(void) {
+//	puts("!!!Hola Mica!!!\n"); /* prints !!!Hello World!!! */
+//
+//	int result = muse_init(1, "127.0.0.1", 5005);
+//	printf("%d \n", result);
+//
+//
+//	char* entrada;
+//	while(1){
+//
+//	entrada = readline("Operación> ");
+//	add_history(entrada);
+//	entrada[strlen(entrada)] = '\0';
+//
+//	char** palabras = descomponer_operacion(entrada);
+//
+//
+//	if( strcmp(palabras[0] ,"MALLOC")==0){
+//		uint32_t tam = atoi(palabras[1]);
+//		uint32_t resultado = muse_alloc(tam);
+//		printf("%d \n", resultado);
+//		//break;
+//	}
+//	if( strcmp(palabras[0] ,"VER")==0){
+//        muse_enviar();
+//        //break;
+//	}
+//	if( strcmp(palabras[0] ,"FREE")==0){
+//		uint32_t pos = atoi(palabras[1]);
+//		muse_free(pos);
+//		//break;
+//	}
+//	if( strcmp(palabras[0] ,"COPY")==0){
+//		uint32_t pos = atoi(palabras[1]);
+//		int      n   = atoi(palabras[2]);
+//
+//		char* frase = palabras_a_copiar(entrada);
+//
+//		void* puntero;
+//		puntero = frase;
+//
+//		int resultado =  muse_cpy(pos, puntero, n);
+//		printf("%d \n", resultado);
+//		//break;
+//	}
+//	if( strcmp(palabras[0] ,"GET")==0){
+//		uint32_t pos = atoi(palabras[1]);
+//		int      n   = atoi(palabras[2]);
+//		char* frase = malloc(n);
+//		void * puntero = frase;
+//		int result = muse_get(puntero, pos, n);
+//		//break;
+//	}
+//	if(strcmp(palabras[0], "MAP")==0){
+//		char* frase  = palabras[1];
+//		int flag     = atoi(palabras[2]);
+//		uint32_t len = atoi(palabras[3]);
+//
+//		len = muse_map(frase, len, flag);
+//		printf("%d \n", len);
+//	}
+//
+//	if(strcmp(palabras[0], "SYN")==0){
+//		uint32_t pos = atoi(palabras[1]);
+//		size_t   len = atoi(palabras[2]);
+//
+//		int res = muse_sync(pos, len);
+//		printf("%d \n", res);
+//	}
+//	if(strcmp(palabras[0], "UNMAP")==0){
+//
+//		uint32_t len = atoi(palabras[1]);
+//
+//		int res = muse_unmap(len);
+//		printf("%d \n", res);
+//	}
+//
+//
+//}
 	//return EXIT_SUCCESS;
+//}
+
+void recursiva(int num)
+{
+	if(num == 0)
+		return;
+
+	uint32_t ptr = muse_alloc(4);
+	muse_cpy(ptr, &num, 4);
+	printf("%d\n", num);
+
+	recursiva(num - 1);
+	num = 0; // Se pisa para probar que muse_get cargue el valor adecuado
+	muse_get(&num, ptr, 4);
+	printf("%d\n", num);
+	muse_free(ptr);
 }
+
+int main(void)
+{
+	muse_init(getpid(), "127.0.0.1", 3306);
+	recursiva(10);
+	muse_close();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -448,7 +448,7 @@ void vaciarSegmento(t_segmento* segmento, t_list* bloquesLibres, t_list* tabla_s
 }
 
 int copiarMuse(uint32_t posicionACopiar,int  bytes,char* src,t_list* tabla_segmentos, t_proceso* proceso, bool sg){
-
+//	int copiarMuse(uint32_t posicionACopiar,int  bytes,void* src,t_list* tabla_segmentos, t_proceso* proceso, bool sg){
 	posicionACopiar -= 5;
 	t_segmento* segmento = buscar_segmento(posicionACopiar, tabla_segmentos);
 		if(segmento == NULL){
@@ -491,7 +491,7 @@ int copiarMuse(uint32_t posicionACopiar,int  bytes,char* src,t_list* tabla_segme
         size_t i;
 
         for (i = 0; i < bytes && src[i] != '\0'; i++){
-            if(posicionACopiar < config_muse->tamanio_pagina ){
+            if(desplazamiento < config_muse->tamanio_pagina ){
           	  dest[i] = src[i];
             }else{
           	  pag++;
@@ -504,7 +504,7 @@ int copiarMuse(uint32_t posicionACopiar,int  bytes,char* src,t_list* tabla_segme
             }
         	 }
         for ( ; i < bytes; i++){
-      	  if(posicionACopiar < config_muse->tamanio_pagina ){
+      	  if(desplazamiento < config_muse->tamanio_pagina ){
       		  dest[i] = '\0';
       	  }else{
           	  pag++;
@@ -516,7 +516,24 @@ int copiarMuse(uint32_t posicionACopiar,int  bytes,char* src,t_list* tabla_segme
           	  dest[i] = src[i];
       	  }
         }
+//
+//	 int len = calcular_paginas_malloc(bytes) -1;
+//  void* dest = malloc(bytes);
+//
+//   src = punteroMemoria + ((config_muse->tamanio_pagina * pagina->marco) + desplazamiento);
+//  size_t i;
+//  	   	   	   	 int aux = config_muse->tamanio_pagina - desplazamiento;
+//  	   	   	   	 memcpy(dest, src, aux);
+//
+//  	   	   	   	 for (i = 0; i < len; i++){
+//              	  pag++;
+//              	  pagina = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag, proceso);
+//              	  src = punteroMemoria + (config_muse->tamanio_pagina * pagina->marco);
+//              	  memcpy(dest, src, config_muse->tamanio_pagina);
+//                }
 
+
+//    return dest;
         //Tengo que ponerle flag de modificada a la pagina.
         log_info(logMuse, "Se copio correctamente \n" );
         return 0;
@@ -574,27 +591,43 @@ char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos, t_proceso
   //Cuanto leo de esta pagina
 
           for (i = 0; i < bytes && src[i] != '\0'; i++){
-              if(posicion < config_muse->tamanio_pagina ){
+              if(desplazamiento < config_muse->tamanio_pagina ){
             	  dest[i] = src[i];
               }else{
             	  pagina++;
             	  pag = buscar_segmento_pagina(tabla_segmentos, seg->segmento, pagina, proceso);
             	  src = punteroMemoria + ((config_muse->tamanio_pagina * pag->marco) + desplazamiento);
-            	  posicion = 0;
+            	  desplazamiento = 0;
             	  dest[i] = src[i];
               }
           	 }
           for ( ; i < bytes; i++){
-        	  if(posicion < config_muse->tamanio_pagina ){
+        	  if(desplazamiento < config_muse->tamanio_pagina ){
         		  dest[i] = '\0';
         	  }else{
             	  pagina++;
             	  pag = buscar_segmento_pagina(tabla_segmentos, seg->segmento, pagina, proceso);
             	  src = punteroMemoria + ((config_muse->tamanio_pagina * pag->marco) + desplazamiento);
-            	  posicion = 0;
+            	  desplazamiento = 0;
             	  dest[i] = src[i];
         	  }
           }
+
+//**************************SI MALE SAL DESCOMENTAR TODO LO ANTERIOR
+// 	 int len = calcular_paginas_malloc(bytes) -1;
+//   void* dest = malloc(bytes);
+//
+//   void* src = punteroMemoria + ((config_muse->tamanio_pagina * pag->marco) + desplazamiento);
+//   size_t i;
+//   	   	   	   	 int aux = config_muse->tamanio_pagina - desplazamiento;
+//   	   	   	   	 memcpy(dest, src, aux);
+//
+//   	   	   	   	 for (i = 0; i < len; i++){
+//               	  pagina++;
+//               	  pag = buscar_segmento_pagina(tabla_segmentos, seg->segmento, pagina, proceso);
+//               	  src = punteroMemoria + (config_muse->tamanio_pagina * pag->marco);
+//               	  memcpy(dest, src, config_muse->tamanio_pagina);
+//                 }
 
 
      return dest;
@@ -651,7 +684,7 @@ int freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesLi
 				}else{
 				actualizar_bloque_libre(pag1, segmento, desplazamiento1 + 5, head1->size, bloquesLibres);
 				}
-				return -1;
+				return 0;
 			}
 
 			posicion2 = posicionAliberar + 5 + head1->size;
@@ -1286,8 +1319,9 @@ int syncMuse(uint32_t fd,size_t len,t_proceso* proceso, bool sg){
 
 //Voy a asumir que el len es siempre igual para todos los que comparten sino me vuelvo loca
 int crearPaginasmapeadas(int tam,size_t len,t_segmento* segmento,t_proceso* proceso, int flag, char* path){
-
+	t_archivo* archivo;
 	t_segmento * seg;
+	t_proceso* fantasma;
 	char mode[] = "0777"; // Permisos totales
 	int permisos = strtol(mode, 0, 8); // Administración para los permisos
 
@@ -1306,7 +1340,7 @@ int crearPaginasmapeadas(int tam,size_t len,t_segmento* segmento,t_proceso* proc
 	//Busco el proceso fantasma
 
 	if(flag == SHARED){
-		t_proceso* proceso = list_get(tabla_procesos, 0);
+		 fantasma = list_get(tabla_procesos, 0);
 		 seg = malloc(sizeof(t_segmento));
 		t_segmento * anterior = list_get(proceso->segmentos, list_size(proceso->segmentos)-1);
 	if(anterior != NULL){
@@ -1342,8 +1376,9 @@ int crearPaginasmapeadas(int tam,size_t len,t_segmento* segmento,t_proceso* proc
 		}else{
 			list_add(segmento->paginas, pagina);
 		}
-		void* contenido = malloc(config_muse->tamanio_pagina);
-		size_t res =read(fd_archivo, contenido, config_muse->tamanio_pagina);
+//		const char* contenido = malloc(config_muse->tamanio_pagina);
+		char* contenido = malloc(config_muse->tamanio_pagina);
+		int res = read(fd_archivo, contenido, config_muse->tamanio_pagina);
 		if(res != 0){
 
 			memmove(punteroAux, contenido, config_muse->tamanio_pagina);
@@ -1364,8 +1399,10 @@ int crearPaginasmapeadas(int tam,size_t len,t_segmento* segmento,t_proceso* proc
 
 	}
 	if(flag == SHARED){
+		list_add(fantasma->segmentos, seg);
+
 		 segmento->paginas = seg->paginas;
-		 t_archivo* archivo = malloc(sizeof(t_archivo));
+		 archivo = malloc(sizeof(t_archivo));
 		 archivo->nombre = malloc(strlen(path)+1);
 		 memcpy(archivo->nombre, path, strlen(path));
 		 archivo->nombre[strlen(path)]= '\0';
@@ -1429,12 +1466,15 @@ uint32_t  crearSegmentoMapeado(int len,t_proceso* proceso, int flag, char* path)
 					return (strcmp(((t_archivo*)arch)->nombre,path) ==0) ;
 				}
 		t_archivo* archivo = list_find(tabla_archivos, &buscar_archivo);
+
 		if(archivo == NULL){
 		res = crearPaginasmapeadas(tam, len, segmento, proceso, flag, path);
 		}else{
 			segmento->paginas = archivo->puntero_a_pag;
 		}
-		if(res >0){
+		archivo = list_find(tabla_archivos, &buscar_archivo);
+		if(res >=0 && archivo != NULL){
+
 			segmento->path = malloc(strlen(path)+1);
 			memcpy(segmento->path, path, strlen(path));
 			segmento->path[strlen(path)]='\0';
@@ -2063,8 +2103,10 @@ void atenderConexiones(int parametros){
 			size_t   bytes    = recibirSizet(proceso->cliente );
 			log_info(logMuse, "GET %d ", posicion);
 			char* frase = getMuse(posicion, bytes, proceso->segmentos, proceso, sg);
+//			void* frase = getMuse(posicion, bytes, proceso->segmentos, proceso, sg);
 
 			enviarTexto(proceso->cliente, frase, logMuse);
+//			enviarVoid(proceso->cliente, frase, bytes);
 			if(frase == NULL){
 				if(!sg){
 				log_error(logMuse, "No se pudo obtener el dato solicitado");
@@ -2087,8 +2129,9 @@ void atenderConexiones(int parametros){
 			uint32_t posicionACopiar = recibirUint32_t(proceso->cliente);
 			int      bytes = recibirInt(proceso->cliente);
 
-			char* copia = recibirTexto(proceso->cliente, logMuse);
-			log_info(logMuse, "COPY %s en %d %d \n", copia, posicionACopiar );
+//			char* copia = recibirTexto(proceso->cliente, logMuse);
+			void* copia = recibirVoid(proceso->cliente);
+			log_info(logMuse, "COPY %s en %d \n", copia, posicionACopiar );
 			int resultado = copiarMuse(posicionACopiar, bytes, copia,proceso->segmentos, proceso, sg);
 			free(copia);
 			enviarInt(proceso->cliente,  resultado);
