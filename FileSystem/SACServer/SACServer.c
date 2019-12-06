@@ -166,9 +166,9 @@ t_nodo* obtenerNodo(int numeroNodo){
 	nodo->nombre_archivo = malloc(71);
 	fread(nodo->nombre_archivo,sizeof(char),71,archivo_fs);
 	fread(&(nodo->bloque_padre),sizeof(int),1,archivo_fs);
+	fread(&(nodo->tam_archivo),sizeof(int),1,archivo_fs);
 	fread(&(nodo->fecha_creacion),sizeof(struct timeval),1,archivo_fs);
 	fread(&(nodo->fecha_modificacion),sizeof(struct timeval),1,archivo_fs);
-	//nodo->p_indirectos = malloc(sizeof(int)*1000);
 	fread(nodo->p_indirectos,sizeof(int)*1000,1,archivo_fs);
 	closeFS();
 
@@ -183,6 +183,7 @@ void persistirNodo(int numeroNodo, t_nodo* nodo){
 	fwrite(nodo->estado,1,1,archivo_fs);
 	fwrite(nodo->nombre_archivo,sizeof(char),71,archivo_fs);
 	fwrite(&(nodo->bloque_padre),sizeof(int),1,archivo_fs);
+	fwrite(&(nodo->tam_archivo),sizeof(int),1,archivo_fs);
 	fwrite(&(nodo->fecha_creacion),sizeof(struct timeval),1,archivo_fs);
 	fwrite(&(nodo->fecha_modificacion),sizeof(struct timeval),1,archivo_fs);
 	fwrite(nodo->p_indirectos,sizeof(int)*1000,1,archivo_fs);
@@ -269,9 +270,7 @@ t_nodo* crearNodoVacio(){
 int main(){
 	inicializacion();
 
-	int numeroNodoLibre = buscarNodoLibre();
 
-	t_nodo* nodoNuevo = obtenerNodo(0);
 	t_nodo* nodo = crearNodoVacio();
 	strcpy(nodo->nombre_archivo, "gente.txt");
 	nodo->bloque_padre = 4;
@@ -280,7 +279,9 @@ int main(){
 	nodo->p_indirectos[0] = 34;
 	nodo->p_indirectos[1] = 12;
 
-	persistirNodo(numeroNodoLibre, nodo);
+	//int numeroNodoLibre = buscarNodoLibre();
+	//persistirNodo(numeroNodoLibre, nodo);
+	t_nodo* nodoNuevo = obtenerNodo(0);
 
 
 	/*t_bitarray* bitarray = obtenerBitmap();
@@ -288,6 +289,6 @@ int main(){
 	persistirBitmap(bitarray);*/
 
 	//aceptarClientes();
-};
+}
 
 
