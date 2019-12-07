@@ -1,5 +1,134 @@
 #include "SUSE.h"
 
+int crearSocket(t_log* logger) {
+    int fileDescriptor = socket(AF_INET, SOCK_STREAM, 0);//usa protocolo TCP/IP
+    if (fileDescriptor == -1) {
+        log_error(logger, "No se pudo crear el file descriptor.");
+    }
+
+    return fileDescriptor;
+}
+
+void escucharSocketsEn(int fd_socket, t_log* logger){
+
+    int valorListen;
+    valorListen = listen(fd_socket, SOMAXCONN);/*Le podríamos poner al listen
+				SOMAXCONN como segundo parámetro, y significaría el máximo tamaño de la cola*/
+    if(valorListen == -1) {
+        log_error(logger, "El servidor no pudo recibir escuchar conexiones de clientes.");
+    } else	{
+        log_info(logger, "El servidor está escuchando conexiones a través del socket %i.", fd_socket);
+    }
+}
+
+
+
+int crearSocketServidor(int puerto, t_log* logger)	{
+    struct sockaddr_in miDireccionServidor;
+    int socketDeEscucha = crearSocket(logger);
+
+    miDireccionServidor.sin_family = AF_INET;			//Protocolo de conexion
+    miDireccionServidor.sin_addr.s_addr = INADDR_ANY;	//INADDR_ANY = 0 y significa que usa la IP actual de la maquina
+    miDireccionServidor.sin_port = htons(puerto);		//Puerto en el que escucha
+    memset(&(miDireccionServidor.sin_zero), '\0', 8);	//Pone 0 al campo de la estructura "miDireccionServidor"
+
+    //Veamos si el puerto está en uso
+    int puertoEnUso = 1;
+    int puertoYaAsociado = setsockopt(socketDeEscucha, SOL_SOCKET, SO_REUSEADDR, (char*) &puertoEnUso, sizeof(puertoEnUso));
+
+    if (puertoYaAsociado == -1) {
+        log_error(logger, "El puerto asignado ya está siendo utilizado.");
+    }
+    //Turno del bind
+    int activado = 1;
+    //Para evitar que falle el bind, al querer usar un mismo puerto
+    setsockopt(socketDeEscucha,SOL_SOCKET,SO_REUSEADDR,&activado,sizeof(activado));
+
+    int valorBind = bind(socketDeEscucha,(void*) &miDireccionServidor, sizeof(miDireccionServidor));
+
+    if ( valorBind !=0) {
+        log_error(logger, "El bind no funcionó, el socket no se pudo asociar al puerto");
+        return 1;
+    }
+
+    log_info(logger, "Servidor levantado en el puerto %i", puerto);
+
+    return socketDeEscucha;
+}
+
+int crearSocketEscucha (int puerto, t_log* logger) {
+
+    int socketDeEscucha = crearSocketServidor(puerto, logger);
+
+    //Escuchar conexiones
+    escucharSocketsEn(socketDeEscucha, logger);
+
+    return socketDeEscucha;
+}
+
+int aceptarCliente(int fd_servidor, t_log* logger){
+
+	struct sockaddr_in unCliente;
+	memset(&unCliente, 0, sizeof(unCliente));
+	unsigned int addres_size = sizeof(unCliente);
+
+	int fd_cliente = accept(fd_servidor, (struct sockaddr*) &unCliente, &addres_size);
+	if(fd_cliente == -1)  {
+		log_error(logger, "El servidor no pudo aceptar la conexión entrante.\n");
+		puts("El servidor no pudo aceptar la conexión entrante.\n");
+	} else	{
+		log_error(logger, "Servidor conectado con cliente %i.\n", fd_cliente);
+	}
+
+	return fd_cliente;
+
+}
+
+
+int enviarInt(int destinatario, int loQueEnvio){
+
+	 void* paquete = malloc(sizeof(int));
+	 void* puntero = paquete;
+	 memcpy(puntero, &(loQueEnvio), sizeof(int));
+	 int res = send(destinatario, paquete, sizeof(int), MSG_WAITALL);
+	 free(paquete);
+	 return res;
+}
+
+char* recibirTexto(int fdOrigen, t_log* logger){
+	int tamanio;
+	int resTamanio = recv(fdOrigen, &tamanio, sizeof(int), MSG_WAITALL);
+	if(resTamanio == -1){
+		log_error(logger, "Hubo un error al recibir Tamanio de Texto de %i", fdOrigen);
+		return NULL;
+	}
+	if(tamanio == 0){
+		return NULL;
+	}
+	char* textoRecibido = malloc(tamanio);
+	int resTexto = recv(fdOrigen, textoRecibido, tamanio, MSG_WAITALL);
+	if(resTexto == -1){
+		log_error(logger, "Hubo un error al recibir Texto de %i", fdOrigen);
+		return NULL;
+	}
+	textoRecibido[tamanio-1] = '\0';
+	return textoRecibido;
+}
+
+
+int recibirInt(int destinatario){
+	int algo;
+	if(recv(destinatario, &algo, sizeof(int), MSG_WAITALL) != 0)
+			return algo;
+		else
+		{
+			//close(destinatario);
+			return -1;
+		}
+
+}
+
+
 void inicializarSemaforos(){
 	sem_values  = malloc(sizeof(int)*config_suse->cantSem);
 	sem_blocked = malloc(sizeof(t_queue*)*config_suse->cantSem);
@@ -14,7 +143,7 @@ void inicializarSemaforos(){
 
 int inicializacion(){
 	configPath = string_new();
-	string_append(&configPath, "../../configs/SUSE.config");
+	string_append(&configPath, "../configs/SUSE.config");
 
 	log_interno = log_create("log_interno.txt", "LOG-INT", true, LOG_LEVEL_INFO);
 	config_suse = malloc(sizeof(t_configSUSE));

@@ -16,7 +16,7 @@ void atenderPrograma(void* par){
 		switch(operacionRecibida){
 			case CREATE_HILO:{
 
-				int tid = recibirEntero(parametros->programa, log_interno);
+				int tid = recibirInt(parametros->programa);
 				log_info(log_interno, "[CREATE] %d \n",tid);
 				create_hilo(tid, parametros); //Hacer los pasos para un Create Hilo.
 				planificadorLargo(tabla_ready);
@@ -27,21 +27,21 @@ void atenderPrograma(void* par){
 				log_info(log_interno, "[SCHEDULE NEXT] \n");
 				if(hilo_exec == NULL)hilo_exec = next_hilo(tabla_ready); //Hacer los pasos para un Schedule Next.
 				if(hilo_exec == NULL){
-					enviarEntero(parametros->programa, parametros->id,  log_interno);
+					enviarInt(parametros->programa, parametros->id);
 				}else{
-				enviarEntero(parametros->programa, hilo_exec->id,  log_interno);
+				enviarInt(parametros->programa, hilo_exec->id);
 				}
 				break;
 			}
 			case JOIN:{
-				int tid = recibirEntero(parametros->programa, log_interno);
+				int tid = recibirInt(parametros->programa);
 				log_info(log_interno, "[JOIN] %d \n",tid);
 				join_hilo(tid, parametros->programa, joins);//Hacer los pasos para un Join.
 				if(list_size(joins)>0)parametros->estado = BLOQUEADO;
 				break;
 			}
 			case CLOSE:{
-				int tid = recibirEntero(parametros->programa, log_interno);
+				int tid = recibirInt(parametros->programa);
 				log_info(log_interno, "[CLOSE] %d \n",tid);
 				hilo_exec = close_hilo(tid, parametros, tabla_ready, hilo_exec, joins);//Hacer los pasos para un Close.
 				printefearMetricas();
@@ -63,7 +63,7 @@ void atenderPrograma(void* par){
 				break;
 			}
 			case WAIT:{
-				int tid = recibirEntero(parametros->programa, log_interno);
+				int tid = recibirInt(parametros->programa);
 
 				char* semName = recibirTexto(parametros->programa, log_interno);
 				log_info(log_interno, "[WAIT] %s \n",semName);
@@ -97,13 +97,13 @@ void atenderPrograma(void* par){
 					 }
 
 				 }
-				enviarEntero(parametros->programa, resultadoWait,  log_interno);
+				enviarInt(parametros->programa, resultadoWait);
 				free(semName);
 				pthread_mutex_unlock(&wt);
 
 			}break;
 			case SIGNAL:{
-				int tid = recibirEntero(parametros->programa, log_interno);
+				int tid = recibirInt(parametros->programa);
 
 				pthread_mutex_lock(&sem_lock);//Habria que chequear
 				pthread_mutex_lock(&sl);
