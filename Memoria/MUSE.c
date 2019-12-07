@@ -667,6 +667,7 @@ char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos, t_proceso
  }
 
   char* dest = malloc(bytes);
+  int aux = bytes;
 
   char* src = punteroMemoria + ((config_muse->tamanio_pagina * pag->marco) + desplazamiento);
 //  size_t i;
@@ -680,23 +681,25 @@ char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos, t_proceso
   else{
 	  memcpy(dest, src,config_muse->tamanio_pagina- desplazamiento );
 	  bytes -= config_muse->tamanio_pagina- desplazamiento;
-	  dest += config_muse->tamanio_pagina- desplazamiento;
+//	  dest += config_muse->tamanio_pagina- desplazamiento;
+	  leidos = config_muse->tamanio_pagina- desplazamiento;
 
 	  while(bytes>=config_muse->tamanio_pagina){
 		  pagina ++;
 		  pag = buscar_segmento_pagina(tabla_segmentos, seg->segmento, pagina, proceso);
 		  src = punteroMemoria + ((config_muse->tamanio_pagina * pag->marco));
 
-		  memcpy(dest, src, config_muse->tamanio_pagina);
+		  memcpy(dest+leidos, src, config_muse->tamanio_pagina);
 		  bytes -= config_muse->tamanio_pagina;
-		  dest += config_muse->tamanio_pagina;
+//		  dest += config_muse->tamanio_pagina;
+		  leidos += config_muse->tamanio_pagina;
 	  }
 	  if(bytes >0){
 		  pagina ++;
 		  pag = buscar_segmento_pagina(tabla_segmentos, seg->segmento, pagina, proceso);
 		  src = punteroMemoria + ((config_muse->tamanio_pagina * pag->marco));
 
-		  memcpy(dest, src, bytes);
+		  memcpy(dest+leidos, src, bytes);
 	  }
   }
 
@@ -2351,13 +2354,13 @@ void atenderConexiones(int parametros){
 
 			uint32_t result = mappearMuse(path, len, flag, proceso);
 
-			if(result ==  0){
-				log_error(logMuse,"Comienza compactacion por falta de espacio: \n");
-				compactar(proceso->segmentos, proceso->bloquesLibres, proceso);
-				result = mappearMuse(path, len, flag, proceso);
+//			if(result ==  0){
+//				log_error(logMuse,"Comienza compactacion por falta de espacio: \n");
+//				compactar(proceso->segmentos, proceso->bloquesLibres, proceso);
+//				result = mappearMuse(path, len, flag, proceso);
 				if(result == 0) log_error(logMuse, "Memoria llena por favor finalice algun proceso \n");
 
-			}
+//			}
 			enviarUint32_t(proceso->cliente, result);
 
 
