@@ -23,14 +23,11 @@
 #include <netdb.h>
 #include <errno.h>
 #include <time.h>
-//#include <libs.h>
-//#include <mensajes.h>
-//#include <conexion.h>
-#include <math.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <signal.h>
+
 
 
 

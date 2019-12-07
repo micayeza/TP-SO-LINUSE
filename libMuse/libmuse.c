@@ -6,7 +6,7 @@
  */
 
 #include "libmuse.h"
-
+#include <unistd.h>
 
 int muse_init(int id, char* ip, int puerto){
 		logLib = log_create("LIB.txt", "LOG", true, LOG_LEVEL_INFO);
@@ -96,7 +96,7 @@ int muse_cpy(uint32_t dst, void* src, int n){
 	enviarInt(muse, COPIAR);
 	enviarUint32_t(muse, dst);
 	enviarInt(muse, n );
-	enviarTexto(muse, frase, logLib);
+	enviarTexto(muse, frase);
 //	enviarVoid(muse, frase, n);
 
 	int res = recibirInt(muse);
@@ -117,14 +117,14 @@ int muse_get(void* dst, uint32_t src, size_t n){
 	enviarUint32_t(muse, src );
 	enviarSizet(muse, n);
 
-	char* copiar = recibirTexto(muse, logLib);
+	char* copiar = recibirTexto(muse);
 //	void* copiar = recibirVoid(muse);
 	if(copiar == NULL){
 		return -1;
 	}else{
 //	char* result = strcpy(dst, copiar);
 	memcpy(dst, copiar, n);
-	printf("El dato obtenido fue: %s \n", dst);
+	printf("El dato obtenido fue: %s \n", (char*)dst);
 		if(copiar == NULL){
 			int res = recibirInt(muse);
 					if(res == 0){
@@ -149,7 +149,7 @@ uint32_t muse_map(char *path, size_t length, int flags){
 	enviarInt(muse , MAPEAR);
 	enviarInt(muse, flags);
 	enviarSizet(muse,  length);
-	int res = enviarTexto(muse, path, logLib);
+	int res = enviarTexto(muse, path);
 	if(res>0){
 		uint32_t resultado = recibirUint32_t(muse);
 		return resultado;

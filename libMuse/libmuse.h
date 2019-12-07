@@ -26,12 +26,40 @@
 	#include <arpa/inet.h>
 	#include <string.h>
 	#include <stdio.h>
-	#include <libs.h>
-	#include <mensajes.h>
-    #include <conexion.h>
 	#include <commons/log.h>
-#include <stdlib.h>
+    #include <stdlib.h>
 
+typedef enum {
+	NADA,
+	SALUDO,
+	CERRAR,
+	RESERVAR,
+	LIBERAR,
+	OBTENER,
+	COPIAR,
+	MAPEAR,
+	SINCRO,
+	DESMAP,
+	VER
+} museOperacion;
+
+
+int enviarInt(int destinatario, int loQueEnvio);
+int recibirInt(int destinatario);
+
+int enviarUint32_t(int destinatario, uint32_t loQueEnvio);
+uint32_t recibirUint32_t(int destinatario);
+
+int enviarSizet(int destinatario, size_t n);
+size_t recibirSizet(int destinatario);
+
+int enviarTexto(int fdDestinatario, char* textoEnviar);
+char* recibirTexto(int fdOrigen);
+int pesoString(char *string);
+
+
+char* recibirVoid(int destinatario);
+int enviarVoid(int destinatario, void* loQueEnvio, int tam);
 
 int muse;
 t_log* logLib;
