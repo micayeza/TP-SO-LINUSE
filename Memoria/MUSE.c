@@ -1469,6 +1469,7 @@ int crearPaginasmapeadas(int tam,size_t len,t_segmento* segmento,t_proceso* proc
 	char mode[] = "0777"; // Permisos totales
 	int permisos = strtol(mode, 0, 8); // Administración para los permisos
 
+	string_append(&path, ".txt" );
 	int fd_archivo = open(path, O_RDWR | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH);
 
 	if(fd_archivo == -1){

@@ -98,6 +98,7 @@ void atenderPrograma(void* par){
 
 				 }
 				enviarEntero(parametros->programa, resultadoWait,  log_interno);
+				free(semName);
 				pthread_mutex_unlock(&wt);
 
 			}break;
@@ -119,6 +120,7 @@ void atenderPrograma(void* par){
 
 				free(block->sem);
 				free(block);
+				free(semName);
 				}
 				pthread_mutex_unlock(&sl);
 				pthread_mutex_unlock(&sem_lock);
@@ -406,9 +408,14 @@ void bloquearEnSemaforo(t_block* block, char* sem_id){
 
 
 int posicionSemaforo(char* sem_id){
+
 	int i=0;
 	while(i<config_suse->cantSem && !string_equals_ignore_case(config_suse->semId[i],sem_id)){
 		i++;
+	}
+	if(i==config_suse->cantSem){
+		log_error(log_interno, "No se encontro el semaforo, revise el nombre en el SUSE.config \n");
+		i=-1;
 	}
 	return i;
 }
@@ -417,7 +424,7 @@ int posicionSemaforo(char* sem_id){
 int wait_hilo(int tid,char* semName){
 
 	    int bloquear = 0;
-		int pos = posicionSemaforo(semName);
+		int pos = posicionSemaforo(semName);if(pos==-1)return -1;
 		sem_values[pos]--;
 		log_info(log_interno, "Semaforo %s. Valor actual: %d",semName,sem_values[pos]);
 		if(sem_values[pos]<0){
@@ -433,7 +440,7 @@ t_block* getNextFromSemaforo(int sem_pos){
 
 t_block* signal_hilo(int tid, char* semName, t_list* tabla_ready){
 
-	int pos = posicionSemaforo(semName);
+	int pos = posicionSemaforo(semName);if(pos==-1)return NULL;
 		if(sem_values[pos] < config_suse->semMax[pos]){
 		sem_values[pos]++;
 		log_info(log_interno, "[SIGNAL] Semaforo %s. Valor actual: %d",semName,sem_values[pos]);

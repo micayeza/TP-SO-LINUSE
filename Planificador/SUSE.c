@@ -14,7 +14,7 @@ void inicializarSemaforos(){
 
 int inicializacion(){
 	configPath = string_new();
-	string_append(&configPath, "../configs/SUSE.config");
+	string_append(&configPath, "../../configs/SUSE.config");
 
 	log_interno = log_create("log_interno.txt", "LOG-INT", true, LOG_LEVEL_INFO);
 	config_suse = malloc(sizeof(t_configSUSE));
