@@ -8,18 +8,19 @@
 
 int SacServerMkdir(char* path){
 	int numeroNodoLibre = buscarNodoLibre();
+	//No hay espacio para guardar nodo
+	if(numeroNodoLibre == ERROR){
+		return -EDQUOT;
+	}
+	//Se crea y persiste el nodo
 	t_nodo* nodo = crearNodoVacio();
-	nodo->estado = 1;
+	nodo->estado = 2;
 	strcpy(&(nodo->nombre_archivo), path);
 	nodo->bloque_padre = 44;
 	nodo->tam_archivo = 8;
 	gettimeofday(&(nodo->fecha_modificacion), NULL);
-	nodo->p_indirectos[0] = 122;
-	nodo->p_indirectos[1] = 123;
-	nodo->p_indirectos[2] = 128;
 	persistirNodo(numeroNodoLibre, nodo);
 
-	//Verificar el valor que tiene que retornar
 	return 0;
 }
 
@@ -105,6 +106,10 @@ void openFS(){
 
 void closeFS(){
 	fclose(archivo_fs);
+}
+
+int existeArchivo(char* path){
+	char** pathSeparado = string_split(path, "/");
 }
 
 void abrirHeaderFS(){
@@ -254,6 +259,8 @@ void finalizar(){
 
 int main(){
 	inicializacion();
+
+	existeArchivo("/home/utnso/aaa");
 	/*t_nodo* nodoNuevo = obtenerNodo(1);
 
 	t_nodo* nodo = crearNodoVacio();
@@ -277,7 +284,7 @@ int main(){
 	ocuparBloqueLibreBitmap(bitarray);
 	persistirBitmap(bitarray);*/
 
-	aceptarClientes();
+	//aceptarClientes();
 
 	finalizar();
 }
