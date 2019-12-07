@@ -144,6 +144,7 @@ t_log *logMuse;
 //FILE * archivoSwap;
 void* punteroSwap;
 bool activo;
+bool stop;
 int  paginas_usadas;
 char* bitmap_marcos;
 char* bitmap_swap;
@@ -218,7 +219,14 @@ bool addition_is_safe(uint32_t a, uint32_t b) ;
 // archivo DA
 // int fputs(const char *buffer, FILE *archivo)
 // char cadena[] = "Mostrando el uso de fputs en un fichero.\n"; TEngo que poner el \n
-
+pthread_mutex_t sem_bitmap_swap;
+pthread_mutex_t sem_bitmap_marco;
+pthread_mutex_t sem_paginas;
+pthread_mutex_t sem_clock;
+//pthread_mutex_t marcos_memoria[];
+//pthread_mutex_t marcos_swap[];
+pthread_mutex_t global; //CAsi como un semaforo global, lastima que no anduvo elarray
+//pthread_mutex_t sem_bitmap_swap;
 
 
 #endif /* MUSE_H_ */

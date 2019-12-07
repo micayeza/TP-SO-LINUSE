@@ -1,7 +1,7 @@
 #include "SUSE.h"
 
 void inicializarSemaforos(){
-	sem_values = malloc(sizeof(int)*config_suse->cantSem);
+	sem_values  = malloc(sizeof(int)*config_suse->cantSem);
 	sem_blocked = malloc(sizeof(t_queue*)*config_suse->cantSem);
 	int i;
 	for(i=0; i<config_suse->cantSem; i++){
@@ -16,7 +16,7 @@ int inicializacion(){
 	configPath = string_new();
 	string_append(&configPath, "../configs/SUSE.config");
 
-	log_interno = log_create("log_interno.txt", "LOG-INT", false, LOG_LEVEL_INFO);
+	log_interno = log_create("log_interno.txt", "LOG-INT", true, LOG_LEVEL_INFO);
 	config_suse = malloc(sizeof(t_configSUSE));
 	config_ruta = config_create(configPath);
 
@@ -45,6 +45,7 @@ int inicializacion(){
 		}
 		free(semInitAux);
 		free(semMaxAux);
+			config_destroy(config_ruta);
 	}
 
 	if(config_suse == NULL){
@@ -52,7 +53,7 @@ int inicializacion(){
 		return -1;
 	}
 
-	config_destroy(config_ruta);
+
 
 
 	tabla_programas = list_create();
@@ -91,11 +92,16 @@ void aceptarClientes(){
 					t_programa* programa = malloc(sizeof(t_programa));
 					programa->programa  = cliente;
 					programa->hijos     = list_create();
+					int operacion = recibirInt(cliente);
+					programa->id  = recibirInt(cliente);
+					programa->estado    = ACTIVO;
+					programa->init      = clock();
+					programa->fin = 0;
 
 					list_add(tabla_programas, programa);
 
 					pthread_t hiloPrograma;
-					pthread_create(&hiloPrograma, NULL, (void*)&atenderPrograma, (void*)&programa);
+					pthread_create(&hiloPrograma, NULL, (void*)&atenderPrograma, (void*)programa);
 
 
 				}
@@ -106,7 +112,7 @@ void aceptarClientes(){
 void atenderMetricas(){
 
 	while(1){
-		usleep(config_suse->metricas);
+		sleep(config_suse->metricas);
 		printefearMetricas();
 
 	}
@@ -122,10 +128,12 @@ int main() {
 
 	socket_escucha = crearSocketEscucha(config_suse->puerto, log_interno);
 
+	aceptarClientes(); //Planificador de largo plazo, fifo
+
 	pthread_t hiloMetricas;
 	pthread_create(&hiloMetricas, NULL, (void*)&atenderMetricas, NULL);
 
-	aceptarClientes(); //Planificador de largo plazo, fifo
+
 
 
 	finalizacion();

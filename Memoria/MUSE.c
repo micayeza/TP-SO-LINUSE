@@ -21,10 +21,17 @@ bool addition_is_safe(uint32_t a, uint32_t b) {
 
 void modificar_clock_bitmap(t_pagina* pagina, int segmento, t_proceso* proceso){
 		if(pagina->p == 1){
+//			pthread_mutex_lock(&sem_bitmap_marco);
 			bitmap_marcos[pagina->marco] = '0';
+//			pthread_mutex_unlock(&sem_bitmap_marco);
+//			pthread_mutex_lock(&sem_clock);
 			remover_clocky(pagina->marco, proceso);
+//			pthread_mutex_unlock(&sem_clock);
 		} else{
+//			pthread_mutex_lock(&sem_bitmap_swap);
 			bitmap_swap[pagina->marco] = '0';
+//			pthread_mutex_unlock(&sem_bitmap_swap);
+
 		}
 
 }
@@ -32,9 +39,10 @@ void modificar_clock_bitmap(t_pagina* pagina, int segmento, t_proceso* proceso){
 
 void agregar_pag_clock(int id, char* ip, int m ,int u, t_segmento* seg, int pag, int marco){
 //Busco el clock que tenga el puntero
+//	pthread_mutex_lock(&sem_clock);
 	t_clock* clock = list_get(tabla_clock, marco);
 
-	if(seg->dinamico && seg->shared == SHARED){
+	if(!seg->dinamico && seg->shared == SHARED){
 		t_proceso* proceso = list_get(tabla_procesos, 0);
 
 		bool buscar_path(void* arch){
@@ -59,7 +67,7 @@ void agregar_pag_clock(int id, char* ip, int m ,int u, t_segmento* seg, int pag,
 	}
 	clock->m   	 = m;
 	clock->u   	 = u;
-
+//	pthread_mutex_unlock(&sem_clock);
 
 }
 
@@ -158,7 +166,7 @@ bool hayHashtag(int marco, int i){
 	char* letra = malloc(sizeof(char)*2);
 	void* puntero = punteroMemoria + (config_muse->tamanio_pagina * marco + (i));
 	memmove(letra, puntero, 1);
-	letra[2]='\0';
+	letra[1]='\0';
 		if(string_starts_with(letra, "#")){
 			free(letra);
 			return true;
@@ -169,6 +177,7 @@ bool hayHashtag(int marco, int i){
 }
 
 t_pagina* buscar_segmento_pagina(t_list* segmentos , int seg, int pag, t_proceso* proceso){
+
 
 	bool buscar_seg(void* elSeg){
 
@@ -199,17 +208,25 @@ t_pagina* buscar_segmento_pagina(t_list* segmentos , int seg, int pag, t_proceso
 }
 
 int swap(int pag_swap, bool nueva){
+
+	bool actualizar_viejo = false;
 	//Libero el marco de swap ya que va a venir a la memoria
-
+	pthread_mutex_lock(&sem_bitmap_swap);
 	bitmap_swap[pag_swap] = '0';
+	pthread_mutex_unlock(&sem_bitmap_swap);
 	//Busco a la vistima, primero veo si tengo un marco libre
-
+	pthread_mutex_lock(&sem_bitmap_marco);
 	int marco = buscar_marco_libre(bitmap_marcos);
+	pthread_mutex_unlock(&sem_bitmap_marco);
 
+	t_clock* clock;
+	if(marco >= 0) clock = list_get(tabla_clock, marco);
 	if(marco == -1){
+		actualizar_viejo = true;
 		//Aplico algoritmo, primero veo donde arajo esta el puntero
+//		pthread_mutex_lock(&sem_clock);
 		int i = 0;
-		t_clock* clock;
+
 			while(i<list_size(tabla_clock)){
 				clock = list_get(tabla_clock, i );
 				if(clock->p ==1){
@@ -307,8 +324,9 @@ int swap(int pag_swap, bool nueva){
 				i=0;
 			}
 		}
+	 }
 	}
-
+//	pthread_mutex_unlock(&sem_clock);
 	//En que marco de swap esta lo que busco? en el que viene por parametro
 		void* punteroAux = punteroSwap + (config_muse->tamanio_pagina * pag_swap);
 		void* salida;
@@ -342,6 +360,8 @@ int swap(int pag_swap, bool nueva){
 			i++;
 			}
 	}
+
+	if(actualizar_viejo){
 	//El ultimo clock es el de la pagina que se fue, asique vamos a buscarla para ponerle marco y ṕ
 	bool buscar_proceso(void* proceso){
 
@@ -470,53 +490,97 @@ int copiarMuse(uint32_t posicionACopiar,int  bytes,char* src,t_list* tabla_segme
 	uint32_t desplazamiento = posicionACopiar%config_muse->tamanio_pagina;
 
 	t_pagina* pagina = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag, proceso);
-
+//	pthread_mutex_lock(&marcos_memoria[pagina->marco]);
+//	pthread_mutex_lock(&global);
 	if(segmento->dinamico){
 		t_header* head = punteroMemoria + ((config_muse->tamanio_pagina * pagina->marco) + desplazamiento );
 		if(head->isFree){
 			log_error(logMuse, "La posición en la que solicitan copiar esta libre \n" );
+//			pthread_mutex_unlock(&marcos_memoria[pagina->marco]);
+//			pthread_mutex_unlock(&global);
 			return -1;
 		}
 		if(head->size < bytes){//Si  que quieren copiar es mayor a lo que hay
+//			pthread_mutex_unlock(&marcos_memoria[pagina->marco]);
+//			pthread_mutex_unlock(&global);
 			log_error(logMuse, "No hay suficiente espacio en  %d \n", posicionACopiar);
 			return -1;
 		}
-		 desplazamiento += 5;
+		  if(desplazamiento + 5 < config_muse->tamanio_pagina){
+			  desplazamiento += 5;
+		  }else{
+			  desplazamiento = 5 -(config_muse->tamanio_pagina - desplazamiento);
+			  pag ++;
+			  pagina = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag, proceso);
+		  }
 	}
 	char* dest = punteroMemoria + ((config_muse->tamanio_pagina * pagina->marco) + desplazamiento);
 
 	t_clock* clock = buscar_clock(pagina->marco);
 	clock->m = 1;
 
-        size_t i;
+	  if(bytes <=config_muse->tamanio_pagina- desplazamiento ){
+		  memcpy(dest, src, bytes);
+	  }
+	  else{
+		  int leidos =0;
+		  memcpy(dest, src,config_muse->tamanio_pagina- desplazamiento );
+		  bytes -= config_muse->tamanio_pagina- desplazamiento;
+		  src += config_muse->tamanio_pagina- desplazamiento;
 
-        for (i = 0; i < bytes && src[i] != '\0'; i++){
-            if(desplazamiento < config_muse->tamanio_pagina ){
-          	  dest[i] = src[i];
-            }else{
-          	  pag++;
-          	  pagina = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag, proceso);
-          	  src = punteroMemoria + ((config_muse->tamanio_pagina * pagina->marco) + desplazamiento);
-          	  posicionACopiar = 0;
-          	  clock = buscar_clock(pagina->marco);
-          	  clock->m = 1;
-          	  dest[i] = src[i];
-            }
-        	 }
-        for ( ; i < bytes; i++){
-      	  if(desplazamiento < config_muse->tamanio_pagina ){
-      		  dest[i] = '\0';
-      	  }else{
-          	  pag++;
-          	  pagina = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag, proceso);
-          	  src = punteroMemoria + ((config_muse->tamanio_pagina * pagina->marco) + desplazamiento);
-          	  posicionACopiar = 0;
-          	  clock = buscar_clock(pagina->marco);
-          	  clock->m = 1;
-          	  dest[i] = src[i];
-      	  }
-        }
-//
+		  while(bytes>=config_muse->tamanio_pagina){
+
+			  pag ++;
+			  pagina = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag, proceso);
+			  dest = punteroMemoria + ((config_muse->tamanio_pagina * pagina->marco));
+
+//			  src += leidos;
+			  memcpy(dest, src, config_muse->tamanio_pagina);
+			  bytes -= config_muse->tamanio_pagina;
+			  src+= config_muse->tamanio_pagina;
+		  }
+		  if(bytes >0){
+			  pag ++;
+			  pagina = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag, proceso);
+			  dest = punteroMemoria + ((config_muse->tamanio_pagina * pagina->marco));
+//			  src += leidos;
+			  memcpy(dest, src, bytes);
+		  }
+	  }
+
+//        size_t i;
+//        size_t x;
+//        for (i = 0; i < bytes && src[i] != '\0'; i++){
+//            if(desplazamiento < config_muse->tamanio_pagina ){
+//          	  dest[desplazamiento] = src[i];
+//          	  desplazamiento++;
+//          	  x++;
+//            }else{
+//          	  pag++;
+//          	  pagina = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag, proceso);
+//          	  dest = punteroMemoria + ((config_muse->tamanio_pagina * pagina->marco));
+//          	  desplazamiento = 0;
+//          	  clock = buscar_clock(pagina->marco);
+//          	  clock->m = 1;
+////          	  i--;
+//          	  dest[desplazamiento] = src[i];
+//            }
+//        	 }
+//        for (i=x ; i < bytes; i++){
+//      	  if(desplazamiento < config_muse->tamanio_pagina ){
+//      		  dest[desplazamiento] = '\0';
+//      		  desplazamiento++;
+//      	  }else{
+//          	  pag++;
+//          	  pagina = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag, proceso);
+//          	  dest = punteroMemoria + ((config_muse->tamanio_pagina * pagina->marco));
+//          	desplazamiento = 0;
+//          	  clock = buscar_clock(pagina->marco);
+//          	  clock->m = 1;
+//          	  dest[desplazamiento] = '\0';
+//      	  }
+//        }
+//		pthread_mutex_unlock(&global);
 //	 int len = calcular_paginas_malloc(bytes) -1;
 //  void* dest = malloc(bytes);
 //
@@ -524,13 +588,19 @@ int copiarMuse(uint32_t posicionACopiar,int  bytes,char* src,t_list* tabla_segme
 //  size_t i;
 //  	   	   	   	 int aux = config_muse->tamanio_pagina - desplazamiento;
 //  	   	   	   	 memcpy(dest, src, aux);
+////  	   	   	     pthread_mutex_unlock(&marcos_memoria[pagina->marco]);
+//  	   	   	pthread_mutex_unlock(&global);
 //
 //  	   	   	   	 for (i = 0; i < len; i++){
 //              	  pag++;
 //              	  pagina = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag, proceso);
+////                	pthread_mutex_lock(&marcos_memoria[pagina->marco]);
+//              	pthread_mutex_unlock(&global);
 //              	  src = punteroMemoria + (config_muse->tamanio_pagina * pagina->marco);
 //              	  memcpy(dest, src, config_muse->tamanio_pagina);
-//                }
+////                 	pthread_mutex_unlock(&marcos_memoria[pagina->marco]);
+//              	pthread_mutex_unlock(&global);
+//  	   	   	   	 }
 
 
 //    return dest;
@@ -563,6 +633,8 @@ char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos, t_proceso
  uint32_t desplazamiento = posicion%config_muse->tamanio_pagina;
 
  t_pagina* pag = buscar_segmento_pagina(tabla_segmentos, seg->segmento, pagina, proceso);
+// pthread_mutex_lock(&marcos_memoria[pag->marco]);
+// pthread_mutex_lock(&global);
 
 
 
@@ -570,63 +642,86 @@ char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos, t_proceso
 	 t_header* head = punteroMemoria + ((config_muse->tamanio_pagina * pag->marco) + desplazamiento);
 
 	  if(head->isFree){
+//		  pthread_mutex_unlock(&marcos_memoria[pag->marco]);
+//		  pthread_mutex_unlock(&global);
 		  log_error(logMuse, "Lo que solicitan esta libre" );
 		  return NULL;
 	  }
 	  if(head->size < bytes){
+//		  pthread_mutex_unlock(&marcos_memoria[pag->marco]);
+//		  pthread_mutex_unlock(&global);
 		  log_error(logMuse, "Lo que solicitan pisa otra asignacion");
 			 log_error(logMuse, "Segmentation Fault \n");
 			 sg=true;
 
 		  return NULL;
 	  }
-	  desplazamiento += 5;
+	  if(desplazamiento + 5 < config_muse->tamanio_pagina){
+		  desplazamiento += 5;
+	  }else{
+		  desplazamiento = 5 -(config_muse->tamanio_pagina - desplazamiento);
+		  pagina ++;
+		  pag = buscar_segmento_pagina(tabla_segmentos, seg->segmento, pagina, proceso);
+
+	  }
  }
 
   char* dest = malloc(bytes);
 
   char* src = punteroMemoria + ((config_muse->tamanio_pagina * pag->marco) + desplazamiento);
-  size_t i;
+//  size_t i;
+//  size_t x;
 
-  //Cuanto leo de esta pagina
+//  Cuanto leo de esta pagina
+  int leidos = 0;
+  if(bytes <=config_muse->tamanio_pagina- desplazamiento ){
+	  memcpy(dest, src, bytes);
+  }
+  else{
+	  memcpy(dest, src,config_muse->tamanio_pagina- desplazamiento );
+	  bytes -= config_muse->tamanio_pagina- desplazamiento;
+	  dest += config_muse->tamanio_pagina- desplazamiento;
 
-          for (i = 0; i < bytes && src[i] != '\0'; i++){
-              if(desplazamiento < config_muse->tamanio_pagina ){
-            	  dest[i] = src[i];
-              }else{
-            	  pagina++;
-            	  pag = buscar_segmento_pagina(tabla_segmentos, seg->segmento, pagina, proceso);
-            	  src = punteroMemoria + ((config_muse->tamanio_pagina * pag->marco) + desplazamiento);
-            	  desplazamiento = 0;
-            	  dest[i] = src[i];
-              }
-          	 }
-          for ( ; i < bytes; i++){
-        	  if(desplazamiento < config_muse->tamanio_pagina ){
-        		  dest[i] = '\0';
-        	  }else{
-            	  pagina++;
-            	  pag = buscar_segmento_pagina(tabla_segmentos, seg->segmento, pagina, proceso);
-            	  src = punteroMemoria + ((config_muse->tamanio_pagina * pag->marco) + desplazamiento);
-            	  desplazamiento = 0;
-            	  dest[i] = src[i];
-        	  }
-          }
+	  while(bytes>=config_muse->tamanio_pagina){
+		  pagina ++;
+		  pag = buscar_segmento_pagina(tabla_segmentos, seg->segmento, pagina, proceso);
+		  src = punteroMemoria + ((config_muse->tamanio_pagina * pag->marco));
+
+		  memcpy(dest, src, config_muse->tamanio_pagina);
+		  bytes -= config_muse->tamanio_pagina;
+		  dest += config_muse->tamanio_pagina;
+	  }
+	  if(bytes >0){
+		  pagina ++;
+		  pag = buscar_segmento_pagina(tabla_segmentos, seg->segmento, pagina, proceso);
+		  src = punteroMemoria + ((config_muse->tamanio_pagina * pag->marco));
+
+		  memcpy(dest, src, bytes);
+	  }
+  }
+
+
+//			pthread_mutex_unlock(&global);
 
 //**************************SI MALE SAL DESCOMENTAR TODO LO ANTERIOR
-// 	 int len = calcular_paginas_malloc(bytes) -1;
+//   int len = calcular_paginas_malloc(bytes) -1;
 //   void* dest = malloc(bytes);
 //
 //   void* src = punteroMemoria + ((config_muse->tamanio_pagina * pag->marco) + desplazamiento);
 //   size_t i;
 //   	   	   	   	 int aux = config_muse->tamanio_pagina - desplazamiento;
 //   	   	   	   	 memcpy(dest, src, aux);
-//
+////   	   	   	   	 pthread_mutex_unlock(&marcos_memoria[pag->marco]);
+//   	   	   pthread_mutex_unlock(&global);
 //   	   	   	   	 for (i = 0; i < len; i++){
 //               	  pagina++;
 //               	  pag = buscar_segmento_pagina(tabla_segmentos, seg->segmento, pagina, proceso);
+////               	  pthread_mutex_lock(&marcos_memoria[pag->marco]);
+//               	pthread_mutex_unlock(&global);
 //               	  src = punteroMemoria + (config_muse->tamanio_pagina * pag->marco);
 //               	  memcpy(dest, src, config_muse->tamanio_pagina);
+////               	  pthread_mutex_unlock(&marcos_memoria[pag->marco]);
+//               	pthread_mutex_unlock(&global);
 //                 }
 
 
@@ -659,15 +754,20 @@ int freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesLi
 	pag1 = posicionAliberar/config_muse->tamanio_pagina;
 
 	pagina1         = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag1, proceso);
+//	pthread_mutex_lock(&marcos_memoria[pagina1->marco]);
+//	pthread_mutex_lock(&global);
     desplazamiento1 = posicionAliberar%config_muse->tamanio_pagina;
 	head1 		    = punteroMemoria + (config_muse->tamanio_pagina * pagina1->marco + desplazamiento1);
 	if(head1->isFree){
+//		pthread_mutex_unlock(&marcos_memoria[pagina1->marco]);
+//		pthread_mutex_unlock(&global);
 		return -1;
 	}
 	if(!head1->isFree){
 	t_clock* clock = list_get(tabla_clock , pagina1->marco);//buscar_clock(proceso, segmento->segmento, pag1);
 	clock->m       = 1;
 	head1->isFree  = true;
+
 		//Veo si hay desperdicio
 		if(config_muse->tamanio_pagina - (desplazamiento1 + 5 + head1->size) < 5 ){
 			head1->size += (config_muse->tamanio_pagina - (desplazamiento1 + 5 + head1->size));
@@ -684,6 +784,8 @@ int freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesLi
 				}else{
 				actualizar_bloque_libre(pag1, segmento, desplazamiento1 + 5, head1->size, bloquesLibres);
 				}
+//				pthread_mutex_unlock(&marcos_memoria[pagina1->marco]);
+//				pthread_mutex_unlock(&global);
 				return 0;
 			}
 
@@ -718,6 +820,8 @@ int freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesLi
 						if(desplazamiento2 +5 == pagina1->ultimo_header){
 							if(posicionAliberar == segmento->base){
 								vaciarSegmento(segmento, bloquesLibres, tabla_segmentos, proceso);
+//								pthread_mutex_unlock(&marcos_memoria[pagina1->marco]);
+//								pthread_mutex_unlock(&global);
 								return 0;
 							}
 
@@ -727,7 +831,8 @@ int freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesLi
 							pagina1->tamanio_header = head1->size;
 							actualizar_bloque_libre(pag1, segmento, desplazamiento2 + 5, head1->size, bloquesLibres);
 							remover_bloque_libre(bloquesLibres, pag1, segmento->segmento, desplazamiento2 +5 );
-
+//							pthread_mutex_unlock(&marcos_memoria[pagina1->marco]);
+//							pthread_mutex_unlock(&global);
 							return 0;
 						}
 					}
@@ -738,12 +843,16 @@ int freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesLi
 
 							if(posicionAliberar == segmento->base){
 								//Si entra acá significa que en la siguiente pagina solo estaba un header free, asique LA ELIMINO sin importar desperdicio
+								log_info(logMuse, "Se libero el segmento %d \n", segmento->segmento);
 								vaciarSegmento(segmento, bloquesLibres, tabla_segmentos, proceso);
-								log_info(logMuse, "Se libero el segmento %d \n", segmento);
+//								pthread_mutex_unlock(&marcos_memoria[pagina1->marco]);
+//								pthread_mutex_unlock(&global);
 								return 0;
 							}
 	//El nuevo ultimo header pasa a ser el 1 y lo restante lo armo en otro segmento
 							head1->size -=(config_muse->tamanio_pagina - (desplazamiento1 + 5));
+//							pthread_mutex_unlock(&marcos_memoria[pagina1->marco]);
+//							pthread_mutex_unlock(&global);
 							pagina1->esFinPag = 1;
 							pagina1->ultimo_header = desplazamiento1 + 5;
 							pagina1->tamanio_header = head1->size;
@@ -778,11 +887,13 @@ int freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesLi
 				remover_bloque_libre(bloquesLibres, pag2, segmento->segmento, desplazamiento2+5);
 
 				head1->size += (5 + head2->size);
+//				pthread_mutex_unlock(&marcos_memoria[pagina1->marco]);
+//				pthread_mutex_unlock(&global);
 	}
 	agregar_bloque_libre(bloquesLibres, pag1, segmento->segmento, desplazamiento1, head1->size);
 	return 0;
 	}
-
+	return 0;
 }
 
 
@@ -992,7 +1103,8 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 
 	//Busco la pagina a actualizar y la traigo a memoria
 	t_pagina* pag = buscar_segmento_pagina(tabla_segmentos,segmento, pagina , proceso);
-
+//	pthread_mutex_lock(&marcos_memoria[pag->marco]);
+//	pthread_mutex_lock(&global);
 
 	//Actualizo el header que ya existia, empieza en posicion
 	t_header* head = convertir(posicion, pag->marco);
@@ -1005,6 +1117,8 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 			pag->tamanio_header = 0;
 			pag->ultimo_header  = posicion +5;
 		}
+//		pthread_mutex_unlock(&marcos_memoria[pag->marco]);
+//		pthread_mutex_unlock(&global);
 		return;
 	}
 
@@ -1016,8 +1130,11 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 		uint32_t sobrante = config_muse->tamanio_pagina - ubicacionCola;
 		//si lo que sobra de la pagina actual es menor que 5 lo desperdicio
 		if(sobrante < 5){
+
 			void* puntero = punteroMemoria + (config_muse->tamanio_pagina * pag->marco + ubicacionCola);
 			desperdicio(sobrante, puntero, pag, posicion);
+//			pthread_mutex_unlock(&marcos_memoria[pag->marco]);
+//			pthread_mutex_unlock(&global);
 			//sumando al tamanio lo desperdiciado, todavia sobra tamAnterior? esta en la otra pag
 			if(tamAnterior >sobrantePag){
 				tamAnterior -= sobrantePag;
@@ -1027,10 +1144,14 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 				if(tamAnterior < 5){
 					void* puntero = punteroMemoria + (config_muse->tamanio_pagina*sigPagina->marco);
 					desperdicio(tamAnterior,puntero, sigPagina, sigPagina->ultimo_header);
+//					pthread_mutex_unlock(&marcos_memoria[sigPagina->marco]);
+//					pthread_mutex_unlock(&global);
 				}else{
 					t_header* cola = convertir(0, sigPagina->marco);
 					cola->isFree   = true;
 					cola->size     = tamAnterior -5;
+//					pthread_mutex_unlock(&marcos_memoria[sigPagina->marco]);
+//					pthread_mutex_unlock(&global);
 					if(fin == 1){
 						pag->esFinPag       = 0;
 						sigPagina->esFinPag = 1;
@@ -1041,6 +1162,7 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 						agregar_bloque_libre(bloquesLibres, sigPagina->numero, segmento, 0, tamAnterior -5);
 					}
 				}
+
 			}
 
 		}
@@ -1049,6 +1171,8 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 			cola->isFree   = true;
 			cola->size     = tamAnterior - tamanio -5;
 
+//	77		pthread_mutex_unlock(&marcos_memoria[pag->marco]);
+//			pthread_mutex_unlock(&global);
 			if(fin ==1 || pag->ultimo_header == (posicion +5)){
 				pag->tamanio_header = tamAnterior - tamanio -5;
 				pag->ultimo_header  = ubicacionCola + 5;
@@ -1064,6 +1188,8 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 	}
 	//Si la cola no entra en la pag inicial, busco la pagina final de este header
 	if(config_muse->tamanio_pagina <= ubicacionCola){
+//		pthread_mutex_unlock(&marcos_memoria[pag->marco]);
+//		pthread_mutex_unlock(&global);
 		//Necesito saber cuanto me falta ubicar despues de la pagina actual
 		uint32_t reservado = tamanio;
 		tamanio     -= sobrantePag;
@@ -1072,29 +1198,37 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 		tamanio -= (config_muse->tamanio_pagina * cociente);
 		cociente ++;
 		t_pagina* ultPagina = buscar_segmento_pagina(tabla_segmentos, segmento, cociente, proceso);
-
+//		pthread_mutex_lock(&marcos_memoria[ultPagina->marco]);
+//		pthread_mutex_lock(&global);
 			uint32_t sobrante     = config_muse->tamanio_pagina - tamanio;
 			uint32_t libreOtraPag = tamAnterior-reservado-sobrante;
 			if(sobrante <5 ){
+
 				void* puntero = punteroMemoria + (config_muse->tamanio_pagina*ultPagina->marco + tamanio);
 
 				desperdicio(sobrante, puntero,ultPagina, ultPagina->ultimo_header);
+//				pthread_mutex_unlock(&marcos_memoria[ultPagina->marco]);
+//				pthread_mutex_unlock(&global);
 				//Me quedo tamanio libre del espacio original?
 
 				if(libreOtraPag > 0){
 					ultPagina = buscar_segmento_pagina(tabla_segmentos, segmento, cociente+1, proceso);
-
+//					pthread_mutex_lock(&marcos_memoria[ultPagina->marco]);
+//					pthread_mutex_unlock(&global);
 						puntero = punteroMemoria + config_muse->tamanio_pagina*ultPagina->marco;
 				}
 				if(libreOtraPag > 0 && libreOtraPag<5){
 					desperdicio(libreOtraPag, puntero, ultPagina, ultPagina->ultimo_header);
+//					pthread_mutex_unlock(&marcos_memoria[ultPagina->marco]);
+//					pthread_mutex_unlock(&global);
 
 				}
 				if(libreOtraPag >=5){
 					t_header* cola = puntero;
 					cola->isFree   = true;
 					cola->size     = libreOtraPag-5;
-
+//					pthread_mutex_unlock(&marcos_memoria[ultPagina->marco]);
+//					pthread_mutex_unlock(&global);
 					agregar_bloque_libre(bloquesLibres, ultPagina->numero, segmento, 0, libreOtraPag-5);
 				}
 			}
@@ -1102,6 +1236,8 @@ void actualizar_header(int segmento, int pagina,uint32_t posicion, uint32_t tamA
 				t_header* cola = punteroMemoria + (config_muse->tamanio_pagina*ultPagina->marco + tamanio);
 				cola->isFree   = true;
 				cola->size     = libreOtraPag-5;
+//				pthread_mutex_unlock(&marcos_memoria[ultPagina->marco]);
+//				pthread_mutex_unlock(&global);
 				if(ultPagina->ultimo_header< (tamanio +5)){
 					ultPagina->ultimo_header  = tamanio + 5;
 					ultPagina->tamanio_header = libreOtraPag-5;
@@ -1300,12 +1436,17 @@ int syncMuse(uint32_t fd,size_t len,t_proceso* proceso, bool sg){
 
 	 for(int i = 0; i<tam;i++){
 		 t_pagina* pag = buscar_segmento_pagina(proceso->segmentos, seg->segmento, i, proceso);
+//		 pthread_mutex_lock(&marcos_memoria[pag->marco]);
+//		 pthread_mutex_lock(&global);
 		 void* puntero = punteroMemoria + (config_muse->tamanio_pagina * pag->marco);
 
 		 fwrite(puntero, CHAR, config_muse->tamanio_pagina, buffer_archivo); // Escribo el contenido del bloque en el archivo
-
+//		 pthread_mutex_unlock(&marcos_memoria[pag->marco]);
+//		 pthread_mutex_unlock(&global);
+//		 pthread_mutex_lock(&sem_clock);
 		 t_clock* clock = buscar_clock(pag->marco);
 		 clock->m = 0;
+//		 pthread_mutex_unlock(&sem_clock);
 
 	 }
 
@@ -1358,19 +1499,26 @@ int crearPaginasmapeadas(int tam,size_t len,t_segmento* segmento,t_proceso* proc
 	void* punteroAux;
 	t_pagina* pagina;
 	for(int i=0; i<tam; i++){
-		paginas_usadas++;
+//		paginas_usadas++;
 		pagina = malloc(sizeof(t_pagina));
 
 		pagina->numero = i;
 		pagina->p      = 0;
+		pthread_mutex_lock(&sem_bitmap_swap);
 		pagina->marco  = buscar_marco_libre(bitmap_swap);
+		pthread_mutex_unlock(&sem_bitmap_swap);
 
 		punteroAux = punteroSwap + (config_muse->tamanio_pagina * pagina->marco);
+
 		if(pagina->marco == -1){
+			pthread_mutex_lock(&sem_bitmap_marco);
 			pagina->marco  = buscar_marco_libre(bitmap_marcos);
+			pthread_mutex_unlock(&sem_bitmap_marco);
 			pagina->p = 1;
 			punteroAux = punteroMemoria + (config_muse->tamanio_pagina * pagina->marco);
 		}
+
+//		pthread_mutex_lock(&global);
 		if(flag == SHARED){
 			list_add(seg->paginas , pagina); // Creo la lista de paginas en el segmento fantasma
 		}else{
@@ -1381,7 +1529,7 @@ int crearPaginasmapeadas(int tam,size_t len,t_segmento* segmento,t_proceso* proc
 		int res = read(fd_archivo, contenido, config_muse->tamanio_pagina);
 		if(res != 0){
 
-			memmove(punteroAux, contenido, config_muse->tamanio_pagina);
+			memcpy(punteroAux, contenido, config_muse->tamanio_pagina);
 		}
 		else{
 			char* dest;
@@ -1396,6 +1544,7 @@ int crearPaginasmapeadas(int tam,size_t len,t_segmento* segmento,t_proceso* proc
 			}
 		}
 		free(contenido);
+//		pthread_mutex_unlock(&global);
 
 	}
 	if(flag == SHARED){
@@ -1425,7 +1574,7 @@ uint32_t  crearSegmentoMapeado(int len,t_proceso* proceso, int flag, char* path)
 	if(paginas_usadas + tam > config_muse->paginas_totales){
 		return 0;
 	}
-
+	paginas_usadas +=tam;
 
 	t_segmento* segmento =  malloc(sizeof(t_segmento));
 	if(list_size(proceso->segmentos) > 0){
@@ -1469,7 +1618,9 @@ uint32_t  crearSegmentoMapeado(int len,t_proceso* proceso, int flag, char* path)
 
 		if(archivo == NULL){
 		res = crearPaginasmapeadas(tam, len, segmento, proceso, flag, path);
+
 		}else{
+			paginas_usadas -=tam;
 			segmento->paginas = archivo->puntero_a_pag;
 		}
 		archivo = list_find(tabla_archivos, &buscar_archivo);
@@ -1629,9 +1780,12 @@ uint32_t crearPaginas(int cant_pag, uint32_t tamanio, t_segmento* segmento, t_li
 				size_tabla--;
 					if(ultima_pagina->p==0){
 						ultima_pagina->marco = swap(ultima_pagina->marco, true);
+						agregar_pag_clock(proceso->id, proceso->ip, 0, 1, segmento, ultima_pagina->numero, ultima_pagina->marco);
 						//Tengo que editar el clock
 					}
 				ultima_pagina->p=1;
+//				pthread_mutex_lock(&marcos_memoria[ultima_pagina->marco]);
+
 
 				t_header* head = convertir((ultima_pagina->ultimo_header-5), ultima_pagina->marco);
 
@@ -1666,14 +1820,16 @@ retorno = segmento->base + (config_muse->tamanio_pagina*ultima_pagina->numero + 
 					}
 
 				}
-
-
+//				pthread_mutex_unlock(&global);
+//				pthread_mutex_unlock(&marcos_memoria[ultima_pagina->marco]);
 
 				continue;
 			}
 		}
 
+		pthread_mutex_lock(&sem_bitmap_marco);
 		pagina->marco = buscar_marco_libre(bitmap_marcos);
+		pthread_mutex_unlock(&sem_bitmap_marco);
 		pagina->p=1;
 
 		pagina->numero   = size_tabla;
@@ -1688,14 +1844,17 @@ retorno = segmento->base + (config_muse->tamanio_pagina*ultima_pagina->numero + 
 
 		}
 		if(pagina->marco == -1){
+			pthread_mutex_lock(&sem_bitmap_swap);
 		   pagina->marco  = buscar_marco_libre(bitmap_swap);
+		   pthread_mutex_unlock(&sem_bitmap_swap);
 		   pagina->p = 0;
 
 		   	   if(i==cant_pag || i==1){
 		   		    pagina->marco = swap(pagina->marco, true);
-					pagina->p=1;
+		   		 	pagina->p=1;
 					agregar_pag_clock(proceso->id, proceso->ip, 0, 1, segmento, pagina->numero, pagina->marco);
-		   			}
+//					pthread_mutex_lock(&marcos_memoria[pagina->marco]);
+		   	   }
 
 				}
 		if(i==1){
@@ -1704,6 +1863,8 @@ retorno = segmento->base + (config_muse->tamanio_pagina*ultima_pagina->numero + 
 			retorno = segmento->base + (config_muse->tamanio_pagina* size_tabla + 5);
 			head->isFree = false;
 			head->size   = tamanio - 5;
+//			pthread_mutex_unlock(&marcos_memoria[pagina->marco]);
+
 	   }
 
 
@@ -1721,6 +1882,7 @@ retorno = segmento->base + (config_muse->tamanio_pagina*ultima_pagina->numero + 
 						t_header* cola = punteroMemoria + (pagina->marco*config_muse->tamanio_pagina + tamanio);
 						cola->isFree = true;
 						cola->size   = sobrante-5;
+//						pthread_mutex_unlock(&marcos_memoria[pagina->marco]);
 						pagina->ultimo_header = tamanio +5;
 						pagina->tamanio_header = sobrante-5;
 						pagina->esFinPag =1;
@@ -1729,6 +1891,9 @@ retorno = segmento->base + (config_muse->tamanio_pagina*ultima_pagina->numero + 
 						}
 
 					}else{
+						if(i==cant_pag){
+//							pthread_mutex_unlock(&marcos_memoria[pagina->marco]);
+						}
 						//Voy a desperdiciar si sobra menos de 5 #$%$#
 						desperdicio(sobrante,  punteroMemoria + (pagina->marco*config_muse->tamanio_pagina + tamanio), pagina, pagina->ultimo_header);
 						pagina->esFinPag       = 1;
@@ -1736,7 +1901,7 @@ retorno = segmento->base + (config_muse->tamanio_pagina*ultima_pagina->numero + 
 					}
 
 				}
-		paginas_usadas ++;
+//		paginas_usadas ++;
 		list_add(segmento->paginas, pagina);
 
 
@@ -1755,6 +1920,7 @@ uint32_t crearSegmentoDinamico(uint32_t tamanio, t_list* tabla_segmentos, t_list
 	if(paginas_usadas + tam > config_muse->paginas_totales){
 		return 0;
 	}
+	paginas_usadas += tam;
 	int ind = list_size(tabla_segmentos) -1;
 
 	t_segmento* seg_nuevo = malloc(sizeof(t_segmento));
@@ -1773,6 +1939,7 @@ uint32_t crearSegmentoDinamico(uint32_t tamanio, t_list* tabla_segmentos, t_list
 		seg_nuevo->segmento      = 0;
 	}
 	if(!addition_is_safe(seg_nuevo->base, tamanio+5)){
+		paginas_usadas -= tam;
 		free(seg_nuevo);
 		return 0;
 	}
@@ -1876,6 +2043,8 @@ uint32_t mallocMuse(uint32_t tamanio, t_proceso* proceso){
 								if(paginas_usadas + tam > config_muse->paginas_totales){
 									log_error(logMuse, "No hay más paginas disponibles (tampoco en swap) \n");
 									return 0;
+								}else{
+									paginas_usadas += tam;
 								}
 
 								ult_segmento->tamanio += tam*config_muse->tamanio_pagina;
@@ -1896,8 +2065,9 @@ uint32_t mallocMuse(uint32_t tamanio, t_proceso* proceso){
 										t_segmento* segmentoVacio = list_get(tabla_segmentos, i);
 										if(segmentoVacio->empty && segmentoVacio->tamanio >= tamanio +5){
 											seg = i;
-											break;
+//											break;
 										}
+									}
 									if(seg != -1){
 										log_info(logMuse, "Segmento vacio : %d \n", seg);
 										t_segmento* segmentoVacio = list_get(tabla_segmentos, seg);
@@ -1915,11 +2085,11 @@ uint32_t mallocMuse(uint32_t tamanio, t_proceso* proceso){
 											}
 											return res;
 									}else{
-
+										paginas_usadas -= tam;
 										return 0;
 									}
 
-									}
+
 								}
 						}
 
@@ -2073,22 +2243,29 @@ void atenderConexiones(int parametros){
 					break;
 				}
 				log_info(logMuse, "MALLOC  %d \n", tamanio);
+				pthread_mutex_lock(&global);
 			uint32_t posicion = mallocMuse(tamanio, proceso);
-			if(posicion == 0){
-				log_error(logMuse,"Comienza compactacion por falta de espacio: \n");
-				compactar(proceso->segmentos, proceso->bloquesLibres, proceso);
-			    posicion = 	mallocMuse(tamanio, proceso);
+
+			pthread_mutex_unlock(&global);
+//			if(posicion == 0){
+//				log_error(logMuse,"Comienza compactacion por falta de espacio: \n");
+//
+//				compactar(proceso->segmentos, proceso->bloquesLibres, proceso);
+//
+//			    posicion = 	mallocMuse(tamanio, proceso);
 			    if(posicion == 0){
 			    	log_error(logMuse, "Memoria llena por favor finalice algun proceso \n");
 			    }
-			}
+//			}
 			enviarUint32_t(proceso->cliente,  posicion);
 
 		} break;
 		case LIBERAR:{
 			uint32_t posicionAliberar = recibirUint32_t(proceso->cliente);
 			log_info(logMuse, "FREE %d \n", posicionAliberar);
+			pthread_mutex_lock(&global);
 			int res = freeMuse(posicionAliberar, proceso->segmentos, proceso->bloquesLibres, proceso, sg);
+			pthread_mutex_unlock(&global);
 			enviarInt(proceso->cliente, res);
 
 			if(sg){
@@ -2102,7 +2279,19 @@ void atenderConexiones(int parametros){
 			uint32_t posicion = recibirUint32_t(proceso->cliente);
 			size_t   bytes    = recibirSizet(proceso->cliente );
 			log_info(logMuse, "GET %d ", posicion);
+			pthread_mutex_lock(&global);
 			char* frase = getMuse(posicion, bytes, proceso->segmentos, proceso, sg);
+
+			 printf("IP      | ID    |  SEG  | PAG | U | M | \n");
+			 int i=0;
+						while(i<list_size(tabla_clock)){
+							t_clock* clock = list_get(tabla_clock , i);
+
+							printf("%s | %d    |  %d   | %d  | %d | %d | \n", clock->ip, clock->id,
+									clock->seg, clock->pag, clock->u, clock->m);
+							i++;
+						}
+			pthread_mutex_unlock(&global);
 //			void* frase = getMuse(posicion, bytes, proceso->segmentos, proceso, sg);
 
 			enviarTexto(proceso->cliente, frase, logMuse);
@@ -2132,7 +2321,19 @@ void atenderConexiones(int parametros){
 //			char* copia = recibirTexto(proceso->cliente, logMuse);
 			void* copia = recibirVoid(proceso->cliente);
 			log_info(logMuse, "COPY %s en %d \n", copia, posicionACopiar );
+			pthread_mutex_lock(&global);
 			int resultado = copiarMuse(posicionACopiar, bytes, copia,proceso->segmentos, proceso, sg);
+
+			 printf("IP      | ID    |  SEG  | PAG | U | M | \n");
+			 int i=0;
+						while(i<list_size(tabla_clock)){
+							t_clock* clock = list_get(tabla_clock , i);
+
+							printf("%s | %d    |  %d   | %d  | %d | %d | \n", clock->ip, clock->id,
+									clock->seg, clock->pag, clock->u, clock->m);
+							i++;
+						}
+			pthread_mutex_unlock(&global);
 			free(copia);
 			enviarInt(proceso->cliente,  resultado);
 			if(sg){
@@ -2385,13 +2586,29 @@ void inicializarMemoria(){
 	proceso->ip            = "0.0.0";
 	proceso->segmentos     = list_create();
 	list_add(tabla_procesos, proceso);
+
+	pthread_mutex_init(&sem_bitmap_swap ,NULL);
+	pthread_mutex_init(&sem_bitmap_marco ,NULL);
+	pthread_mutex_init(&sem_paginas,NULL);
+//	pthread_mutex_init(&sem_clock,NULL);
+//	for(int i =0; i<cantidad_paginas; i++){
+//		pthread_mutex_init(&marcos_memoria[i] ,NULL);
+//	}
+//	for(int i =0; i<paginas_swap; i++){
+//		pthread_mutex_init(&marcos_swap[i] ,NULL);
+//	}
+//	pthread_mutex_init(&multi ,NULL);
+//	pthread_mutex_init(&wt ,NULL);
+//	pthread_mutex_init(&global ,NULL);
+
+
 }
 
 
 void* inicializarSwap(){
 
 
-	paginas_swap = config_muse->tamanio_swap / config_muse->tamanio_pagina;
+	paginas_swap = config_muse->tamanio_swap/config_muse->tamanio_pagina;
 	bitmap_swap  = string_repeat('0', paginas_swap);
 
 	remove("archivoSwap.txt");
@@ -2473,7 +2690,7 @@ int crearConfigMemoria(){
 
 		remove("MUSE.txt");
 		int v_error = crearConfigMemoria();
-		if(v_error == 0){
+ 		if(v_error == 0){
 
 		inicializarMemoria();
 

@@ -97,9 +97,19 @@ t_config *config_ruta;
 // ------------------------ FIN SECCIÓN CONFIG y LOG ------------------------
 
 // -------------------------- SECCIÓN MICA --------------------------
+typedef enum {
+	ACTIVO,
+	FINALIZADO,
+	BLOQUEADO
+} estProg;
+
 typedef struct{
-	int 	     programa;
-	t_list*		 hijos;
+	int 	 programa;
+	t_list*	 hijos;
+	int      id;
+	estProg  estado;
+	double   init;
+	double   fin;
 }t_programa;
 
 typedef struct{
@@ -107,6 +117,10 @@ typedef struct{
 	int	   id;
 	double estimado;
 }t_new;
+
+typedef struct{
+	int	   id;
+}t_join;
 
 typedef struct{
 	int    programa;
@@ -164,14 +178,14 @@ int socket_escucha;
 int cant_programas;
 
 void atenderPrograma(void* cliente);
-void join_hilo(int tid, t_new* hilo_exec);
-void planificadorLargo(t_list* tabla_ready, pthread_mutex_t sem_ready);
+void join_hilo(int tid, int programa, t_list* joins);
+void planificadorLargo(t_list* tabla_ready);
 t_hilo* buscar_prog_hilo(int programa, int hilo);
-void create_hilo(int tid, t_programa* programa, pthread_mutex_t tabla_hijos);
-int next_hilo(t_list* tabla_ready, pthread_mutex_t sem_ready,t_new* hilo_exec,  pthread_mutex_t sem_exec);
+void create_hilo(int tid, t_programa* programa);
+t_new* next_hilo(t_list* tabla_ready);
 void recalcularEstimado(t_hilo* hilo);
-//FALTAN
-void close_hilo(int tid, int programa, t_list* tabla_ready, t_new* hilo_exec);
+
+t_new* close_hilo(int tid, t_programa* programa, t_list* tabla_ready, t_new* hilo_exec, t_list* joins);
 int wait_hilo(int tid,char* semName);
 t_block* signal_hilo(int tid, char* semName, t_list* tabla_ready);
 void inicializarSemaforos();

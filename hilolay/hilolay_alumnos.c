@@ -1,4 +1,13 @@
 #include "hilolay_alumnos.h"
+#include <commons/log.h>
+#include <commons/config.h>
+#include <conexion.h>
+#include <commons/string.h>
+
+
+
+t_log* log_interno;
+int socketServidor;
 
 int suse_create(int tid){
 
@@ -65,7 +74,7 @@ void hilolay_init(void){
 	int   puerto = config_get_int_value(ruta, "LISTEN_PORT");
 
 
-	log_interno = log_create("log_interno.txt", "LOG-INT", false, LOG_LEVEL_INFO);
+	log_interno = log_create("log_interno.txt", "LOG-INT", true, LOG_LEVEL_INFO);
 	socketServidor = crearSocketCliente(ip, puerto, log_interno); //Está hardcodeado - Habría que obtener IP y puerto del archivo de configuración?
 
 	//Enviar mensaje con un INIT. No recibo respuesta.

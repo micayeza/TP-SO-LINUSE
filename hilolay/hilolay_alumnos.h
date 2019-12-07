@@ -1,14 +1,6 @@
 #ifndef hilolay_alumnos_h__
 	#define hilolay_alumnos_h__
 
-#include <commons/log.h>
-#include <commons/config.h>
-#include <conexion.h>
-#include <commons/string.h>
-
-t_log* log_interno;
-int socketServidor;
-
 
 /**
 	 * TODO: Interface for alumnos (what they should implement in orde to make this work)
