@@ -134,8 +134,134 @@ int fuse_unlink(const char *path) {
 
 //Borrrar directorio
 static int fuse_rmdir(const char *path) {
+	int res = enviarEntero(socketServidor, SYS_RMDIR, log_interno);
+	    res = enviarTexto(socketServidor, path, log_interno);
+	return recibirEntero(socketServidor, log_interno);
+}
+
+static int fuse_utimens(const char *path, const struct timespec tv[2]) {
+	int res = enviarEntero(socketServidor, SYS_UTIMES, log_interno);
+
+	enviarTexto(socketServidor, path, log_interno);
+
+	 res  =  send(socketServidor, &tv[2].tv_sec, sizeof(time_t), MSG_WAITALL);
+	   res =  send(socketServidor, &tv[2].tv_nsec, sizeof(long), MSG_WAITALL);
+
+	return 0;
+}
+
+static int fuse_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi){
+
+	int res = enviarEntero(socketServidor, SYS_WRITE,  log_interno);
+
+	    res = enviarTexto(socketServidor, path, log_interno);
+	    res = enviarTexto(socketServidor,  buf,  log_interno);
+	    res = send(socketServidor, &size, sizeof(size_t), MSG_WAITALL);
+	    res = send(socketServidor, &offset, sizeof(off_t),MSG_WAITALL);
+
+	    res = recibirEntero(socketServidor,  log_info);
+
+	if(res == ENOSPC){
+		return -ENOSPC;
+	}
+
+	 if(res==ENOENT){
+
+    	 return -ENOENT;
+
+	 }
+
+	return size;
+}
+
+static int fuse_move(const char* path, const char *newPath) {
+
+	//Path origen
+	int res = enviarTexto(socketServidor, path, log_interno);
+	    res = enviarTexto(socketServidor, newPath, log_interno);
+
+	//Recibir respuesta
+	    res = recibirEntero(socketServidor, log_interno);
+
+	//Procesar respuesta
+	    	if(res == EEXIST){
+	    		return -EEXIST;
+
+			}
+			if (res == ENAMETOOLONG){
+
+				return -ENAMETOOLONG;
+			}
+			if(res == EACCES){
+				return -EACCES;
+
+			}
+	//Libero todas las estructuras
+
+
+	return 0;
 
 }
+
+static int fuse_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
+
+	//Seteo estructuras de envio
+	int res = enviarEntero(socketServidor, SYS_CREATE, log_interno);
+	    res = enviarTexto(socketServidor, path,  log_interno);
+
+	    // ME LA JUEGO A QUENO NECESITAS FUSE_FILE_INF
+	    res = recibirEntero(socketServidor, log_interno);
+	//Procesar respuesta
+	if(res == EEXIST){
+
+		return -EEXIST;
+
+	}
+		if (res == ENAMETOOLONG){
+
+			return -ENAMETOOLONG;
+		}
+		if(res == EDQUOT){
+
+			return -EDQUOT;
+		}
+		if(res == EACCES){
+
+			return -EACCES;
+		}
+	return 0;
+
+}
+
+
+static int fuse_chmod(const char *path, struct fuse_file_info *fi) {
+
+	return 0;
+}
+
+static int fuse_truncate(const char *path, off_t offset) {
+	int res = enviarEntero(socketServidor, SYS_TRUNCATE, log_interno);
+
+	res = enviarTexto(socketServidor, path, log_interno);
+	res = send(socketServidor, &offset, sizeof(off_t), MSG_WAITALL);
+	if(res >0){
+		res = recibirEntero(socketServidor, log_interno);
+	//Respuesta del servidor
+
+	if(res == -1){ //Archivo muy grande como para truncarlo
+
+		return -EFBIG;
+	}
+
+}
+	return 0;
+
+}
+
+
+
+
+
 
 int main(int argc, char *argv[]) {
 	argc = 3;
