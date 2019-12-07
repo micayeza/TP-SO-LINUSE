@@ -37,6 +37,7 @@
 #define TAM_BLOQUE 4096
 #define TAM_TABLA_NODOS 1024
 #define TAM_P_BLOQUE 4
+#define TAM_MAX_PUNT_IND 1000
 
 typedef enum e_estado {BORRADO, OCUPADO, DIRECTORIO} e_estado;
 
@@ -57,14 +58,13 @@ typedef struct {
 } t_cliente;
 
 typedef struct {
-	int id_nodo;
-	char* estado;
-	char* nombre_archivo;
-	int bloque_padre;
-	int tam_archivo;
-	struct timeval* fecha_creacion;
-	struct timeval* fecha_modificacion;
-	int p_indirectos[1000];
+	uint8_t estado;
+	unsigned char nombre_archivo[TAM_MAX_NOMBRE_ARCHIVO];
+	uint32_t bloque_padre;
+	uint32_t tam_archivo;
+	struct timeval fecha_creacion;
+	struct timeval fecha_modificacion;
+	int p_indirectos[TAM_MAX_PUNT_IND];
 } t_nodo;
 
 typedef struct {
@@ -92,6 +92,7 @@ typedef struct {
 
 t_log *SacServerLog;
 t_header* fs_header;
+t_configSAC* config;
 
 //FUNCIONES CONFIG
 t_configSAC* getConfigSAC(char* configPath);
@@ -104,7 +105,8 @@ t_cliente* create_cliente(int socket);
 void atenderCliente(t_cliente* cliente);
 
 //FUNCIONES FILESYSTEM
-
+void abrirHeaderFS();
+t_nodo* crearNodoVacio();
 
 
 #endif /* SACSERVER_H_ */
