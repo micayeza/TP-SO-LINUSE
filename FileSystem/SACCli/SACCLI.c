@@ -119,15 +119,10 @@ static int fuse_read(const char *path, char *buf, size_t size, off_t offset, str
 
 //Crear directorio
 int fuse_mkdir(const char *path, mode_t mode) {
-	//int resEnvioOperacion = enviarEntero(socketServidor, SYS_MKDIR,  log_interno);
-	int a = 1;
-	printf("PINTO UN MKDIR PERRO.");
-	 /*MensajeFUSE* mensaje;
-	 mensaje->syscall = 3;
-	 strcpy(mensaje->path,path);
-	 free(path);
-	 mensaje->buff = buf;
-	 memcpy(mensaje->size,size);*/
+	int resEnvioOperacion = enviarEntero(socketServidor, SYS_MKDIR,  log_interno);
+	int resEnvioTexto = enviarTexto(socketServidor, path, log_interno);
+	printf("CLIENTE: UN MKDIR. \n");
+	return recibirEntero(socketServidor, log_interno);
 }
 
 //Borrar archivo

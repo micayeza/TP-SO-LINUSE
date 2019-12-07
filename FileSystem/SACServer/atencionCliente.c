@@ -28,7 +28,10 @@ void atenderCliente(t_cliente* cliente){
 				break;
 			}
 			case SYS_MKDIR:{
-				printf("PINTO UN MKDIR PERRO");
+				printf("SERVER: UN MKDIR. \n");
+				char* path = recibirTexto(cliente->socket, log_interno);
+				int resultado = SacServerMkdir(path);
+				enviarEntero(cliente->socket, resultado,  log_interno);
 				break;
 			}
 			case SYS_READDIR:{
