@@ -336,7 +336,7 @@ t_pagina* buscar_segmento_pagina(t_list* segmentos , int seg, int pag, t_proceso
 		}
 	t_segmento* segmento  = list_find(segmentos, &(buscar_seg));
 	t_pagina*   pagina    = list_find(segmento->paginas, &(buscar_pag));
-
+	if(pagina == NULL) return NULL;
 	if(pagina->p != 1){
 		pagina->marco = swap(pagina->marco, false);
 		pagina->p = 1;
@@ -862,6 +862,7 @@ int freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesLi
 			//Si no era la ultima pagina hay otra y esa puede tener desperdicio
 			 if(desplazamiento1 + 5 + head1->size == config_muse->tamanio_pagina){
 				 pagina2 = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag2, proceso);
+				 if(pagina2 == NULL) return 0;
 				 for(int i= 0; i<5; i++){
 					 if(!hayHashtag(pagina2->marco, i)){
 							posicion2 += i;
@@ -875,6 +876,7 @@ int freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesLi
 						marco2 = pagina1->marco;
 					} else {
 						pagina2 = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag2, proceso);
+						if(pagina2 == NULL) return 0;
 						marco2 = pagina2->marco;
 					}
 	desplazamiento2 = posicion2%config_muse->tamanio_pagina;
@@ -2299,7 +2301,7 @@ void atenderConexiones(int parametros){
 		}break;
 		case CERRAR:{
 			//TEngo que liberar absolutamente todo
-			log_info(logMuse,"Se desconecto el proceso: \n");
+			log_info(logMuse,"Se desconecto el proceso %d : \n", parametros);
 			liberarTodo(proceso);
 
 			pthread_exit("CHAU");
@@ -2351,15 +2353,6 @@ void atenderConexiones(int parametros){
 			pthread_mutex_lock(&global);
 			char* frase = getMuse(posicion, bytes, proceso->segmentos, proceso, sg);
 
-			 printf("IP      | ID    |  SEG  | PAG | U | M | \n");
-			 int i=0;
-						while(i<list_size(tabla_clock)){
-							t_clock* clock = list_get(tabla_clock , i);
-
-							printf("%s | %d    |  %d   | %d  | %d | %d | \n", clock->ip, clock->id,
-									clock->seg, clock->pag, clock->u, clock->m);
-							i++;
-						}
 			pthread_mutex_unlock(&global);
 //			void* frase = getMuse(posicion, bytes, proceso->segmentos, proceso, sg);
 
@@ -2393,15 +2386,6 @@ void atenderConexiones(int parametros){
 			pthread_mutex_lock(&global);
 			int resultado = copiarMuse(posicionACopiar, bytes, copia,proceso->segmentos, proceso, sg);
 
-			 printf("IP      | ID    |  SEG  | PAG | U | M | \n");
-			 int i=0;
-						while(i<list_size(tabla_clock)){
-							t_clock* clock = list_get(tabla_clock , i);
-
-							printf("%s | %d    |  %d   | %d  | %d | %d | \n", clock->ip, clock->id,
-									clock->seg, clock->pag, clock->u, clock->m);
-							i++;
-						}
 			pthread_mutex_unlock(&global);
 			free(copia);
 			enviarInt(proceso->cliente,  resultado);
