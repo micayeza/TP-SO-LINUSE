@@ -12,6 +12,7 @@
 #include <commons/config.h>
 #include <commons/bitarray.h>
 #include <commons/log.h>
+#include <commons/string.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <pthread.h>
@@ -22,9 +23,9 @@
 #include <netdb.h>
 #include <errno.h>
 #include <time.h>
-#include <libs.h>
-#include <mensajes.h>
-#include <conexion.h>
+//#include <libs.h>
+//#include <mensajes.h>
+//#include <conexion.h>
 #include <math.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -113,6 +114,20 @@ typedef struct {
 	t_list* puntero_a_pag;
 }t_archivo;
 
+typedef enum {
+	NADA,
+	SALUDO,
+	CERRAR,
+	RESERVAR,
+	LIBERAR,
+	OBTENER,
+	COPIAR,
+	MAPEAR,
+	SINCRO,
+	DESMAP,
+	VER
+} museOperacion;
+
 typedef enum{
 	SHARED,
 	PRIVATE
@@ -150,6 +165,24 @@ char* bitmap_marcos;
 char* bitmap_swap;
 char* aux_swap;
 
+
+
+
+int enviarInt(int destinatario, int loQueEnvio);
+int recibirInt(int destinatario);
+
+int enviarUint32_t(int destinatario, uint32_t loQueEnvio);
+uint32_t recibirUint32_t(int destinatario);
+
+int enviarSizet(int destinatario, size_t n);
+size_t recibirSizet(int destinatario);
+
+int enviarTexto(int fdDestinatario, char* textoEnviar);
+char* recibirTexto(int fdOrigen);
+int pesoString(char *string);
+
+char* recibirVoid(int destinatario);
+int enviarVoid(int destinatario, void* loQueEnvio, int tam);
 
 bool existeArchivoConfig(char*);
 int crearConfigMemoria();
