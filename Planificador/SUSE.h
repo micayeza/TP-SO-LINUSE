@@ -13,6 +13,7 @@
 #include <sys/socket.h>
 #include <sys/sem.h>
 #include <semaphore.h>
+#include <arpa/inet.h>
 
 //Librerias COMMONS
 #include <commons/string.h>
@@ -22,9 +23,9 @@
 #include <commons/collections/dictionary.h>
 
 //Librerias propias
-#include <libs.h>
-#include <mensajes.h>
-#include <conexion.h>
+//#include <libs.h>
+//#include <mensajes.h>
+//#include <conexion.h>
 
 //------------------------- SECCION CONEXION -------------------------------
 void atenderPedidos();
@@ -41,33 +42,17 @@ typedef enum {
 	EXIT
 } estado;
 
-
-//typedef struct {
-//	int socket;
-//	t_dictionary* TCBs;
-//	estadoDeEjecucion estado;
-//} t_PCB;
-//
-//typedef struct {
-//	int id;
-//	estadoDeEjecucion estado;
-//	t_PCB* procesoPadre;
-//} t_TCB;
-//
-//t_dictionary* PCBs;
-//t_queue* colaNew;
-
-//t_TCB* create_TCB_en_PCB(t_PCB* PCB, void* funcion);
-
-//void encolarEnNew(t_TCB* TCB);
-//t_PCB* create_PCB(int socket);
-//void free_PCB(t_PCB* PCB);
-//t_TCB* create_TCB(int id, void* funcion);
-//void free_TCB(t_TCB* TCB);
-
-
-
-
+typedef enum {
+	VACIO,
+	INIT,
+	//Para SUSE
+    CREATE_HILO,
+	SCHEDULE_NEXT,
+	WAIT,
+	SIGNAL,
+	JOIN,
+	CLOSE,
+} TipoOperacion;
 // ------------------------ FIN SECCIÓN PLANIFICACIÓN ------------------------
 
 
@@ -193,6 +178,16 @@ int posicionSemaforo(char* sem_id);
 void bloquearEnSemaforo(t_block* block, char* sem_id);
 t_block* getNextFromSemaforo(int sem_pos);
 void printefearMetricas();
+
+
+int recibirInt(int destinatario);
+char* recibirTexto(int fdOrigen, t_log* logger);
+int enviarInt(int destinatario, int loQueEnvio);
+int aceptarCliente(int fd_servidor, t_log* logger);
+int crearSocketEscucha (int puerto, t_log* logger);
+void escucharSocketsEn(int fd_socket, t_log* logger);
+int crearSocketServidor(int puerto, t_log* logger);
+int crearSocket(t_log* logger);
 // ------------------------ FIN SECCIÓN MICA ------------------------
 
 #endif /* SUSE_H_ */

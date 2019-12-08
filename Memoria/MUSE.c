@@ -5,6 +5,151 @@
  *      Author: utnso
  */
 #include "MUSE.h"
+
+//MENSAJEEEEEEEEEEEEEEEEEEES
+char* recibirTexto(int fdOrigen){
+	int tamanio;
+	int resTamanio = recv(fdOrigen, &tamanio, sizeof(int), MSG_WAITALL);
+	if(resTamanio == ERROR){
+
+		return NULL;
+	}
+	if(tamanio == 0){
+		return NULL;
+	}
+	char* textoRecibido = malloc(tamanio);
+	int resTexto = recv(fdOrigen, textoRecibido, tamanio, MSG_WAITALL);
+	if(resTexto == ERROR){
+
+		return NULL;
+	}
+	textoRecibido[tamanio-1] = '\0';
+	return textoRecibido;
+}
+
+int pesoString(char *string) {
+    return string == NULL ? 0 : sizeof(char) * (strlen(string) + 1);
+}
+
+int enviarTexto(int fdDestinatario, char* textoEnviar){
+	int tamanio = pesoString(textoEnviar);
+	int resTamanio = send(fdDestinatario, &tamanio, sizeof(int), MSG_WAITALL);
+	if(resTamanio == ERROR){
+
+		return ERROR;
+	}
+	if(tamanio != 0){
+	int resTexto = send(fdDestinatario, (void*)textoEnviar, tamanio, MSG_WAITALL);
+	if(resTexto == ERROR){
+
+		return ERROR;
+	}
+	return resTexto;
+	}
+	return 0;
+}
+
+int enviarInt(int destinatario, int loQueEnvio){
+
+	 void* paquete = malloc(sizeof(int));
+	 void* puntero = paquete;
+	 memcpy(puntero, &(loQueEnvio), sizeof(int));
+	 int res = send(destinatario, paquete, sizeof(int), MSG_WAITALL);
+	 free(paquete);
+	 return res;
+}
+
+int recibirInt(int destinatario){
+	int algo;
+	if(recv(destinatario, &algo, sizeof(int), MSG_WAITALL) != 0)
+			return algo;
+		else
+		{
+			//close(destinatario);
+			return -1;
+		}
+
+}
+
+int enviarUint32_t(int destinatario, uint32_t loQueEnvio){
+	 void* paquete = malloc(sizeof(uint32_t));
+	 void* puntero = paquete;
+	 memcpy(puntero, &(loQueEnvio), sizeof(uint32_t));
+	 int res = send(destinatario, paquete, sizeof(uint32_t), MSG_WAITALL);
+	 free(paquete);
+	 return res;
+}
+
+uint32_t recibirUint32_t(int destinatario){
+	uint32_t algo;
+	if(recv(destinatario, &algo, sizeof(uint32_t), MSG_WAITALL) != 0)
+			return algo;
+		else
+		{
+			//close(destinatario);
+			return -1;
+		}
+
+}
+int enviarSizet(int destinatario,size_t n){
+	 int tamanio = sizeof(size_t);
+	 void* paquete = malloc(sizeof(size_t));
+	 void* puntero = paquete;
+
+	 memcpy(puntero, &(n), sizeof(size_t));
+	 int res = send(destinatario, paquete, tamanio, MSG_WAITALL);
+	 free(paquete);
+	 return res;
+}
+
+size_t recibirSizet(int destinatario){
+
+	size_t algo;
+	if(recv(destinatario, &algo, sizeof(size_t), MSG_WAITALL) != 0)
+			return algo;
+		else
+		{
+			//close(destinatario);
+			return -1;
+		}
+}
+
+
+int enviarVoid(int destinatario, void* textoEnviar, int tam){
+
+
+	int res = enviarInt(destinatario, tam);
+	if(res != 0){
+	  res = send(destinatario, textoEnviar, tam, MSG_WAITALL);
+	if(res == -1){
+
+		return -1;
+	}
+	return res;
+	}
+	return 0;
+}
+
+
+
+char* recibirVoid(int fdOrigen){
+	int tamanio;
+
+	tamanio = recibirInt(fdOrigen);
+	if(tamanio == 0){
+		return NULL;
+	}
+	void* textoRecibido = malloc(tamanio);
+	int resTexto = recv(fdOrigen, textoRecibido, tamanio, MSG_WAITALL);
+	if(resTexto == -1){
+		return NULL;
+	}
+
+	return textoRecibido;
+}
+
+
+
 size_t highestOneBitPosition(uint32_t a) {
     size_t bits=0;
     while (a!=0) {
@@ -191,7 +336,7 @@ t_pagina* buscar_segmento_pagina(t_list* segmentos , int seg, int pag, t_proceso
 		}
 	t_segmento* segmento  = list_find(segmentos, &(buscar_seg));
 	t_pagina*   pagina    = list_find(segmento->paginas, &(buscar_pag));
-
+	if(pagina == NULL) return NULL;
 	if(pagina->p != 1){
 		pagina->marco = swap(pagina->marco, false);
 		pagina->p = 1;
@@ -523,7 +668,7 @@ int copiarMuse(uint32_t posicionACopiar,int  bytes,char* src,t_list* tabla_segme
 		  memcpy(dest, src, bytes);
 	  }
 	  else{
-		  int leidos =0;
+//		  int leidos =0;
 		  memcpy(dest, src,config_muse->tamanio_pagina- desplazamiento );
 		  bytes -= config_muse->tamanio_pagina- desplazamiento;
 		  src += config_muse->tamanio_pagina- desplazamiento;
@@ -548,62 +693,6 @@ int copiarMuse(uint32_t posicionACopiar,int  bytes,char* src,t_list* tabla_segme
 		  }
 	  }
 
-//        size_t i;
-//        size_t x;
-//        for (i = 0; i < bytes && src[i] != '\0'; i++){
-//            if(desplazamiento < config_muse->tamanio_pagina ){
-//          	  dest[desplazamiento] = src[i];
-//          	  desplazamiento++;
-//          	  x++;
-//            }else{
-//          	  pag++;
-//          	  pagina = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag, proceso);
-//          	  dest = punteroMemoria + ((config_muse->tamanio_pagina * pagina->marco));
-//          	  desplazamiento = 0;
-//          	  clock = buscar_clock(pagina->marco);
-//          	  clock->m = 1;
-////          	  i--;
-//          	  dest[desplazamiento] = src[i];
-//            }
-//        	 }
-//        for (i=x ; i < bytes; i++){
-//      	  if(desplazamiento < config_muse->tamanio_pagina ){
-//      		  dest[desplazamiento] = '\0';
-//      		  desplazamiento++;
-//      	  }else{
-//          	  pag++;
-//          	  pagina = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag, proceso);
-//          	  dest = punteroMemoria + ((config_muse->tamanio_pagina * pagina->marco));
-//          	desplazamiento = 0;
-//          	  clock = buscar_clock(pagina->marco);
-//          	  clock->m = 1;
-//          	  dest[desplazamiento] = '\0';
-//      	  }
-//        }
-//		pthread_mutex_unlock(&global);
-//	 int len = calcular_paginas_malloc(bytes) -1;
-//  void* dest = malloc(bytes);
-//
-//   src = punteroMemoria + ((config_muse->tamanio_pagina * pagina->marco) + desplazamiento);
-//  size_t i;
-//  	   	   	   	 int aux = config_muse->tamanio_pagina - desplazamiento;
-//  	   	   	   	 memcpy(dest, src, aux);
-////  	   	   	     pthread_mutex_unlock(&marcos_memoria[pagina->marco]);
-//  	   	   	pthread_mutex_unlock(&global);
-//
-//  	   	   	   	 for (i = 0; i < len; i++){
-//              	  pag++;
-//              	  pagina = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag, proceso);
-////                	pthread_mutex_lock(&marcos_memoria[pagina->marco]);
-//              	pthread_mutex_unlock(&global);
-//              	  src = punteroMemoria + (config_muse->tamanio_pagina * pagina->marco);
-//              	  memcpy(dest, src, config_muse->tamanio_pagina);
-////                 	pthread_mutex_unlock(&marcos_memoria[pagina->marco]);
-//              	pthread_mutex_unlock(&global);
-//  	   	   	   	 }
-
-
-//    return dest;
         //Tengo que ponerle flag de modificada a la pagina.
         log_info(logMuse, "Se copio correctamente \n" );
         return 0;
@@ -667,7 +756,7 @@ char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos, t_proceso
  }
 
   char* dest = malloc(bytes);
-  int aux = bytes;
+//  int aux = bytes;
 
   char* src = punteroMemoria + ((config_muse->tamanio_pagina * pag->marco) + desplazamiento);
 //  size_t i;
@@ -702,30 +791,6 @@ char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos, t_proceso
 		  memcpy(dest+leidos, src, bytes);
 	  }
   }
-
-
-//			pthread_mutex_unlock(&global);
-
-//**************************SI MALE SAL DESCOMENTAR TODO LO ANTERIOR
-//   int len = calcular_paginas_malloc(bytes) -1;
-//   void* dest = malloc(bytes);
-//
-//   void* src = punteroMemoria + ((config_muse->tamanio_pagina * pag->marco) + desplazamiento);
-//   size_t i;
-//   	   	   	   	 int aux = config_muse->tamanio_pagina - desplazamiento;
-//   	   	   	   	 memcpy(dest, src, aux);
-////   	   	   	   	 pthread_mutex_unlock(&marcos_memoria[pag->marco]);
-//   	   	   pthread_mutex_unlock(&global);
-//   	   	   	   	 for (i = 0; i < len; i++){
-//               	  pagina++;
-//               	  pag = buscar_segmento_pagina(tabla_segmentos, seg->segmento, pagina, proceso);
-////               	  pthread_mutex_lock(&marcos_memoria[pag->marco]);
-//               	pthread_mutex_unlock(&global);
-//               	  src = punteroMemoria + (config_muse->tamanio_pagina * pag->marco);
-//               	  memcpy(dest, src, config_muse->tamanio_pagina);
-////               	  pthread_mutex_unlock(&marcos_memoria[pag->marco]);
-//               	pthread_mutex_unlock(&global);
-//                 }
 
 
      return dest;
@@ -797,6 +862,7 @@ int freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesLi
 			//Si no era la ultima pagina hay otra y esa puede tener desperdicio
 			 if(desplazamiento1 + 5 + head1->size == config_muse->tamanio_pagina){
 				 pagina2 = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag2, proceso);
+				 if(pagina2 == NULL) return 0;
 				 for(int i= 0; i<5; i++){
 					 if(!hayHashtag(pagina2->marco, i)){
 							posicion2 += i;
@@ -810,6 +876,7 @@ int freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesLi
 						marco2 = pagina1->marco;
 					} else {
 						pagina2 = buscar_segmento_pagina(tabla_segmentos, segmento->segmento, pag2, proceso);
+						if(pagina2 == NULL) return 0;
 						marco2 = pagina2->marco;
 					}
 	desplazamiento2 = posicion2%config_muse->tamanio_pagina;
@@ -2234,7 +2301,7 @@ void atenderConexiones(int parametros){
 		}break;
 		case CERRAR:{
 			//TEngo que liberar absolutamente todo
-			log_info(logMuse,"Se desconecto el proceso: \n");
+			log_info(logMuse,"Se desconecto el proceso %d : \n", parametros);
 			liberarTodo(proceso);
 
 			pthread_exit("CHAU");
@@ -2286,19 +2353,10 @@ void atenderConexiones(int parametros){
 			pthread_mutex_lock(&global);
 			char* frase = getMuse(posicion, bytes, proceso->segmentos, proceso, sg);
 
-			 printf("IP      | ID    |  SEG  | PAG | U | M | \n");
-			 int i=0;
-						while(i<list_size(tabla_clock)){
-							t_clock* clock = list_get(tabla_clock , i);
-
-							printf("%s | %d    |  %d   | %d  | %d | %d | \n", clock->ip, clock->id,
-									clock->seg, clock->pag, clock->u, clock->m);
-							i++;
-						}
 			pthread_mutex_unlock(&global);
 //			void* frase = getMuse(posicion, bytes, proceso->segmentos, proceso, sg);
 
-			enviarTexto(proceso->cliente, frase, logMuse);
+			enviarTexto(proceso->cliente, frase);
 //			enviarVoid(proceso->cliente, frase, bytes);
 			if(frase == NULL){
 				if(!sg){
@@ -2328,15 +2386,6 @@ void atenderConexiones(int parametros){
 			pthread_mutex_lock(&global);
 			int resultado = copiarMuse(posicionACopiar, bytes, copia,proceso->segmentos, proceso, sg);
 
-			 printf("IP      | ID    |  SEG  | PAG | U | M | \n");
-			 int i=0;
-						while(i<list_size(tabla_clock)){
-							t_clock* clock = list_get(tabla_clock , i);
-
-							printf("%s | %d    |  %d   | %d  | %d | %d | \n", clock->ip, clock->id,
-									clock->seg, clock->pag, clock->u, clock->m);
-							i++;
-						}
 			pthread_mutex_unlock(&global);
 			free(copia);
 			enviarInt(proceso->cliente,  resultado);
@@ -2351,7 +2400,7 @@ void atenderConexiones(int parametros){
 		case MAPEAR: {
 			int flag   = recibirInt(proceso->cliente);
 			size_t len = recibirSizet(proceso->cliente);
-			char* path = recibirTexto(proceso->cliente, logMuse);
+			char* path = recibirTexto(proceso->cliente);
 
 			uint32_t result = mappearMuse(path, len, flag, proceso);
 

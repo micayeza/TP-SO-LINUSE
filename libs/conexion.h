@@ -33,6 +33,10 @@ typedef enum {
 	SYS_UNLINK,
 	SYS_MKDIR,
 	SYS_READDIR,
+	SYS_UTIMES,
+	SYS_MOVE,
+	SYS_CREATE,
+	SYS_TRUNCATE
 } TipoOperacion;
 
 int crearSocketEscucha (int puerto, t_log* logger);
