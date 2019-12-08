@@ -100,6 +100,8 @@ void atenderCliente(t_cliente* cliente);
 //FUNCIONES FILESYSTEM
 void abrirHeaderFS();
 t_nodo* crearNodoVacio();
+void free_nodo(t_nodo* nodo);
+t_nodo* obtenerNodo(int numeroNodo);
 
 
 #endif /* SACSERVER_H_ */

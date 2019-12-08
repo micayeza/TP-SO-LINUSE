@@ -100,6 +100,12 @@ void free_cliente(t_cliente* cliente){
 	free(cliente);
 }
 
+void free_nodo(t_nodo* nodo){
+	free(nodo->nombre_archivo);
+	free(nodo->p_indirectos);
+	free(nodo);
+}
+
 void openFS(){
 	archivo_fs = fopen(config->pathFs,"r+");
 }
@@ -108,8 +114,12 @@ void closeFS(){
 	fclose(archivo_fs);
 }
 
-int existeArchivo(char* path){
-	char** pathSeparado = string_split(path, "/");
+int sizeArrayChar(char** array){
+	int tam = 0;
+	while(array[tam] != NULL){
+		tam++;
+	}
+	return tam;
 }
 
 void abrirHeaderFS(){
@@ -199,6 +209,34 @@ int buscarNodoLibre(){
 	closeFS();
 	return -1;
 }
+
+//Retorna el ID del nodo si existe o ERROR en caso de no existir.
+int existeArchivo(char* path){
+	char** pathSeparado = string_split(path, "/");
+	int tam = sizeArrayChar(pathSeparado);
+	for(int i = 0; i < TAM_TABLA_NODOS; i++){
+		int i_path = tam - 1;
+		t_nodo* nodo = obtenerNodo(i);
+
+		if(strcmp(pathSeparado[i_path], nodo->nombre_archivo) == 0){
+			if(chequearNombrePadre(pathSeparado, i_path, nodo->bloque_padre) == 0)
+				return i;
+		}
+	}
+	return ERROR;
+}
+
+int chequearNombrePadre(char** pathSeparado, int i_path, int padre){
+	if(padre==0)
+		return 0;
+	t_nodo* nodo = obtenerNodo(padre);
+	i_path--;
+	if(strcmp(pathSeparado[i_path], nodo->nombre_archivo) == 0){
+		int resultado = chequearNombrePadre(pathSeparado, i_path, nodo->bloque_padre);
+		return resultado;
+	}
+	return ERROR;
+}
 //--------------------------------
 
 //BITMAP -------------------
@@ -260,22 +298,22 @@ void finalizar(){
 int main(){
 	inicializacion();
 
-	existeArchivo("/home/utnso/aaa");
-	/*t_nodo* nodoNuevo = obtenerNodo(1);
+	int res = existeArchivo("/BBB/DDD/mmm.txt");
+	//t_nodo* nodoNuevo = obtenerNodo(1);
 
 	t_nodo* nodo = crearNodoVacio();
 
 
-	nodo->estado = 0;
-	strcpy(&(nodo->nombre_archivo), "maldito.txt");
-	nodo->bloque_padre = 44;
-	nodo->tam_archivo = 8;
+	/*nodo->estado = 1;
+	strcpy(&(nodo->nombre_archivo), "mmm.txt");
+	nodo->bloque_padre = 5;
+	nodo->tam_archivo = 22;
 	gettimeofday(&(nodo->fecha_modificacion), NULL);
 	nodo->p_indirectos[0] = 122;
 	nodo->p_indirectos[1] = 123;
-	nodo->p_indirectos[2] = 128;
+	nodo->p_indirectos[2] = 128;*/
 
-	persistirNodo(1, nodo);*/
+	//persistirNodo(8, nodo);
 	//int numeroNodoLibre = buscarNodoLibre();
 	//persistirNodo(numeroNodoLibre, nodo);
 
