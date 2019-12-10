@@ -13,7 +13,6 @@
 #include <time.h>
 #include <commons/config.h>
 #include <commons/log.h>
-//#include "../CommonsFUSE.c"
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <pthread.h>
@@ -76,12 +75,6 @@ typedef struct {
 	int inicio_tabla_nodos; //Numero de bloque
 	int inicio_bloques_datos;
 	int tam_bloques_datos;
-	/*long bitmap_byte_inicio;
-	long bitmap_byte_tam;
-	long tabla_nodos_byte_inicio;
-	long tabla_nodos_byte_tam;
-	long bloque_datos_byte_inicio;
-	long bloque_datos_byte_tam;*/
 } t_header;
 
 typedef struct {
@@ -107,6 +100,8 @@ void atenderCliente(t_cliente* cliente);
 //FUNCIONES FILESYSTEM
 void abrirHeaderFS();
 t_nodo* crearNodoVacio();
+void free_nodo(t_nodo* nodo);
+t_nodo* obtenerNodo(int numeroNodo);
 
 
 #endif /* SACSERVER_H_ */

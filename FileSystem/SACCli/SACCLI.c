@@ -11,7 +11,7 @@ static int fuse_getattr(const char *path, struct stat *stbuf) {
 	if (strcmp(path, "/") == 0) {
 		stbuf->st_mode = S_IFDIR | 0755;
 		stbuf->st_nlink = 2;
-	} else if (strcmp(path, DEFAULT_FILE_PATH) == 0) {
+	}else if (strcmp(path, DEFAULT_FILE_PATH) == 0) {
 		stbuf->st_mode = S_IFREG | 0444;
 		stbuf->st_nlink = 1;
 		stbuf->st_size = strlen(DEFAULT_FILE_CONTENT);
@@ -44,7 +44,6 @@ static int fuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off
 	(void) offset;
 	(void) fi;
 
-	printf("PINTO UN MKDIR PERRO.");
 	if (strcmp(path, "/") != 0)
 		return -ENOENT;
 
@@ -122,7 +121,8 @@ int fuse_mkdir(const char *path, mode_t mode) {
 	int resEnvioOperacion = enviarEntero(socketServidor, SYS_MKDIR,  log_interno);
 	int resEnvioTexto = enviarTexto(socketServidor, path, log_interno);
 	printf("CLIENTE: UN MKDIR. \n");
-	return recibirEntero(socketServidor, log_interno);
+	int resultado = recibirEntero(socketServidor, log_interno);
+	return resultado;
 }
 
 //Borrar archivo
@@ -264,10 +264,11 @@ static int fuse_truncate(const char *path, off_t offset) {
 
 
 int main(int argc, char *argv[]) {
-	argc = 3;
-	argv[0] = "./fuse_example";
+	argc = 4;
+	argv[0] = "./SACCli";
 	argv[1] = "/home/utnso/pipo/";
-	argv[2] = "-f";
+	argv[2] = "-d";
+	argv[3] = "-s";
 	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 
 	memset(&runtime_options, 0, sizeof(struct t_runtime_options));
