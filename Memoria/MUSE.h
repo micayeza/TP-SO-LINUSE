@@ -126,8 +126,8 @@ typedef enum {
 } museOperacion;
 
 typedef enum{
-	SHARED,
-	PRIVATE
+	PRIVATE,
+	SHARED
 }comparticion;
 
 typedef struct {

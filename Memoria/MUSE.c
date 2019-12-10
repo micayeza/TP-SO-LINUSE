@@ -1535,18 +1535,23 @@ int crearPaginasmapeadas(int tam,size_t len,t_segmento* segmento,t_proceso* proc
 	t_proceso* fantasma;
 	char mode[] = "0777"; // Permisos totales
 	int permisos = strtol(mode, 0, 8); // Administración para los permisos
+	chmod(path, permisos); // Aplico permisos al archivo
 
-	string_append(&path, ".txt" );
+//	char*  path1 = string_new();
+//	string_append(&path1, "/home/utnso/workspace/tp-2019-2c-capitulo-2/Memoria/Debug/una/ruta.txt" );
+//	string_append(&path, ".txt" );
 	int fd_archivo = open(path, O_RDWR | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH);
-
+//	FILE* fd_archivo = fopen(path, "w+");
 	if(fd_archivo == -1){
+		log_error(logMuse, "no se haecr open");
+//	if(fd_archivo == NULL){
 		//vacio el segmento y deberia devolver error
 		segmento->dinamico =  true;
 		segmento->empty    =  true;
 		free(segmento->path);
 		return -1;
 	}
-	chmod(path, permisos); // Aplico permisos al archivo
+//	chmod(path, permisos); // Aplico permisos al archivo
 
 //	int tamanio_archivo = tamanioArchivo(path);
 	//Busco el proceso fantasma
@@ -1678,7 +1683,7 @@ uint32_t  crearSegmentoMapeado(int len,t_proceso* proceso, int flag, char* path)
 	if(flag == PRIVATE){
 		segmento->paginas = list_create();
 	 	res = crearPaginasmapeadas(tam, len, segmento, proceso, flag, path);
-	 	if(res >0) list_add(proceso->segmentos, segmento );
+	 	if(res >=0) list_add(proceso->segmentos, segmento );
 	}
 	else{
 
