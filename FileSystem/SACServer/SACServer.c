@@ -122,6 +122,52 @@ int sizeArrayChar(char** array){
 	return tam;
 }
 
+void formatearSAC(){
+	openFS();
+	fseek(archivo_fs, 0, SEEK_END); //Me paro al final del archivo
+	long tamFS = ftell(archivo_fs); //Veo en que byte estoy parado
+	fseek(archivo_fs, 0, SEEK_SET);
+
+	//HEADER
+	fwrite("SAC",sizeof(char),4,archivo_fs); //Identificador
+	fwrite(&1,sizeof(int),1,archivo_fs); //Version
+	fwrite(&1,sizeof(int),1,archivo_fs); //Bloque inicio bitmap
+	fwrite(&1,sizeof(int),1,archivo_fs); //Tamaño bitmap en bloque
+	long tam_byte_bitmap = tamFS / TAM_BLOQUE;
+	int bloques_bm = ceil( (float)tam_byte_bitmap / (float)TAM_BLOQUE); //Cantidad bloques que ocupa el Bitmap
+	fwrite(&bloques_bm,sizeof(int),1,archivo_fs); //Tamaño bitmap en bloque
+	fwrite("\0",sizeof(char),4081,archivo_fs); //Identificador
+
+	//BITMAP
+	char* bytesBitmap = malloc(bloques_bm * TAM_BLOQUE);
+	bytesBitmap = string_repeat("\0", int count);
+	t_bitarray* bitmap = bitarray_create_with_mode(bytesBitmap,tam_byte_bitmap,MSB_FIRST);
+	bitarray_set_bit(bitmap, 0); //Seteo ocupado el bit del header
+	for(int i = 1; i <= bloques_bm; i++){ //Seteo ocupado los bits del bitmap
+		bitarray_set_bit(bitmap, i);
+	}
+	for(int i = 1 + bloques_bm; i <= 1 + bloques_bm + TAM_TABLA_NODOS; i++){ //Seteo ocupado los bits de la tabla de nodos
+		bitarray_set_bit(bitmap, i);
+	}
+	fwrite(bitmap->bitarray,1,bloques_bm * TAM_BLOQUE,archivo_fs);
+
+	//TABLA DE NODOS
+	t_nodo* nodo= crearNodoVacio();
+	for(int i = 0; i < TAM_TABLA_NODOS; i++){
+		fseek(archivo_fs, i * TAM_BLOQUE, SEEK_CUR);
+
+		fwrite(&(nodo->estado),1,1,archivo_fs);
+		fwrite(nodo->nombre_archivo,sizeof(char),71,archivo_fs);
+		fwrite(&(nodo->bloque_padre),sizeof(int),1,archivo_fs);
+		fwrite(&(nodo->tam_archivo),sizeof(int),1,archivo_fs);
+		fwrite(&(nodo->fecha_creacion),sizeof(struct timeval),1,archivo_fs);
+		fwrite(&(nodo->fecha_modificacion),sizeof(struct timeval),1,archivo_fs);
+		fwrite(nodo->p_indirectos,sizeof(int)*TAM_MAX_PUNT_IND,1,archivo_fs);
+	}
+
+	closeFS();
+}
+
 void abrirHeaderFS(){
 	/*long pos = ftell(archivo);
 	fseek(archivo,3,SEEK_CUR); //Se mueve desde donde quedó.
@@ -236,6 +282,22 @@ int chequearNombrePadre(char** pathSeparado, int i_path, int padre){
 		return resultado;
 	}
 	return ERROR;
+}
+
+t_nodo* crearNodoVacio(){
+	t_nodo* nodo = malloc(sizeof(t_nodo));
+	nodo->estado = 0;
+	strcpy(&(nodo->nombre_archivo), "");
+	nodo->bloque_padre = 0;
+	nodo->tam_archivo = 0;
+	gettimeofday(&(nodo->fecha_creacion), NULL);
+	gettimeofday(&(nodo->fecha_modificacion), NULL);
+
+	for(int i = 0 ; i < TAM_MAX_PUNT_IND; i++){
+		nodo->p_indirectos[i] = -1;
+	}
+
+	return nodo;
 }
 //--------------------------------
 
