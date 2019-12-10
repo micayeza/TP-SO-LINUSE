@@ -160,7 +160,7 @@ bool stop;
 int  paginas_usadas;
 char* bitmap_marcos;
 char* bitmap_swap;
-char* aux_swap;
+//char* aux_swap;
 
 
 
@@ -244,19 +244,18 @@ int unmapMuse(uint32_t  fd,t_proceso* proceso, bool sg);
 
 size_t highestOneBitPosition(uint32_t a);
 bool addition_is_safe(uint32_t a, uint32_t b) ;
-// Para swap tengo al funcion rewind que devuelve el cursor al inicio del archivo
-//Esta char *fgets(char *buffer, int tamaño, FILE *archivo); buffer donde lo guarda, tamaño es el maximio
-// archivo DA
-// int fputs(const char *buffer, FILE *archivo)
-// char cadena[] = "Mostrando el uso de fputs en un fichero.\n"; TEngo que poner el \n
+
 pthread_mutex_t sem_bitmap_swap;
 pthread_mutex_t sem_bitmap_marco;
 pthread_mutex_t sem_paginas;
 pthread_mutex_t sem_clock;
-//pthread_mutex_t marcos_memoria[];
-//pthread_mutex_t marcos_swap[];
-pthread_mutex_t global; //CAsi como un semaforo global, lastima que no anduvo elarray
-//pthread_mutex_t sem_bitmap_swap;
+pthread_mutex_t global;
 
+typedef struct {
+ pthread_mutex_t marco;
+} t_semaforo;
+
+t_list* marcos_memoria;
+t_list* marcos_swap;
 
 #endif /* MUSE_H_ */
