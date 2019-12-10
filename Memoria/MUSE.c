@@ -476,7 +476,7 @@ int swap(int pag_swap, bool nueva){
 
 	t_semaforo* sem = list_get(marcos_memoria, marco);
 	pthread_mutex_lock(&sem->marco);
-	t_semaforo* sem_swap = list_get(marcos_memoria, marco_swap);
+	t_semaforo* sem_swap = list_get(marcos_swap, marco_swap);
 	pthread_mutex_lock(&sem_swap->marco);
 
 
@@ -514,8 +514,8 @@ int swap(int pag_swap, bool nueva){
 			}
 	}
 
-	pthread_mutex_lock(&sem_swap->marco);
-	pthread_mutex_lock(&sem->marco);
+	pthread_mutex_unlock(&sem_swap->marco);
+	pthread_mutex_unlock(&sem->marco);
 
 	free(aux_swap);
 	if(actualizar_viejo){
