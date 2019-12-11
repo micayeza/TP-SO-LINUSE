@@ -161,7 +161,25 @@ int  paginas_usadas;
 char* bitmap_marcos;
 char* bitmap_swap;
 //char* aux_swap;
+pthread_mutex_t sem_bitmap_swap;
+pthread_mutex_t sem_bitmap_marco;
+pthread_mutex_t sem_paginas;
+pthread_mutex_t sem_clock;
+pthread_mutex_t global;
+pthread_mutex_t sem_cant_pag;
+pthread_mutex_t sem_procesos;
 
+//typedef struct {
+// pthread_mutex_t marco;
+//} t_semaforo;
+
+typedef struct{
+	pthread_mutex_t marco;
+
+}t_semaforo;
+
+t_list* lista_marcos_memoria;
+t_list* lista_marcos_swap;
 
 
 
@@ -245,17 +263,15 @@ int unmapMuse(uint32_t  fd,t_proceso* proceso, bool sg);
 size_t highestOneBitPosition(uint32_t a);
 bool addition_is_safe(uint32_t a, uint32_t b) ;
 
-pthread_mutex_t sem_bitmap_swap;
-pthread_mutex_t sem_bitmap_marco;
-pthread_mutex_t sem_paginas;
-pthread_mutex_t sem_clock;
-pthread_mutex_t global;
+static void libres_destroy(t_libres *self);
+static void seg_destroy(t_segmento *self);
+static void proc_destroy(t_proceso *self);
+static void clock_destroy(t_clock *self);
+static void sem_destroy(t_semaforo *self);
+static void ip_destroy(t_ip_id *self);
+static void pag_destroy(t_pagina *self);
+static void archivos_destroy(t_archivo *self);
+static void sem_destroy(t_semaforo *self);
 
-typedef struct {
- pthread_mutex_t marco;
-} t_semaforo;
-
-t_list* marcos_memoria;
-t_list* marcos_swap;
 
 #endif /* MUSE_H_ */

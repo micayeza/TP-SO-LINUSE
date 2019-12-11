@@ -223,15 +223,6 @@ void muse_free(uint32_t posicion){
 
 int muse_cpy(uint32_t dst, void* src, int n){
 
-//	char* frase;
-//	if(n==4){
-//		int a = *(int*)src;
-//		frase = string_itoa(a);
-//	}else{
-//		frase =  malloc(n);
-//		memcpy(frase, src, n);
-//	}
-
 	void* frase = malloc(n);
 	memcpy(frase, src, n);
 
@@ -239,8 +230,8 @@ int muse_cpy(uint32_t dst, void* src, int n){
 	enviarInt(muse, COPIAR);
 	enviarUint32_t(muse, dst);
 	enviarInt(muse, n );
-	enviarTexto(muse, frase);
-//	enviarVoid(muse, frase, n);
+//	enviarTexto(muse, frase);
+	enviarVoid(muse, frase, n);
 
 	int res = recibirInt(muse);
 	if(res == -1){
@@ -260,8 +251,8 @@ int muse_get(void* dst, uint32_t src, size_t n){
 	enviarUint32_t(muse, src );
 	enviarSizet(muse, n);
 
-	char* copiar = recibirTexto(muse);
-//	void* copiar = recibirVoid(muse);
+//	char* copiar = recibirTexto(muse);
+	void* copiar = recibirVoid(muse);
 	if(copiar == NULL){
 		return -1;
 	}else{
