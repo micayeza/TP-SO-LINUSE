@@ -14,13 +14,14 @@
 #include <sys/sem.h>
 #include <semaphore.h>
 #include <arpa/inet.h>
-
+#include <signal.h>
 //Librerias COMMONS
 #include <commons/string.h>
 #include <commons/config.h>
 #include <commons/log.h>
 #include <commons/collections/queue.h>
 #include <commons/collections/dictionary.h>
+#include <commons/collections/list.h>
 
 //Librerias propias
 //#include <libs.h>
@@ -152,6 +153,7 @@ t_queue** sem_blocked;
 
 //int mult;
 
+
 pthread_mutex_t sem_new;
 pthread_mutex_t sem_lock;
 pthread_mutex_t sem_exit;
@@ -188,6 +190,13 @@ int crearSocketEscucha (int puerto, t_log* logger);
 void escucharSocketsEn(int fd_socket, t_log* logger);
 int crearSocketServidor(int puerto, t_log* logger);
 int crearSocket(t_log* logger);
+
+static void prog_destroy(t_programa *self);
+static void hilos_destroy(t_hilo *self);
+static void block_destroy(t_block *self);
+static void new_destroy(t_new *self);
+
+
 // ------------------------ FIN SECCIÓN MICA ------------------------
 
 #endif /* SUSE_H_ */

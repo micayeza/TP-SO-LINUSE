@@ -2798,6 +2798,8 @@ void inicializarMemoria(){
 	pthread_mutex_init(&sem_bitmap_marco ,NULL);
 	pthread_mutex_init(&sem_paginas,NULL);
 	pthread_mutex_init(&sem_cant_pag,NULL);
+	pthread_mutex_init(&sem_procesos,NULL);
+	pthread_mutex_init(&sem_clock,NULL);
 
 	lista_marcos_memoria = list_create();
 
@@ -2948,10 +2950,7 @@ static void archivos_destroy(t_archivo *self) {
 	list_destroy_and_destroy_elements(self->puntero_a_pag, (void*) pag_destroy);
     free(self);
 }
-//static void sem_destroy(t_semaforo *self) {
-//	pthread_mutex_destroy(&self->marco);
-//    free(self);
-//}
+
 void handler(){
 	log_info(logMuse, "Cerrando MUSE \n");
 

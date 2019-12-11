@@ -27,9 +27,13 @@ void atenderPrograma(void* par){
 				log_info(log_interno, "[SCHEDULE NEXT] \n");
 				if(hilo_exec == NULL)hilo_exec = next_hilo(tabla_ready); //Hacer los pasos para un Schedule Next.
 				if(hilo_exec == NULL){
-					enviarInt(parametros->programa, parametros->id);
+					if(list_size(joins)>0){
+						enviarInt(parametros->programa, -1);
+					}else{
+						enviarInt(parametros->programa, parametros->id);
+					}
 				}else{
-				enviarInt(parametros->programa, hilo_exec->id);
+				    enviarInt(parametros->programa, hilo_exec->id);
 				}
 				break;
 			}
@@ -120,8 +124,9 @@ void atenderPrograma(void* par){
 
 				free(block->sem);
 				free(block);
-				free(semName);
+
 				}
+				free(semName);
 				pthread_mutex_unlock(&sl);
 				pthread_mutex_unlock(&sem_lock);
 			}break;
@@ -226,8 +231,9 @@ t_new* next_hilo(t_list* tabla_ready){
 
 	log_info(log_interno, "Pasa el hilo %d del programa %d a ejecutar \n", nuevo->id, nuevo->programa);
 
-
+	pthread_mutex_lock(&sem_new);
 	t_hilo* hilo = buscar_prog_hilo(nuevo->programa, nuevo->id);
+	pthread_mutex_unlock(&sem_new);
 	hilo->enReady  += clock() - hilo->initReady;
 	hilo->initExec  = clock();
 	hilo->estado    = EXEC;
@@ -425,7 +431,8 @@ int wait_hilo(int tid,char* semName){
 
 	    int bloquear = 0;
 		int pos = posicionSemaforo(semName);if(pos==-1)return -1;
-		sem_values[pos]--;
+		if(sem_values[pos]>0)sem_values[pos]--;
+
 		log_info(log_interno, "Semaforo %s. Valor actual: %d",semName,sem_values[pos]);
 		if(sem_values[pos]<0){
 			bloquear = 1;
@@ -480,6 +487,7 @@ void printefearMetricas(){
 		log_info(log_interno,"Semaforo %s : Valor Actual %d \n", config_suse->semId[x], sem_values[x] );
 		}
 
+	pthread_mutex_lock(&multi);
 	while(i<list_size(tabla_programas)){
 		t_programa* prog = list_get(tabla_programas, i);
 		int new = 0; int ready = 0; int exec = 0; int blocked = 0; int exit = 0;
@@ -525,6 +533,7 @@ void printefearMetricas(){
 				}
 		i++;
 	}
+	pthread_mutex_unlock(&multi);
 
 		return;
 

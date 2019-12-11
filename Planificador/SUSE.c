@@ -1,5 +1,45 @@
 #include "SUSE.h"
 
+static void new_destroy(t_new *self) {
+	free(self);
+}
+
+static void block_destroy(t_block *self) {
+	if(self->sem != NULL){
+	 free(self->sem);
+	}
+	 free(self);
+}
+static void hilos_destroy(t_hilo *self) {
+	free(self);
+}
+static void prog_destroy(t_programa *self) {
+	list_destroy_and_destroy_elements(tabla_programas, (void*) hilos_destroy);
+	free(self);
+}
+void handler(){
+
+	pthread_mutex_destroy(&sem_new);
+	pthread_mutex_destroy(&sem_lock);
+	pthread_mutex_destroy(&sem_exit);
+	pthread_mutex_destroy(&wt);
+	pthread_mutex_destroy(&sl);
+	pthread_mutex_destroy(&multi);
+
+	list_destroy_and_destroy_elements(tabla_new, (void*)new_destroy);
+	list_destroy_and_destroy_elements(tabla_exit, (void*)new_destroy);
+	list_destroy_and_destroy_elements(tabla_lock, (void*)block_destroy);
+	list_destroy_and_destroy_elements(tabla_programas, (void*) prog_destroy);
+//	queue_destroy_and_destroy_elements(sem_blocked, (void*) block_destroy);
+//	int* sem_values;
+	for(int i=0; i<config_suse->cantSem; i++){
+			queue_destroy_and_destroy_elements(sem_blocked[i],(void*)block_destroy);
+		}
+	free(sem_values);
+
+}
+
+
 int crearSocket(t_log* logger) {
     int fileDescriptor = socket(AF_INET, SOCK_STREAM, 0);//usa protocolo TCP/IP
     if (fileDescriptor == -1) {
@@ -77,7 +117,7 @@ int aceptarCliente(int fd_servidor, t_log* logger){
 		log_error(logger, "El servidor no pudo aceptar la conexión entrante.\n");
 		puts("El servidor no pudo aceptar la conexión entrante.\n");
 	} else	{
-		log_error(logger, "Servidor conectado con cliente %i.\n", fd_cliente);
+		log_info(logger, "Servidor conectado con cliente %i.\n", fd_cliente);
 	}
 
 	return fd_cliente;
@@ -198,6 +238,7 @@ int inicializacion(){
 	pthread_mutex_init(&sl ,NULL);
 
 
+
     return 0;
 //	PCBs = dictionary_create();
 //	colaNew = queue_create();
@@ -205,11 +246,8 @@ int inicializacion(){
 
 }
 
-void finalizacion(){
-	free(configPath);
-	log_destroy(log_interno);
-	pthread_mutex_destroy(&mutexColaNew);
-}
+
+
 
 void aceptarClientes(){
 
@@ -250,7 +288,10 @@ void atenderMetricas(){
 }
 
 
+
+
 int main() {
+	signal(SIGINT, &handler);
 	inicializacion();
 
 	inicializarSemaforos();
@@ -263,7 +304,4 @@ int main() {
 	pthread_create(&hiloMetricas, NULL, (void*)&atenderMetricas, NULL);
 
 
-
-
-	finalizacion();
 }
