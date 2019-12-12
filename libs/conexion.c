@@ -76,6 +76,15 @@ int enviarEntero(int fdDestinatario, int enteroEnviar,  t_log* logger){
 	return resEntero;
 }
 
+int enviarTiempo(int fdDestinatario, struct timespec tiempoEnviar,  t_log* logger){
+	int resTiempo =  send(fdDestinatario, &tiempoEnviar, sizeof(struct timespec), MSG_WAITALL);
+	if(resTiempo == ERROR){
+		log_error(logger, "Hubo un error al enviar el Tiempo a %i", fdDestinatario);
+		return ERROR;
+	}
+	return resTiempo;
+}
+
 int enviarTexto(int fdDestinatario, char* textoEnviar,  t_log* logger){
 	int tamanio = pesoString(textoEnviar);
 	int resTamanio = send(fdDestinatario, &tamanio, sizeof(int), MSG_WAITALL);
@@ -102,6 +111,16 @@ int recibirEntero(int fdOrigen, t_log* logger){
 		return ERROR;
 	}
 	return enteroRecibido;
+}
+
+struct timespec* recibirTiempo(int fdOrigen, t_log* logger){
+	struct timespec* tiempoRecibido = malloc(sizeof(struct timespec));
+	int resTiempo = recv(fdOrigen, tiempoRecibido, sizeof(struct timespec), MSG_WAITALL);
+	if(resTiempo == ERROR){
+		log_error(logger, "Hubo un error al recibir Timeval de %i", fdOrigen);
+		return ERROR;
+	}
+	return tiempoRecibido;
 }
 
 char* recibirTexto(int fdOrigen, t_log* logger){

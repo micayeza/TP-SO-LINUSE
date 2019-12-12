@@ -7,16 +7,32 @@ static int fuse_getattr(const char *path, struct stat *stbuf) {
 	memset(stbuf, 0, sizeof(struct stat));
 
 	//Si path es igual a "/" nos estan pidiendo los atributos del punto de montaje
-
 	if (strcmp(path, "/") == 0) {
 		stbuf->st_mode = S_IFDIR | 0755;
 		stbuf->st_nlink = 2;
-	}else if (strcmp(path, DEFAULT_FILE_PATH) == 0) {
-		stbuf->st_mode = S_IFREG | 0444;
-		stbuf->st_nlink = 1;
-		stbuf->st_size = strlen(DEFAULT_FILE_CONTENT);
-	} else {
-		res = -ENOENT;
+	}else{
+		int resEnvioOperacion = enviarEntero(socketServidor, SYS_GETATTR,  log_interno);
+		int resEnvioTexto = enviarTexto(socketServidor, path, log_interno);
+		int estado = recibirEntero(socketServidor, log_interno);
+		if(estado == 1){
+			stbuf->st_mode = S_IFREG | 0777;
+			stbuf->st_nlink = 1;
+			int size = recibirEntero(socketServidor, log_interno);
+			struct timespec* timeCreacion = recibirTiempo(socketServidor, log_interno);
+			struct timespec* timeModificacion = recibirTiempo(socketServidor, log_interno);
+			stbuf->st_size = size;
+			stbuf->st_ctim = *timeCreacion;
+			stbuf->st_mtim = *timeModificacion;
+		}else{
+			if(estado == 2){
+				stbuf->st_mode = S_IFDIR | 0755;
+				stbuf->st_nlink = 2;
+			}else{
+				res = -ENOENT;
+			}
+
+		}
+		printf("CLIENTE: UN GETATTR. \n");
 	}
 	return res;
 }
@@ -44,14 +60,18 @@ static int fuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off
 	(void) offset;
 	(void) fi;
 
-	if (strcmp(path, "/") != 0)
+	int resEnvioOperacion = enviarEntero(socketServidor, SYS_READDIR,  log_interno);
+	int resEnvioTexto = enviarTexto(socketServidor, path, log_interno);
+	char* nombresArchivos = recibirTexto(socketServidor, log_interno);
+	//El servidor retornará vacio cuando no existe el path
+	if(strcmp(nombresArchivos, "") == 1){
 		return -ENOENT;
-
-	// "." y ".." son entradas validas, la primera es una referencia al directorio donde estamos parados
-	// y la segunda indica el directorio padre
-	filler(buf, ".", NULL, 0);
-	filler(buf, "..", NULL, 0);
-	filler(buf, DEFAULT_FILE_NAME, NULL, 0);
+	}
+	char** archivos = string_split(nombresArchivos, ";");
+	int tam = sizeArrayChar(archivos);
+	for(int i = 0; i < tam; i++){
+		filler(buf, archivos[i], NULL, 0);
+	}
 
 	return 0;
 }
@@ -258,10 +278,13 @@ static int fuse_truncate(const char *path, off_t offset) {
 
 }
 
-
-
-
-
+int sizeArrayChar(char** array){
+	int tam = 0;
+	while(array[tam] != NULL){
+		tam++;
+	}
+	return tam;
+}
 
 int main(int argc, char *argv[]) {
 	argc = 4;

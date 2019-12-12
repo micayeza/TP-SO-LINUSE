@@ -41,7 +41,7 @@ static int fuse_chmod(const char *path, struct fuse_file_info *fi);
 
 static struct fuse_operations fuse_oper = {
 		.getattr  = fuse_getattr,
-//		.readdir  = fuse_readdir,
+		.readdir  = fuse_readdir,
 		.open 	  = fuse_open,
 		.read 	  = fuse_read,
 		.mkdir 	  = fuse_mkdir,
