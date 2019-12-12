@@ -1,20 +1,22 @@
 #include "SUSE.h"
 
-static void new_destroy(t_new *self) {
+void new_destroy(t_new *self) {
 	free(self);
 }
 
-static void block_destroy(t_block *self) {
-	if(self->sem != NULL){
-	 free(self->sem);
-	}
+void block_destroy(t_block *self) {
+
 	 free(self);
 }
-static void hilos_destroy(t_hilo *self) {
+void hilos_destroy(t_hilo *self) {
 	free(self);
 }
-static void prog_destroy(t_programa *self) {
-	list_destroy_and_destroy_elements(tabla_programas, (void*) hilos_destroy);
+void ready_destroy(t_new *self) {
+	free(self);
+}
+void prog_destroy(t_programa *self) {
+	list_destroy_and_destroy_elements(self->hijos, (void*) hilos_destroy);
+//	list_destroy_and_destroy_elements(self->tablaReady, (void*)ready_destroy);
 	free(self);
 }
 void handler(){
@@ -23,19 +25,37 @@ void handler(){
 	pthread_mutex_destroy(&sem_lock);
 	pthread_mutex_destroy(&sem_exit);
 	pthread_mutex_destroy(&wt);
-	pthread_mutex_destroy(&sl);
+//	pthread_mutex_destroy(&sl);
 	pthread_mutex_destroy(&multi);
-
-	list_destroy_and_destroy_elements(tabla_new, (void*)new_destroy);
-	list_destroy_and_destroy_elements(tabla_exit, (void*)new_destroy);
-	list_destroy_and_destroy_elements(tabla_lock, (void*)block_destroy);
-	list_destroy_and_destroy_elements(tabla_programas, (void*) prog_destroy);
-//	queue_destroy_and_destroy_elements(sem_blocked, (void*) block_destroy);
-//	int* sem_values;
-	for(int i=0; i<config_suse->cantSem; i++){
-			queue_destroy_and_destroy_elements(sem_blocked[i],(void*)block_destroy);
-		}
-	free(sem_values);
+//
+	if(list_size(tabla_new)>0){
+		list_destroy_and_destroy_elements(tabla_new, (void*)new_destroy);
+	}else{
+		list_destroy(tabla_new);
+	}
+	if(list_size(tabla_exit)>0){
+		list_destroy_and_destroy_elements(tabla_exit, (void*)new_destroy);
+	} else{
+		list_destroy(tabla_exit);
+	}
+	if(list_size(tabla_lock)>0){
+		list_destroy_and_destroy_elements(tabla_lock, (void*)block_destroy);
+	}else{
+		list_destroy(tabla_lock);
+	}
+	if(list_size(tabla_programas)>0){
+		list_destroy_and_destroy_elements(tabla_programas, (void*) prog_destroy);
+	}else{
+		list_destroy(tabla_programas);
+	}
+//
+////	queue_destroy_and_destroy_elements(sem_blocked, (void*) block_destroy);
+////	int* sem_values;
+//	for(int i=0; i<config_suse->cantSem; i++){
+//			queue_destroy_and_destroy_elements(sem_blocked[i],(void*)block_destroy);
+//		}
+//	free(sem_values);
+	exit(0);
 
 }
 
@@ -229,6 +249,7 @@ int inicializacion(){
 	tabla_new       = list_create();
 	tabla_lock	    = list_create();
 	tabla_exit      = list_create();
+	lista_sem_programas = list_create();
 
 	pthread_mutex_init(&sem_new ,NULL);
 	pthread_mutex_init(&sem_lock ,NULL);
@@ -237,6 +258,7 @@ int inicializacion(){
 	pthread_mutex_init(&wt ,NULL);
 	pthread_mutex_init(&sl ,NULL);
 
+	lista_semaforos = list_create();
 
 
     return 0;
@@ -259,13 +281,30 @@ void aceptarClientes(){
 					t_programa* programa = malloc(sizeof(t_programa));
 					programa->programa  = cliente;
 					programa->hijos     = list_create();
-					int operacion = recibirInt(cliente);
+					programa->tablaReady= list_create();
+					recibirInt(cliente);
 					programa->id  = recibirInt(cliente);
 					programa->estado    = ACTIVO;
 					programa->init      = clock();
 					programa->fin = 0;
+					programa->cant_hilos = 0;
 
 					list_add(tabla_programas, programa);
+// AGREGO EL CONTADOR DE HILOS DEL PROGRAMA
+					t_sem_contador* contador = malloc(sizeof(t_sem_contador));
+					sem_t sem ;
+					sem_init(&sem, 0,0);
+					contador->cont = sem;
+					contador->idProg = cliente;
+
+					list_add(lista_semaforos, contador);
+// AGREGO EL PROGRAMA A LOS MUTEX PORQUE ASDDFFASDA
+					t_pth_programas* reg_prog = malloc(sizeof(t_pth_programas));
+					pthread_mutex_t sem_prog;
+					pthread_mutex_init(&sem_prog, NULL);
+					reg_prog->mtx    = sem_prog;
+					reg_prog->idProg = cliente;
+					list_add(lista_sem_programas, reg_prog);
 
 					pthread_t hiloPrograma;
 					pthread_create(&hiloPrograma, NULL, (void*)&atenderPrograma, (void*)programa);

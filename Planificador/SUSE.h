@@ -96,6 +96,8 @@ typedef struct{
 	estProg  estado;
 	double   init;
 	double   fin;
+	t_list*  tablaReady;
+	int      cant_hilos;
 }t_programa;
 
 typedef struct{
@@ -113,7 +115,7 @@ typedef struct{
 	int	   id;
 	double estimado;
 	int    tid;
-	char*  sem;
+	int    sem; //guardo la posicion y a la mierda
 }t_block;
 
 t_list* tabla_new;
@@ -145,6 +147,16 @@ typedef struct{
 //	int   asigandos;
 }t_semaforos;
 
+typedef struct{
+	sem_t cont;
+	int   idProg;
+}t_sem_contador;
+
+typedef struct{
+	pthread_mutex_t mtx;
+	int   idProg;
+}t_pth_programas;
+
 //array de valores de semaforos para las primitivas signal y wait de Ansisop
 int* sem_values;
 //array de colas de procesos bloqueados en semaforos
@@ -160,13 +172,17 @@ pthread_mutex_t sem_exit;
 pthread_mutex_t multi;
 pthread_mutex_t wt;
 pthread_mutex_t sl;
+pthread_mutex_t sem_lista_semaforos;
+
+t_list* lista_semaforos; //1 semaforo contador por programa
+t_list* lista_sem_programas;
 
 int socket_escucha;
 int cant_programas;
 
 void atenderPrograma(void* cliente);
 void join_hilo(int tid, int programa, t_list* joins);
-void planificadorLargo(t_list* tabla_ready);
+void planificadorLargo();
 t_hilo* buscar_prog_hilo(int programa, int hilo);
 void create_hilo(int tid, t_programa* programa);
 t_new* next_hilo(t_list* tabla_ready);
@@ -174,7 +190,7 @@ void recalcularEstimado(t_hilo* hilo);
 
 t_new* close_hilo(int tid, t_programa* programa, t_list* tabla_ready, t_new* hilo_exec, t_list* joins);
 int wait_hilo(int tid,char* semName);
-t_block* signal_hilo(int tid, char* semName, t_list* tabla_ready);
+t_block* signal_hilo(int tid, char* semName);
 void inicializarSemaforos();
 int posicionSemaforo(char* sem_id);
 void bloquearEnSemaforo(t_block* block, char* sem_id);
@@ -191,11 +207,15 @@ void escucharSocketsEn(int fd_socket, t_log* logger);
 int crearSocketServidor(int puerto, t_log* logger);
 int crearSocket(t_log* logger);
 
-static void prog_destroy(t_programa *self);
-static void hilos_destroy(t_hilo *self);
-static void block_destroy(t_block *self);
-static void new_destroy(t_new *self);
+void prog_destroy(t_programa *self);
+void hilos_destroy(t_hilo *self);
+void block_destroy(t_block *self);
+void new_destroy(t_new *self);
 
+t_sem_contador* buscar_contador(int id);
+t_hilo* buscar_hilo_bool(int id, t_programa* programa);
+t_programa* buscar_programa_bool(int id);
+t_pth_programas*  buscar_mutex( int programa);
 
 // ------------------------ FIN SECCIÓN MICA ------------------------
 
