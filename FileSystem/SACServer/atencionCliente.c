@@ -30,13 +30,13 @@ void atenderCliente(t_cliente* cliente){
 			case SYS_MKDIR:{
 				printf("SERVER: UN MKDIR. \n");
 				char* path = recibirTexto(cliente->socket, log_interno);
-				int resultado = SacServerMkdir(path);
+				int resultado = crearNodoDirectorio(path);
 				enviarEntero(cliente->socket, resultado,  log_interno);
 				break;
 			}
 			case SYS_GETATTR:{
 				char* path = recibirTexto(cliente->socket, log_interno);
-				t_nodo* nodo = SacServerGetattr(path);
+				t_nodo* nodo = obtenerNodoDePath(path);
 				if(nodo == NULL){
 					int cero = 0;
 					enviarEntero(cliente->socket, &cero,  log_interno); //Se envia que no se encontró.
@@ -44,14 +44,18 @@ void atenderCliente(t_cliente* cliente){
 					enviarEntero(cliente->socket, nodo->estado,  log_interno);
 					if(nodo->estado == 1){
 						enviarEntero(cliente->socket, nodo->tam_archivo,  log_interno);
-						enviarTimeval(cliente->socket, nodo->fecha_creacion,  log_interno);
-						enviarTimeval(cliente->socket, nodo->fecha_modificacion,  log_interno);
+						enviarTiempo(cliente->socket, nodo->fecha_creacion,  log_interno);
+						enviarTiempo(cliente->socket, nodo->fecha_modificacion,  log_interno);
 					}
 				}
 				printf("SERVER: UN GETATTR. \n");
+				break;
 			}
 			case SYS_READDIR:{
-
+				char* path = recibirTexto(cliente->socket, log_interno);
+				char* nombresArchivos = obtenerArchivosDeDirectorio(path);
+				int resEnvioTexto = enviarTexto(cliente->socket, nombresArchivos, log_interno);
+				printf("SERVER: UN READDIR. \n");
 				break;
 			}
 		}

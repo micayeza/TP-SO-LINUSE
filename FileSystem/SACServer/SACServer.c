@@ -6,7 +6,7 @@
  */
 #include "SACServer.h"
 
-int SacServerMkdir(char* path){
+int crearNodoDirectorio(char* path){
 	int numeroNodoLibre = buscarNodoLibre();
 	//No hay espacio para guardar nodo
 	if(numeroNodoLibre == ERROR){
@@ -24,14 +24,32 @@ int SacServerMkdir(char* path){
 	return 0;
 }
 
-t_nodo* SacServerGetattr(char* path){
+t_nodo* obtenerNodoDePath(char* path){
 	int numNodo = existeArchivo(path);
 	if(numNodo == ERROR) return NULL;
 	return obtenerNodo(numNodo);
 }
 
-int SacServerRead(const char *path, char *buf, size_t size, off_t offset){
-	return 0;
+char* obtenerArchivosDeDirectorio(char* path){
+	char* separador = ";";
+	char* punto = ".";
+	char* dosPuntos = "..";
+	int numNodo = existeArchivo(path);
+	if(numNodo == ERROR)
+		return "";
+	char* nombresArchivos = string_new();
+	string_append(&nombresArchivos,punto);
+	string_append(&nombresArchivos,separador);
+	string_append(&nombresArchivos,dosPuntos);
+	for(int i = 0; i < TAM_TABLA_NODOS; i++){
+		t_nodo* nodo = obtenerNodo(i);
+		if(obtenerNodo(i)->bloque_padre == numNodo){
+			string_append(&nombresArchivos,separador);
+			string_append(&nombresArchivos,&(nodo->nombre_archivo));
+		}
+	}
+	return nombresArchivos;
+
  }
 
 int SacServerOpen(const char *path) {
@@ -161,8 +179,8 @@ void formatearSAC(){
 		fwrite(nodo->nombre_archivo,sizeof(char),71,archivo_fs);
 		fwrite(&(nodo->bloque_padre),sizeof(int),1,archivo_fs);
 		fwrite(&(nodo->tam_archivo),sizeof(int),1,archivo_fs);
-		fwrite(&(nodo->fecha_creacion),sizeof(struct timeval),1,archivo_fs);
-		fwrite(&(nodo->fecha_modificacion),sizeof(struct timeval),1,archivo_fs);
+		fwrite(&(nodo->fecha_creacion),sizeof(struct timespec),1,archivo_fs);
+		fwrite(&(nodo->fecha_modificacion),sizeof(struct timespec),1,archivo_fs);
 		fwrite(nodo->p_indirectos,sizeof(int)*TAM_MAX_PUNT_IND,1,archivo_fs);
 	}
 
@@ -220,8 +238,8 @@ t_nodo* obtenerNodo(int numeroNodo){
 	fread(&(nodo->nombre_archivo),sizeof(char),TAM_MAX_NOMBRE_ARCHIVO,archivo_fs);
 	fread(&(nodo->bloque_padre),sizeof(uint32_t),1,archivo_fs);
 	fread(&(nodo->tam_archivo),sizeof(uint32_t),1,archivo_fs);
-	fread(&(nodo->fecha_creacion),sizeof(struct timeval),1,archivo_fs);
-	fread(&(nodo->fecha_modificacion),sizeof(struct timeval),1,archivo_fs);
+	fread(&(nodo->fecha_creacion),sizeof(struct timespec),1,archivo_fs);
+	fread(&(nodo->fecha_modificacion),sizeof(struct timespec),1,archivo_fs);
 	fread(nodo->p_indirectos,sizeof(uint32_t)*TAM_MAX_PUNT_IND,1,archivo_fs);
 	closeFS();
 
@@ -237,8 +255,8 @@ void persistirNodo(int numeroNodo, t_nodo* nodo){
 	fwrite(nodo->nombre_archivo,sizeof(char),71,archivo_fs);
 	fwrite(&(nodo->bloque_padre),sizeof(int),1,archivo_fs);
 	fwrite(&(nodo->tam_archivo),sizeof(int),1,archivo_fs);
-	fwrite(&(nodo->fecha_creacion),sizeof(struct timeval),1,archivo_fs);
-	fwrite(&(nodo->fecha_modificacion),sizeof(struct timeval),1,archivo_fs);
+	fwrite(&(nodo->fecha_creacion),sizeof(struct timespec),1,archivo_fs);
+	fwrite(&(nodo->fecha_modificacion),sizeof(struct timespec),1,archivo_fs);
 	fwrite(nodo->p_indirectos,sizeof(int)*TAM_MAX_PUNT_IND,1,archivo_fs);
 
 	closeFS();
@@ -354,8 +372,9 @@ void finalizar(){
 int main(){
 	inicializacion();
 
-	//int res = existeArchivo("/AAA/CCCS");
-	//t_nodo* nodoNuevo = obtenerNodo(1);
+	//int res = existeArchivo("/AAA/CCC/mmm.txt");
+	//char* archivos = obtenerArchivosDeDirectorio("/AAA/CCC");
+	//t_nodo* nodoNuevo = obtenerNodo(res);
 
 	//t_nodo* nodo = crearNodoVacio();
 

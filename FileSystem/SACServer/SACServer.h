@@ -61,8 +61,8 @@ typedef struct {
 	unsigned char nombre_archivo[TAM_MAX_NOMBRE_ARCHIVO];
 	uint32_t bloque_padre;
 	uint32_t tam_archivo;
-	struct timeval fecha_creacion;
-	struct timeval fecha_modificacion;
+	struct timespec fecha_creacion;
+	struct timespec fecha_modificacion;
 	int p_indirectos[TAM_MAX_PUNT_IND];
 } t_nodo;
 

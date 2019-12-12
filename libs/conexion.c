@@ -76,13 +76,13 @@ int enviarEntero(int fdDestinatario, int enteroEnviar,  t_log* logger){
 	return resEntero;
 }
 
-int enviarTimeval(int fdDestinatario, struct timeval timevalEnviar,  t_log* logger){
-	int resTimeval =  send(fdDestinatario, &timevalEnviar, sizeof(struct timeval), MSG_WAITALL);
-	if(resTimeval == ERROR){
-		log_error(logger, "Hubo un error al enviar el Timeval a %i", fdDestinatario);
+int enviarTiempo(int fdDestinatario, struct timespec tiempoEnviar,  t_log* logger){
+	int resTiempo =  send(fdDestinatario, &tiempoEnviar, sizeof(struct timespec), MSG_WAITALL);
+	if(resTiempo == ERROR){
+		log_error(logger, "Hubo un error al enviar el Tiempo a %i", fdDestinatario);
 		return ERROR;
 	}
-	return resTimeval;
+	return resTiempo;
 }
 
 int enviarTexto(int fdDestinatario, char* textoEnviar,  t_log* logger){
@@ -113,14 +113,14 @@ int recibirEntero(int fdOrigen, t_log* logger){
 	return enteroRecibido;
 }
 
-struct timeval* recibirTimeval(int fdOrigen, t_log* logger){
-	struct timeval* timevalRecibido = malloc(sizeof(struct timeval));
-	int resEntero = recv(fdOrigen, timevalRecibido, sizeof(struct timeval), MSG_WAITALL);
-	if(resEntero == ERROR){
+struct timespec* recibirTiempo(int fdOrigen, t_log* logger){
+	struct timespec* tiempoRecibido = malloc(sizeof(struct timespec));
+	int resTiempo = recv(fdOrigen, tiempoRecibido, sizeof(struct timespec), MSG_WAITALL);
+	if(resTiempo == ERROR){
 		log_error(logger, "Hubo un error al recibir Timeval de %i", fdOrigen);
 		return ERROR;
 	}
-	return timevalRecibido;
+	return tiempoRecibido;
 }
 
 char* recibirTexto(int fdOrigen, t_log* logger){
