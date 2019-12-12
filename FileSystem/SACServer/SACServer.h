@@ -102,6 +102,7 @@ void abrirHeaderFS();
 t_nodo* crearNodoVacio();
 void free_nodo(t_nodo* nodo);
 t_nodo* obtenerNodo(int numeroNodo);
+char* cortarPathPadre(char* path);
 
 
 #endif /* SACSERVER_H_ */
