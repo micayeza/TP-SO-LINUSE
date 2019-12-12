@@ -16,7 +16,8 @@ void ready_destroy(t_new *self) {
 }
 void prog_destroy(t_programa *self) {
 	list_destroy_and_destroy_elements(self->hijos, (void*) hilos_destroy);
-//	list_destroy_and_destroy_elements(self->tablaReady, (void*)ready_destroy);
+	if(list_size(self->tablaReady)){
+		list_destroy_and_destroy_elements(self->tablaReady, (void*)ready_destroy);}
 	free(self);
 }
 void handler(){

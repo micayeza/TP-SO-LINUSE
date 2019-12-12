@@ -134,7 +134,9 @@ void atenderPrograma(void* par){
 
 
 					 bloquearEnSemaforo(lock,  semName);
+					 free(hilo_exec);
 					 hilo_exec=NULL;
+
 					 }
 
 
