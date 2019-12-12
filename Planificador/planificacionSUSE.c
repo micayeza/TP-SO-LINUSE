@@ -4,7 +4,6 @@ void atenderPrograma(void* par){
 
 	t_programa* parametros = par;
 
-	t_list* tabla_ready = list_create();
 	t_new*  hilo_exec = NULL;
 
 	t_list* joins = list_create();
@@ -17,55 +16,87 @@ void atenderPrograma(void* par){
 			case CREATE_HILO:{
 
 				int tid = recibirInt(parametros->programa);
-				log_info(log_interno, "[CREATE] %d \n",tid);
+				log_info(log_interno, "[CREATE] hilo %d Programa %d \n",tid, parametros->programa);
 				create_hilo(tid, parametros); //Hacer los pasos para un Create Hilo.
-				planificadorLargo(tabla_ready);
+				planificadorLargo();
 
-				break;
-			}
+			}break;
 			case SCHEDULE_NEXT:{
-				log_info(log_interno, "[SCHEDULE NEXT] \n");
-				if(hilo_exec == NULL)hilo_exec = next_hilo(tabla_ready); //Hacer los pasos para un Schedule Next.
-				if(hilo_exec == NULL){
-					if(list_size(joins)>0){
-						enviarInt(parametros->programa, -1);
-					}else{
-						enviarInt(parametros->programa, parametros->id);
-					}
-				}else{
-				    enviarInt(parametros->programa, hilo_exec->id);
+				log_info(log_interno, "[SCHEDULE NEXT] Programa %d \n", parametros->programa);
+
+				//Paso el hilo de exec a ready y le cambio el estimado
+				if(hilo_exec != NULL){
+					t_hilo* hilo = buscar_prog_hilo(parametros->programa, hilo_exec->id);
+					 if(hilo!=NULL){//evito que rompa
+						 hilo->real = clock() - hilo->initExec;
+						 recalcularEstimado(hilo);
+						 hilo->estado = READY;
+						 hilo->initReady = clock();
+						 hilo->enExec += clock() - hilo->initExec;
+
+						 hilo_exec->estimado = hilo->estimadoActual;
+
+						 t_pth_programas* mut = buscar_mutex(parametros->programa);
+						 pthread_mutex_lock(&mut->mtx);
+						 list_add(parametros->tablaReady, hilo_exec);
+						 pthread_mutex_unlock(&mut->mtx);
+						 hilo_exec= NULL;
+
+							pthread_mutex_lock(&sem_lista_semaforos);
+							t_sem_contador* contador = buscar_contador(parametros->programa);
+
+							pthread_mutex_unlock(&sem_lista_semaforos);
+							sem_post(&contador->cont);
+					 }
 				}
-				break;
-			}
+				//MMMM no me convence mandar esto asique salvo que venga el close se cagan. que hagan ctrl c
+				if(parametros->cant_hilos == 0){
+					enviarInt(parametros->programa, parametros->id);
+					break;
+				}
+
+
+				pthread_mutex_lock(&sem_lista_semaforos);
+				t_sem_contador* contador = buscar_contador(parametros->programa);
+				pthread_mutex_unlock(&sem_lista_semaforos);
+				sem_wait(&contador->cont);
+
+
+				hilo_exec = next_hilo(parametros->tablaReady);
+				enviarInt(parametros->programa, hilo_exec->id);
+
+			}break;
 			case JOIN:{
 				int tid = recibirInt(parametros->programa);
 				log_info(log_interno, "[JOIN] %d \n",tid);
 				join_hilo(tid, parametros->programa, joins);//Hacer los pasos para un Join.
 				if(list_size(joins)>0)parametros->estado = BLOQUEADO;
-				break;
-			}
+
+			}break;
 			case CLOSE:{
 				int tid = recibirInt(parametros->programa);
 				log_info(log_interno, "[CLOSE] %d \n",tid);
-				hilo_exec = close_hilo(tid, parametros, tabla_ready, hilo_exec, joins);//Hacer los pasos para un Close.
+				hilo_exec = close_hilo(tid, parametros, parametros->tablaReady, hilo_exec, joins);//Hacer los pasos para un Close.
 				printefearMetricas();
 				if(parametros->estado == FINALIZADO){
-					for(int i=0; i<list_size(tabla_ready);i++){
-						t_new* read = list_remove(tabla_ready, i);
+					for(int i=0; i<list_size(parametros->tablaReady);i++){
+						t_new* read = list_remove(parametros->tablaReady, i);
 						free(read);
 					}
 					for(int i=0; i<list_size(joins);i++){
 						t_join* jo = list_remove(joins, i);
 						free(jo);
 					}
-					free(tabla_ready);
+					free(parametros->tablaReady);
 					free(joins);
 					if(hilo_exec != NULL)free(hilo_exec);
 					pthread_exit("Chau");
 
+				}else{
+					planificadorLargo();
 				}
-				break;
-			}
+
+			}break;
 			case WAIT:{
 				int tid = recibirInt(parametros->programa);
 
@@ -77,19 +108,25 @@ void atenderPrograma(void* par){
 				 if(resultadoWait == 1){//Se bloqueo
 					 log_info(log_interno, "Se bloquea el hilo %d a la espera del semaforo %s \n",tid, semName);
 					 t_hilo* hilo = buscar_prog_hilo(parametros->programa, tid);
+
 					 if(hilo!=NULL){//evito que rompa
+					 t_pth_programas* mut = buscar_mutex(parametros->programa);
+					 pthread_mutex_lock(&mut->mtx);
+
 					 hilo->real = clock() - hilo->initExec;
 					 recalcularEstimado(hilo);
 					 hilo->initLock = clock();
 					 hilo->enExec  += clock() - hilo->initExec;
 					 hilo->estado   = BLOCKED;
 
+					 pthread_mutex_unlock(&mut->mtx);
+
 					 t_block* lock  = malloc(sizeof(t_block));
 					 lock->estimado = hilo->estimadoActual;
 					 lock->id       = hilo->id;
 					 lock->programa = parametros->programa;
 					 lock->tid      = -1;
-					 lock->sem      = semName;
+					 lock->sem      = posicionSemaforo(semName);
 
 					 pthread_mutex_lock(&sem_lock);
 					 list_add(tabla_lock, lock);
@@ -100,6 +137,7 @@ void atenderPrograma(void* par){
 					 hilo_exec=NULL;
 					 }
 
+
 				 }
 				enviarInt(parametros->programa, resultadoWait);
 				free(semName);
@@ -108,35 +146,37 @@ void atenderPrograma(void* par){
 			}break;
 			case SIGNAL:{
 				int tid = recibirInt(parametros->programa);
-
+				pthread_mutex_lock(&wt);
 				pthread_mutex_lock(&sem_lock);//Habria que chequear
-				pthread_mutex_lock(&sl);
+//				pthread_mutex_lock(&sl);
+
 				char* semName  = recibirTexto(parametros->programa, log_interno);
 				log_info(log_interno, "[SIGNAL] %s \n",semName);
-				t_block* block = signal_hilo(tid,semName, tabla_ready); //Hacer los pasos para un Signal.
+				t_block* block = signal_hilo(tid,semName); //Hacer los pasos para un Signal.
 				if(block != NULL){
-				bool buscar_lock(void* blo){
-					return ((t_block*)blo)->id == block->id &&
-							((t_block*)blo)->programa == block->programa;
-				}
+					bool buscar_lock(void* blo){
+						return ((t_block*)blo)->id == block->id &&
+								((t_block*)blo)->programa == block->programa;
+					}
 
 				block = list_remove_by_condition(tabla_lock, &buscar_lock);
-
-				free(block->sem);
 				free(block);
 
 				}
 				free(semName);
-				pthread_mutex_unlock(&sl);
+//				pthread_mutex_unlock(&sl);
+
 				pthread_mutex_unlock(&sem_lock);
+				pthread_mutex_unlock(&wt);
 			}break;
 		}
-	}
+   }
 }
+
 
 void recalcularEstimado(t_hilo* hilo){
 	hilo->estimadoAnterior = hilo->estimadoActual;
-	hilo->estimadoActual   = ((1-config_suse->alpha)*hilo->estimadoAnterior) + config_suse->alpha * hilo->real;
+	hilo->estimadoActual   = ((1-config_suse->alpha)*hilo->estimadoAnterior) + (config_suse->alpha * hilo->real);
 
 }
 
@@ -159,22 +199,75 @@ t_hilo* buscar_prog_hilo(int prog, int hilo){
 		 return NULL;
 }
 
-void planificadorLargo(t_list* tabla_ready){
+
+t_sem_contador* buscar_contador(int id){
+
+	bool buscar_semaforo(void* sem_cont){
+			return ((t_sem_contador*)sem_cont)->idProg == id ;
+		}
+
+	return list_find(lista_semaforos, &buscar_semaforo);
+}
+
+t_hilo* buscar_hilo_bool(int id, t_programa* programa){
+
+	bool buscar_hilo_b(void* hl){
+					return ((t_hilo*)hl)->id == id ;
+	}
+
+   return list_find(programa->hijos, &buscar_hilo_b);
+}
+
+t_programa* buscar_programa_bool(int id){
+
+		bool buscar_prog_b(void* progam){
+					return ((t_programa*)progam)->programa == id ;
+				}
+
+ return list_find(tabla_programas, &buscar_prog_b);
+}
+
+t_pth_programas*  buscar_mutex( int programa){
+
+	bool buscar_mu(void* pth){
+				return ((t_pth_programas*)pth)->idProg == programa ;
+			}
+
+ return list_find(lista_sem_programas, &buscar_mu);
+}
+
+
+void planificadorLargo(){
 
 	pthread_mutex_lock(&multi);
 	log_info(log_interno, "Cantidad de programas en memoria %d \n",cant_programas);
-	if(cant_programas < config_suse->multiprog){
+//	if(cant_programas < config_suse->multiprog){
+	while(cant_programas < config_suse->multiprog && list_size(tabla_new)>0){
+
 		t_new* nuevo = list_remove(tabla_new, 0);
 		if(nuevo != NULL){
-			t_hilo* hilo = buscar_prog_hilo(nuevo->programa, nuevo->id);
+
+			t_programa* programa = buscar_programa_bool(nuevo->programa);
+
+			if(programa == NULL)continue;
+
+			t_hilo* hilo = buscar_hilo_bool(nuevo->id, programa);
 
 			hilo->estado = READY;
 			hilo->deNaR  = clock() - hilo->initNew;
 			hilo->initReady = clock();
 
-			log_info(log_interno , "Pasa el hilo %d del programa %da READY \n", nuevo->id, nuevo->programa );
+			log_info(log_interno , "Pasa el hilo %d del programa %d a READY \n", nuevo->id, nuevo->programa );
 
-			list_add(tabla_ready, nuevo);
+			t_pth_programas* mut = buscar_mutex(programa->programa);
+			pthread_mutex_lock(&mut->mtx);
+			list_add(programa->tablaReady, nuevo);
+			pthread_mutex_unlock(&mut->mtx);
+
+			pthread_mutex_lock(&sem_lista_semaforos);
+			t_sem_contador* contador = buscar_contador(programa->programa);
+			sem_post(&contador->cont);
+			pthread_mutex_unlock(&sem_lista_semaforos);
 
 			cant_programas ++;
 
@@ -204,7 +297,7 @@ void create_hilo(int tid, t_programa* programa){
 
 
 	list_add(programa->hijos, hijo);
-
+	programa->cant_hilos ++;
 	pthread_mutex_lock(&sem_new);
 	list_add(tabla_new, nuevo);
 	pthread_mutex_unlock(&sem_new);
@@ -272,13 +365,17 @@ t_new* close_hilo(int tid, t_programa* programa, t_list* tabla_ready, t_new* hil
 
 	if(tid == programa->id){
 		//NO puedo cerrar el hilo central porque hay hilos pendientes, qqueda bloqueado
-		if(list_size(joins)>0)log_error(log_interno, "No se puede cerrar el hilo %d ya que aun hay hilos joineados", tid);
+		if(list_size(joins)>0){
+			log_error(log_interno, "No se puede cerrar el hilo %d ya que aun hay hilos joineados", tid);
+			return NULL;
+			}
 		log_info(log_interno, "Se finaliza el programa %d \n",programa->programa);
 		programa->estado = FINALIZADO;
 		programa->fin = clock();
 		return NULL;
 
 	}
+	programa->cant_hilos --;
 	t_hilo* hilo = buscar_prog_hilo(programa->programa,  tid);
 
 	switch(hilo->estado){
@@ -307,6 +404,11 @@ t_new* close_hilo(int tid, t_programa* programa, t_list* tabla_ready, t_new* hil
 				 return ((t_new*)h)->id == hilo->id;
 			 }
 		t_new* hilo_exit = list_remove_by_condition(tabla_ready, &buscar_ready );
+		pthread_mutex_lock(&sem_lista_semaforos);
+		t_sem_contador* contador = buscar_contador(programa->programa);
+		sem_wait(&contador->cont);
+		pthread_mutex_unlock(&sem_lista_semaforos);
+
 
 		pthread_mutex_lock(&sem_exit);
 		list_add(tabla_exit, hilo_exit);
@@ -351,7 +453,7 @@ t_new* close_hilo(int tid, t_programa* programa, t_list* tabla_ready, t_new* hil
 
 	 }
 	 break;
-
+	 default: break;
 
 	}
 	log_info(log_interno, "Pasa el hilo %d a EXIT \n", tid);
@@ -431,7 +533,8 @@ int wait_hilo(int tid,char* semName){
 
 	    int bloquear = 0;
 		int pos = posicionSemaforo(semName);if(pos==-1)return -1;
-		if(sem_values[pos]>0)sem_values[pos]--;
+//		if(sem_values[pos]>0)
+			sem_values[pos]--;
 
 		log_info(log_interno, "Semaforo %s. Valor actual: %d",semName,sem_values[pos]);
 		if(sem_values[pos]<0){
@@ -445,31 +548,45 @@ t_block* getNextFromSemaforo(int sem_pos){
 	return block;
 }
 
-t_block* signal_hilo(int tid, char* semName, t_list* tabla_ready){
+t_block* signal_hilo(int tid, char* semName){
 
 	int pos = posicionSemaforo(semName);if(pos==-1)return NULL;
 		if(sem_values[pos] < config_suse->semMax[pos]){
 		sem_values[pos]++;
 		log_info(log_interno, "[SIGNAL] Semaforo %s. Valor actual: %d",semName,sem_values[pos]);
-		if(sem_values[pos]>0){
+		if(sem_values[pos]<=0){
 			t_block* block = getNextFromSemaforo(pos);
-			if(block != NULL){
-			log_info(log_interno, "Desbloqueado de Semaforo %s, PID: %d",semName,block->id);
-			if(block!=NULL){
-				t_hilo* hilo = buscar_prog_hilo(block->programa, block->id);
-				hilo->estado = READY;
-				hilo->enLock += clock()-hilo->initLock;
-				hilo->initReady = clock();
 
-				t_new* nuevo = malloc(sizeof(t_new));
-				nuevo->id 		= block->id;
-				nuevo->programa = block->programa;
-				nuevo->estimado = block->estimado;
+				log_info(log_interno, "Desbloqueado de Semaforo %s, PID: %d",semName,block->id);
 
-				list_add(tabla_ready, nuevo);
 
-				}
-			}
+					t_programa* programa = buscar_programa_bool(block->programa);
+					t_pth_programas* mut = buscar_mutex(programa->programa);
+					pthread_mutex_lock(&mut->mtx);
+
+					if(programa == NULL) return NULL;
+					t_hilo* hilo = buscar_hilo_bool(block->id, programa);
+
+					hilo->estado = READY;
+					hilo->enLock += clock()-hilo->initLock;
+					hilo->initReady = clock();
+
+					t_new* nuevo = malloc(sizeof(t_new));
+					nuevo->id 		= block->id;
+					nuevo->programa = block->programa;
+					nuevo->estimado = block->estimado;
+
+
+					list_add(programa->tablaReady, nuevo);
+					pthread_mutex_unlock(&mut->mtx);
+
+					pthread_mutex_lock(&sem_lista_semaforos);
+					t_sem_contador* contador = buscar_contador(nuevo->programa);
+					sem_post(&contador->cont);
+					pthread_mutex_unlock(&sem_lista_semaforos);
+
+
+
 			return block;
 			}
 
@@ -481,11 +598,18 @@ t_block* signal_hilo(int tid, char* semName, t_list* tabla_ready){
 void printefearMetricas(){
 
 	int i= 0;
+	pthread_mutex_lock(&multi);
 		log_info(log_interno, "Metrica del sistema: Grado actual multiprogramación %d \n", cant_programas);
+	pthread_mutex_unlock(&multi);
 		log_info(log_interno,"Metrica del sistema: Valor de semaforos: \n" );
+
+		pthread_mutex_lock(&wt);
 		for(int x = 0; x< config_suse->cantSem; x++){
+
 		log_info(log_interno,"Semaforo %s : Valor Actual %d \n", config_suse->semId[x], sem_values[x] );
+
 		}
+		pthread_mutex_unlock(&wt);
 
 	pthread_mutex_lock(&multi);
 	while(i<list_size(tabla_programas)){
@@ -520,14 +644,15 @@ void printefearMetricas(){
 		for(int x = 0; x<list_size(prog->hijos); x++){
 				t_hilo* hilo = list_get(prog->hijos, x);
 				algo += clock() - hilo->initNew;
-				if(hilo->enExec >0) div   = vida/hilo->enExec;
-				log_info(log_interno,"Metricas del hilo %d \n ", hilo->id );
-				log_info(log_interno," Tiempo de ejecución  : %lf \n", algo);
-				log_info(log_interno," Tiempo de espera     : %lf \n", hilo->enReady );
-				log_info(log_interno," Tiempo de uso de CPU : %lf \n", hilo->enExec);
-				log_info(log_interno," Tiempo bloqueado     : %lf \n", hilo->enLock);
-				log_info(log_interno," Demora en entrar a Ready : %lf \n", hilo->deNaR);
-				log_info(log_interno," Porcentaje del Tiempo de Ejecución    : %lf \n", div);
+				if(hilo->enExec >0) div   = (hilo->enExec/vida)*100;
+				log_info(log_interno,"Metricas del hilo %d \n ", hilo->id/CLOCKS_PER_SEC );
+				log_info(log_interno," Tiempo de ejecución  : %lf segundos \n", algo/CLOCKS_PER_SEC);
+				log_info(log_interno," Tiempo de espera     : %lf segundos \n", hilo->enReady/CLOCKS_PER_SEC );
+				log_info(log_interno," Tiempo de uso de CPU : %lf segundos \n", hilo->enExec/CLOCKS_PER_SEC);
+				log_info(log_interno," Tiempo bloqueado     : %lf segundos \n", hilo->enLock/CLOCKS_PER_SEC);
+				log_info(log_interno," Demora en entrar a Ready : %lf segundos \n", hilo->deNaR/CLOCKS_PER_SEC);
+				if(hilo->enExec >0)
+				log_info(log_interno," Porcentaje del Tiempo de Ejecución    : %lf segundos \n", div/CLOCKS_PER_SEC);
 
 
 				}
