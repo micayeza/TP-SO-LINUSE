@@ -18,11 +18,11 @@ static int fuse_getattr(const char *path, struct stat *stbuf) {
 			stbuf->st_mode = S_IFREG | 0777;
 			stbuf->st_nlink = 1;
 			int size = recibirEntero(socketServidor, log_interno);
-			struct timespec* timeCreacion = recibirTiempo(socketServidor, log_interno);
-			struct timespec* timeModificacion = recibirTiempo(socketServidor, log_interno);
+			struct timespec timeCreacion = recibirTiempo(socketServidor, log_interno);
+			struct timespec timeModificacion = recibirTiempo(socketServidor, log_interno);
 			stbuf->st_size = size;
-			stbuf->st_ctim = *timeCreacion;
-			stbuf->st_mtim = *timeModificacion;
+			stbuf->st_ctim = timeCreacion;
+			stbuf->st_mtim = timeModificacion;
 		}else{
 			if(estado == 2){
 				stbuf->st_mode = S_IFDIR | 0755;
@@ -160,14 +160,13 @@ static int fuse_rmdir(const char *path) {
 }
 
 static int fuse_utimens(const char *path, const struct timespec tv[2]) {
-	int res = enviarEntero(socketServidor, SYS_UTIMES, log_interno);
-
+	enviarEntero(socketServidor, SYS_UTIMES, log_interno);
 	enviarTexto(socketServidor, path, log_interno);
+	enviarTiempo(socketServidor, tv[0],  log_interno);
+	enviarTiempo(socketServidor, tv[1],  log_interno);
+	int res = recibirEntero(socketServidor,  log_info);
 
-	 res  =  send(socketServidor, &tv[2].tv_sec, sizeof(time_t), MSG_WAITALL);
-	   res =  send(socketServidor, &tv[2].tv_nsec, sizeof(long), MSG_WAITALL);
-
-	return 0;
+	return res;
 }
 
 static int fuse_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi){
@@ -226,36 +225,34 @@ static int fuse_move(const char* path, const char *newPath) {
 static int fuse_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
 
 	//Seteo estructuras de envio
-	int res = enviarEntero(socketServidor, SYS_CREATE, log_interno);
-	    res = enviarTexto(socketServidor, path,  log_interno);
-
-	    // ME LA JUEGO A QUENO NECESITAS FUSE_FILE_INF
-	    res = recibirEntero(socketServidor, log_interno);
+	enviarEntero(socketServidor, SYS_CREATE, log_interno);
+	enviarTexto(socketServidor, path,  log_interno);
+	int res = recibirEntero(socketServidor, log_interno);
 	//Procesar respuesta
 	if(res == EEXIST){
 
 		return -EEXIST;
 
 	}
-		if (res == ENAMETOOLONG){
+	if (res == ENAMETOOLONG){
 
-			return -ENAMETOOLONG;
-		}
-		if(res == EDQUOT){
+		return -ENAMETOOLONG;
+	}
+	if(res == EDQUOT){
 
-			return -EDQUOT;
-		}
-		if(res == EACCES){
+		return -EDQUOT;
+	}
+	if(res == EACCES){
 
-			return -EACCES;
-		}
+		return -EACCES;
+	}
 	return 0;
 
 }
 
 
 static int fuse_chmod(const char *path, struct fuse_file_info *fi) {
-
+	int a = 1;
 	return 0;
 }
 

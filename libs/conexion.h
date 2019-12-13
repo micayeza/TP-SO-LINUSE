@@ -50,7 +50,7 @@ int enviarTexto(int fdDestinatario, char* textoEnviar,  t_log* logger);
 int enviarTiempo(int fdDestinatario, struct timespec tiempoEnviar,  t_log* logger);
 int recibirEntero(int fdOrigen, t_log* logger);
 char* recibirTexto(int fdOrigen, t_log* logger);
-struct timespec* recibirTiempo(int fdOrigen, t_log* logger);
+struct timespec recibirTiempo(int fdOrigen, t_log* logger);
 
 void escucharSocketsEn(int fd_socket, t_log* logger);
 void freeCharArray(char** charArray);

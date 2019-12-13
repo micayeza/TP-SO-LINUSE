@@ -9,12 +9,22 @@ void atenderCliente(t_cliente* cliente){
 
 				break;
 			}
-			case SYS_OPEN:{
-
+			case SYS_CREATE:{
+				char* path = recibirTexto(cliente->socket, log_interno);
+				int resultado = crearNodoDirectorioArchivo(path, 0);
+				enviarEntero(cliente->socket, resultado,  log_interno);
 				break;
 			}
 			case SYS_READ:{
 
+				break;
+			}
+			case SYS_UTIMES:{
+				char* path = recibirTexto(cliente->socket, log_interno);
+				struct timespec tiempoCreacion =  recibirTiempo(cliente->socket, log_interno);
+				struct timespec tiempoModificacion =  recibirTiempo(cliente->socket, log_interno);
+				int resultado = modificarFechas(path, tiempoCreacion, tiempoModificacion);
+				enviarEntero(cliente->socket, resultado,  log_interno);
 				break;
 			}
 			case SYS_RMDIR:{
@@ -22,15 +32,12 @@ void atenderCliente(t_cliente* cliente){
 				break;
 			}
 			case SYS_UNLINK:{
-				char* path = recibirTexto(cliente->socket, log_interno);
-				int resultadoUnLink = SacServerUnlink(path);//Hacer los pasos para un Create Hilo.
-				enviarEntero(cliente->socket, resultadoUnLink,  log_interno);
 				break;
 			}
 			case SYS_MKDIR:{
 				printf("SERVER: UN MKDIR. \n");
 				char* path = recibirTexto(cliente->socket, log_interno);
-				int resultado = crearNodoDirectorio(path);
+				int resultado = crearNodoDirectorioArchivo(path, 1);
 				enviarEntero(cliente->socket, resultado,  log_interno);
 				break;
 			}
