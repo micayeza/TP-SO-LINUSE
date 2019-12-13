@@ -37,7 +37,6 @@ static int fuse_getattr(const char *path, struct stat *stbuf) {
 	return res;
 }
 
-
 /*
  * @DESC
  *  Esta función va a ser llamada cuando a la biblioteca de FUSE le llege un pedido
@@ -76,6 +75,59 @@ static int fuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off
 	return 0;
 }
 
+//Crear directorio
+int fuse_mkdir(const char *path, mode_t mode) {
+	int resEnvioOperacion = enviarEntero(socketServidor, SYS_MKDIR,  log_interno);
+	int resEnvioTexto = enviarTexto(socketServidor, path, log_interno);
+	printf("CLIENTE: UN MKDIR. \n");
+	int resultado = recibirEntero(socketServidor, log_interno);
+	return resultado;
+}
+
+static int fuse_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
+
+	//Seteo estructuras de envio
+	enviarEntero(socketServidor, SYS_CREATE, log_interno);
+	enviarTexto(socketServidor, path,  log_interno);
+	int res = recibirEntero(socketServidor, log_interno);
+	//Procesar respuesta
+	if(res == EEXIST){
+
+		return -EEXIST;
+
+	}
+	if (res == ENAMETOOLONG){
+
+		return -ENAMETOOLONG;
+	}
+	if(res == EDQUOT){
+
+		return -EDQUOT;
+	}
+	if(res == EACCES){
+
+		return -EACCES;
+	}
+	return 0;
+
+}
+
+//Actualizacion de Fechas
+static int fuse_utimens(const char *path, const struct timespec tv[2]) {
+	enviarEntero(socketServidor, SYS_UTIMES, log_interno);
+	enviarTexto(socketServidor, path, log_interno);
+	enviarTiempo(socketServidor, tv[0],  log_interno);
+	enviarTiempo(socketServidor, tv[1],  log_interno);
+	int res = recibirEntero(socketServidor,  log_info);
+
+	return res;
+}
+
+
+//----------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------
+
+
 /*
  * @DESC
  *  Esta función va a ser llamada cuando a la biblioteca de FUSE le llege un pedido
@@ -90,11 +142,6 @@ static int fuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off
  * 		O archivo fue encontrado. -EACCES archivo no es accesible
  */
 static int fuse_open(const char *path, struct fuse_file_info *fi) {
-	if (strcmp(path, DEFAULT_FILE_PATH) != 0)
-		return -ENOENT;
-
-	if ((fi->flags & 3) != O_RDONLY)
-		return -EACCES;
 
 	return 0;
 }
@@ -136,15 +183,6 @@ static int fuse_read(const char *path, char *buf, size_t size, off_t offset, str
 	return size;
 }
 
-//Crear directorio
-int fuse_mkdir(const char *path, mode_t mode) {
-	int resEnvioOperacion = enviarEntero(socketServidor, SYS_MKDIR,  log_interno);
-	int resEnvioTexto = enviarTexto(socketServidor, path, log_interno);
-	printf("CLIENTE: UN MKDIR. \n");
-	int resultado = recibirEntero(socketServidor, log_interno);
-	return resultado;
-}
-
 //Borrar archivo
 int fuse_unlink(const char *path) {
 	int resEnvioOperacion = enviarEntero(socketServidor, SYS_UNLINK,  log_interno);
@@ -157,16 +195,6 @@ static int fuse_rmdir(const char *path) {
 	int res = enviarEntero(socketServidor, SYS_RMDIR, log_interno);
 	    res = enviarTexto(socketServidor, path, log_interno);
 	return recibirEntero(socketServidor, log_interno);
-}
-
-static int fuse_utimens(const char *path, const struct timespec tv[2]) {
-	enviarEntero(socketServidor, SYS_UTIMES, log_interno);
-	enviarTexto(socketServidor, path, log_interno);
-	enviarTiempo(socketServidor, tv[0],  log_interno);
-	enviarTiempo(socketServidor, tv[1],  log_interno);
-	int res = recibirEntero(socketServidor,  log_info);
-
-	return res;
 }
 
 static int fuse_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi){
@@ -221,35 +249,6 @@ static int fuse_move(const char* path, const char *newPath) {
 	return 0;
 
 }
-
-static int fuse_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
-
-	//Seteo estructuras de envio
-	enviarEntero(socketServidor, SYS_CREATE, log_interno);
-	enviarTexto(socketServidor, path,  log_interno);
-	int res = recibirEntero(socketServidor, log_interno);
-	//Procesar respuesta
-	if(res == EEXIST){
-
-		return -EEXIST;
-
-	}
-	if (res == ENAMETOOLONG){
-
-		return -ENAMETOOLONG;
-	}
-	if(res == EDQUOT){
-
-		return -EDQUOT;
-	}
-	if(res == EACCES){
-
-		return -EACCES;
-	}
-	return 0;
-
-}
-
 
 static int fuse_chmod(const char *path, struct fuse_file_info *fi) {
 	int a = 1;

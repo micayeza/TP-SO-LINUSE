@@ -5,42 +5,6 @@ void atenderCliente(t_cliente* cliente){
 	while(1){
 		TipoOperacion operacionRecibida = (TipoOperacion) recibirEntero(cliente->socket, log_interno); //Chequear que no se bloquea, debuggear.
 		switch(operacionRecibida){
-			case SYS_WRITE:{
-
-				break;
-			}
-			case SYS_CREATE:{
-				char* path = recibirTexto(cliente->socket, log_interno);
-				int resultado = crearNodoDirectorioArchivo(path, 0);
-				enviarEntero(cliente->socket, resultado,  log_interno);
-				break;
-			}
-			case SYS_READ:{
-
-				break;
-			}
-			case SYS_UTIMES:{
-				char* path = recibirTexto(cliente->socket, log_interno);
-				struct timespec tiempoCreacion =  recibirTiempo(cliente->socket, log_interno);
-				struct timespec tiempoModificacion =  recibirTiempo(cliente->socket, log_interno);
-				int resultado = modificarFechas(path, tiempoCreacion, tiempoModificacion);
-				enviarEntero(cliente->socket, resultado,  log_interno);
-				break;
-			}
-			case SYS_RMDIR:{
-
-				break;
-			}
-			case SYS_UNLINK:{
-				break;
-			}
-			case SYS_MKDIR:{
-				printf("SERVER: UN MKDIR. \n");
-				char* path = recibirTexto(cliente->socket, log_interno);
-				int resultado = crearNodoDirectorioArchivo(path, 1);
-				enviarEntero(cliente->socket, resultado,  log_interno);
-				break;
-			}
 			case SYS_GETATTR:{
 				char* path = recibirTexto(cliente->socket, log_interno);
 				t_nodo* nodo = obtenerNodoDePath(path);
@@ -63,6 +27,42 @@ void atenderCliente(t_cliente* cliente){
 				char* nombresArchivos = obtenerArchivosDeDirectorio(path);
 				int resEnvioTexto = enviarTexto(cliente->socket, nombresArchivos, log_interno);
 				printf("SERVER: UN READDIR. \n");
+				break;
+			}
+			case SYS_MKDIR:{
+				printf("SERVER: UN MKDIR. \n");
+				char* path = recibirTexto(cliente->socket, log_interno);
+				int resultado = crearNodoDirectorioArchivo(path, 1);
+				enviarEntero(cliente->socket, resultado,  log_interno);
+				break;
+			}
+			case SYS_CREATE:{
+				char* path = recibirTexto(cliente->socket, log_interno);
+				int resultado = crearNodoDirectorioArchivo(path, 0);
+				enviarEntero(cliente->socket, resultado,  log_interno);
+				break;
+			}
+			case SYS_UTIMES:{
+				char* path = recibirTexto(cliente->socket, log_interno);
+				struct timespec tiempoCreacion =  recibirTiempo(cliente->socket, log_interno);
+				struct timespec tiempoModificacion =  recibirTiempo(cliente->socket, log_interno);
+				int resultado = modificarFechas(path, tiempoCreacion, tiempoModificacion);
+				enviarEntero(cliente->socket, resultado,  log_interno);
+				break;
+			}
+			case SYS_WRITE:{
+
+				break;
+			}
+			case SYS_READ:{
+
+				break;
+			}
+			case SYS_RMDIR:{
+
+				break;
+			}
+			case SYS_UNLINK:{
 				break;
 			}
 		}
