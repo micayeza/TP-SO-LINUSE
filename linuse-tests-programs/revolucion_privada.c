@@ -4,8 +4,8 @@
 #include <hilolay/hilolay.h>
 #include <string.h>
 
-#define RUTA_ARCHIVO "una/ruta"
-#define MAP_PRIVATE 1
+#define RUTA_ARCHIVO  "/home/utnso/workspace/tp-2019-2c-capitulo-2/linuse-tests-programs/compartido"
+#define MAP_PRIVATE 0
 
 struct hilolay_sem_t* presion_emitida;
 struct hilolay_sem_t* presion_recibida;

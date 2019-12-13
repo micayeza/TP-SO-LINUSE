@@ -199,8 +199,8 @@ void agregar_pag_clock(int id, char* ip, int m ,int u, t_segmento* seg, int pag,
 
 
 		clock->ip      = malloc(strlen("0.0.0")+1);
-		memcpy(clock->ip, ip, strlen(ip));
-		clock->ip[strlen(ip)]='\0';
+		memcpy(clock->ip, "0.0.0", strlen("0.0.0"));
+		clock->ip[strlen("0.0.0")]='\0';
 		clock->seg 	 = segmento->segmento;
 		clock->pag 	 = pag;//La pagina si es igual para todos
 
@@ -793,7 +793,7 @@ char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos, t_proceso
     pthread_mutex_unlock(&sem->marco);
 	sem = list_get(lista_marcos_memoria, pag->marco);
 	pthread_mutex_lock(&sem->marco);
-
+//     int aux = bytes;
   char* dest = malloc(bytes);
 
 
@@ -804,6 +804,7 @@ char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos, t_proceso
   int leidos = 0;
   if(bytes <=config_muse->tamanio_pagina- desplazamiento ){
 	  memcpy(dest, src, bytes);
+//	  dest[bytes-1]='\0';
 	  pthread_mutex_unlock(&sem->marco);
   }
   else{
@@ -837,6 +838,7 @@ char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos, t_proceso
 		  memcpy(dest+leidos, src, bytes);
 		  pthread_mutex_unlock(&sem->marco);
 	  }
+//	  dest[aux-1]='\0';
   }
 
 
@@ -1484,6 +1486,7 @@ int unmapMuse(uint32_t  fd,t_proceso* proceso, bool sg){
 			}
 	 		seg = list_remove_by_condition(proceso->segmentos, &numero_seg);
 	 		t_segmento* anterior = buscar_segmento(seg->base - config_muse->tamanio_pagina, proceso->segmentos);
+	 		if(anterior != NULL)
 	 		anterior->ultimo = true;
 
 	 		if(seg->shared == SHARED) free(seg->path);
@@ -1583,8 +1586,10 @@ int syncMuse(uint32_t fd,size_t len,t_proceso* proceso, bool sg){
 	 int tam = calcular_paginas_malloc(len);//necesito saber cuantas paginas escribir
 	 if(tam > list_size(seg->paginas)) tam = list_size(seg->paginas);
 
-		FILE* buffer_archivo = fopen(seg->path, "w+"); // Creo un nuevo archivo para persistir el bloque (píso el anterior si existe)
-		if ( buffer_archivo == NULL){
+//		FILE* buffer_archivo = fopen(seg->path, "r+"); // Creo un nuevo archivo para persistir el bloque (píso el anterior si existe)
+	 int fd_archivo = open(seg->path, O_RDWR, S_IRUSR | S_IRGRP | S_IROTH);
+//	 if ( buffer_archivo == NULL){
+	 if(fd_archivo <0){
 			log_error(logMuse, "No se pudo abrir el archivo, verificar que aun existe. \n");
 			return -1;
 		}
@@ -1593,16 +1598,30 @@ int syncMuse(uint32_t fd,size_t len,t_proceso* proceso, bool sg){
 		int permisos = strtol(mode, 0, 8); // Administración para los permisos
 		chmod(seg->path, permisos); // Aplico permisos al archivo
 
+//En la primer pagina tomo los 4 primeros porque rompe
+
 
 	 for(int i = 0; i<tam;i++){
 		 t_pagina* pag = buscar_segmento_pagina(proceso->segmentos, seg->segmento, i, proceso);
 			t_semaforo* sem = list_get(lista_marcos_memoria, pag->marco);
 			pthread_mutex_lock(&sem->marco);
 //		 pthread_mutex_lock(&global);
-		 void* puntero = punteroMemoria + (config_muse->tamanio_pagina * pag->marco);
-
-		 fwrite(puntero, CHAR, config_muse->tamanio_pagina, buffer_archivo); // Escribo el contenido del bloque en el archivo
-		 pthread_mutex_unlock(&sem->marco);
+		 char* puntero = punteroMemoria + (config_muse->tamanio_pagina * pag->marco);
+		 int result;
+//		 if(i ==0){
+//			 result = fwrite(puntero, sizeof(int), 1, buffer_archivo);
+//			 result = fwrite(puntero, CHAR, config_muse->tamanio_pagina - 4, buffer_archivo);
+//		 }else{
+//		    result = fwrite(puntero, CHAR, config_muse->tamanio_pagina, buffer_archivo); // Escribo el contenido del bloque en el archivo
+//		 }
+		 if(i==0){ //excluyo la primer parte la puta madre
+			 puntero +=4;
+		 }
+		 result = write(fd_archivo, puntero, config_muse->tamanio_pagina);
+		if(result == config_muse->tamanio_pagina){
+			log_info(logMuse, "Se grabo ok el marco i del archivo \n");
+		}
+		pthread_mutex_unlock(&sem->marco);
 //		 pthread_mutex_unlock(&global);
 
 		 t_clock* clock = buscar_clock(pag->marco);
@@ -1610,8 +1629,10 @@ int syncMuse(uint32_t fd,size_t len,t_proceso* proceso, bool sg){
 
 
 	 }
-
-	 fclose(buffer_archivo);
+//	 fseek(buffer_archivo, len -1, SEEK_SET);
+//	 fwrite("-1",1,1,buffer_archivo);
+	 close(fd_archivo);
+//	int close = fclose(buffer_archivo);
 	 return 0;
 
 }
@@ -1635,7 +1656,7 @@ int crearPaginasmapeadas(int tam,size_t len,t_segmento* segmento,t_proceso* proc
 	int fd_archivo = open(path, O_RDWR | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH);
 //	FILE* fd_archivo = fopen(path, "w+");
 	if(fd_archivo == -1){
-		log_error(logMuse, "no se haecr open");
+		log_error(logMuse, "no se hacer open");
 //	if(fd_archivo == NULL){
 		//vacio el segmento y deberia devolver error
 		segmento->dinamico =  true;
@@ -1643,9 +1664,7 @@ int crearPaginasmapeadas(int tam,size_t len,t_segmento* segmento,t_proceso* proc
 		free(segmento->path);
 		return -1;
 	}
-//	chmod(path, permisos); // Aplico permisos al archivo
 
-//	int tamanio_archivo = tamanioArchivo(path);
 	//Busco el proceso fantasma
 
 	if(flag == SHARED){
@@ -1665,6 +1684,9 @@ int crearPaginasmapeadas(int tam,size_t len,t_segmento* segmento,t_proceso* proc
 		seg->shared  = true;
 		seg->tamanio = config_muse->tamanio_pagina * tam;
 		seg->paginas =list_create();
+		seg->path = malloc(strlen(path)+1);
+		memcpy(seg->path, path, strlen(path));
+		seg->path[strlen(path)]= '\0';
 	}
 	void* punteroAux;
 	t_pagina* pagina;
@@ -1751,9 +1773,18 @@ uint32_t  crearSegmentoMapeado(int len,t_proceso* proceso, int flag, char* path)
 	int size = list_size(proceso->segmentos) -1;
 	int tam = calcular_paginas_malloc(len);
 	pthread_mutex_lock(&sem_cant_pag);
-	if(paginas_usadas + tam > config_muse->paginas_totales){
+	if(flag == 0 && paginas_usadas + tam > config_muse->paginas_totales){
 		pthread_mutex_unlock(&sem_cant_pag);
 		return 0;
+	}
+
+	bool buscar_archivo(void* arch){
+						return (strcmp(((t_archivo*)arch)->nombre,path) ==0) ;
+					}
+			t_archivo* archivo = list_find(tabla_archivos, &buscar_archivo);
+	if(archivo == NULL && paginas_usadas + tam > config_muse->paginas_totales){
+		pthread_mutex_unlock(&sem_cant_pag);
+				return 0;
 	}
 
 	paginas_usadas +=tam;
@@ -1788,17 +1819,21 @@ uint32_t  crearSegmentoMapeado(int len,t_proceso* proceso, int flag, char* path)
 
 	if(flag == PRIVATE){
 		segmento->paginas = list_create();
+		segmento->path = malloc(strlen(path)+1);
+		memcpy(segmento->path, path, strlen(path));
+		segmento->path[strlen(path)]='\0';
 	 	res = crearPaginasmapeadas(tam, len, segmento, proceso, flag, path);
 	 	if(res >=0) list_add(proceso->segmentos, segmento );
 	}
 	else{
 
-		bool buscar_archivo(void* arch){
-					return (strcmp(((t_archivo*)arch)->nombre,path) ==0) ;
-				}
-		t_archivo* archivo = list_find(tabla_archivos, &buscar_archivo);
+//		bool buscar_archivo(void* arch){
+//					return (strcmp(((t_archivo*)arch)->nombre,path) ==0) ;
+//				}
+		archivo = list_find(tabla_archivos, &buscar_archivo);
 
 		if(archivo == NULL){
+
 		res = crearPaginasmapeadas(tam, len, segmento, proceso, flag, path);
 
 		}else{
@@ -1807,6 +1842,7 @@ uint32_t  crearSegmentoMapeado(int len,t_proceso* proceso, int flag, char* path)
 			pthread_mutex_unlock(&sem_cant_pag);
 			segmento->paginas = archivo->puntero_a_pag;
 		}
+		//puede que se haya creado despues del if
 		archivo = list_find(tabla_archivos, &buscar_archivo);
 		if(res >=0 && archivo != NULL){
 
@@ -2515,7 +2551,13 @@ void atenderConexiones(int parametros){
 				}
 			}
 			else{
-				log_info(logMuse, "Dato solicitado %s \n", frase );
+//				frase[bytes-1]='\0';
+				if(bytes == 4){
+					log_info(logMuse, "Dato solicitado %d \n", *(int*)frase );
+				}else{
+					log_info(logMuse, "Dato solicitado %s \n", frase );
+				}
+
 			}
 
 
@@ -2528,8 +2570,11 @@ void atenderConexiones(int parametros){
 
 //			char* copia = recibirTexto(proceso->cliente, logMuse);
 			void* copia = recibirVoid(proceso->cliente);
-			log_info(logMuse, "COPY %s en %d \n", copia, posicionACopiar );
-
+			if(bytes==4){
+				log_info(logMuse, "COPY %d en %d \n", *(int*)copia, posicionACopiar );
+			}else{
+				log_info(logMuse, "COPY %s en %d \n", copia, posicionACopiar );
+			}
 			int resultado = copiarMuse(posicionACopiar, bytes, copia,proceso->segmentos, proceso, sg);
 //			for(int i=0; i<cantidad_paginas;i++){
 //				t_semaforo* sem = list_get(lista_marcos_memoria, i);
@@ -2825,38 +2870,46 @@ void* inicializarSwap(){
 	paginas_swap = config_muse->tamanio_swap/config_muse->tamanio_pagina;
 	bitmap_swap  = string_repeat('0', paginas_swap);
 
-	remove("archivoSwap.txt");
+	remove(config_muse->rutaSwap);
 
 	if(config_muse->tamanio_swap>0){
 	char mode[] = "0777"; // Permisos totales
 	int permisos = strtol(mode, 0, 8); // Administración para los permisos
 
-	int fd_archivo = open("archivoSwap.txt", O_RDWR | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH);
+	int fd_archivo = open(config_muse->rutaSwap, O_RDWR | O_CREAT, S_IRUSR | S_IRGRP | S_IROTH);
 
-		chmod("archivoSwap.txt", permisos); // Aplico permisos al archivo
-		truncate("archivoSwap.txt", config_muse->tamanio_swap);
+		chmod(config_muse->rutaSwap, permisos); // Aplico permisos al archivo
+		truncate(config_muse->rutaSwap, config_muse->tamanio_swap);
 		void* archivo_mapeado = mmap(NULL, config_muse->tamanio_swap, PROT_READ | PROT_WRITE, MAP_SHARED, fd_archivo, 0);
 
 
 		if ( archivo_mapeado == MAP_FAILED){
-			printf("Error al mapear el archivo %s.", "archivoSwap.txt");
+			printf("Error al mapear el archivo %s . \n", config_muse->rutaSwap);
 			return NULL;
 		}
+    	char caracter = '\0';
+    	int i;
+    	for(i=0; i < config_muse->tamanio_swap; i++){
+    		write(fd_archivo, &caracter, 1);
+    	}
 
 		close(fd_archivo); // Cerramos el archivo pues ya lo tenemos mapeado en memoria, no es necesario mantenerlo abierto
+
+		lista_marcos_swap = list_create();
+		for(int i =0; i<paginas_swap; i++){
+			t_semaforo* semaforo = malloc(sizeof(t_semaforo));
+			pthread_mutex_t marco_swap;
+			pthread_mutex_init(&marco_swap, NULL);
+			semaforo->marco = marco_swap;
+
+			list_add(lista_marcos_swap, semaforo);
+		}
+
 
 		return archivo_mapeado;
 	}
 
-	lista_marcos_swap = list_create();
-	for(int i =0; i<paginas_swap; i++){
-		t_semaforo* semaforo = malloc(sizeof(t_semaforo));
-		pthread_mutex_t marco_swap;
-		pthread_mutex_init(&marco_swap, NULL);
-		semaforo->marco = marco_swap;
 
-		list_add(lista_marcos_swap, semaforo);
-	}
 	return NULL;
 
 }
@@ -2895,6 +2948,7 @@ int crearConfigMemoria(){
 	        	config_muse->tamanio_total 	= config_get_int_value(config_ruta, "MEMORY_SIZE");
 	        	config_muse->tamanio_pagina	= config_get_int_value(config_ruta, "PAGE_SIZE");
 	        	config_muse->tamanio_swap 	= config_get_int_value(config_ruta, "SWAP_SIZE");
+	        	config_muse->rutaSwap       = config_get_string_value(config_ruta, "SWAP");
 
 
 	        }
@@ -2954,6 +3008,9 @@ static void archivos_destroy(t_archivo *self) {
 void handler(){
 	log_info(logMuse, "Cerrando MUSE \n");
 
+	if ( munmap(punteroSwap, config_muse->tamanio_swap) == -1 ){
+		log_error(logMuse, "Error en el unmaping del archivo de swap");
+	}
 	free(config_muse);
 	free(punteroMemoria);
 	free(bitmap_marcos);

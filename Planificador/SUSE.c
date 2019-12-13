@@ -22,34 +22,33 @@ void prog_destroy(t_programa *self) {
 }
 void handler(){
 
-	pthread_mutex_destroy(&sem_new);
-	pthread_mutex_destroy(&sem_lock);
-	pthread_mutex_destroy(&sem_exit);
-	pthread_mutex_destroy(&wt);
-//	pthread_mutex_destroy(&sl);
-	pthread_mutex_destroy(&multi);
-//
-	if(list_size(tabla_new)>0){
-		list_destroy_and_destroy_elements(tabla_new, (void*)new_destroy);
-	}else{
-		list_destroy(tabla_new);
-	}
-	if(list_size(tabla_exit)>0){
-		list_destroy_and_destroy_elements(tabla_exit, (void*)new_destroy);
-	} else{
-		list_destroy(tabla_exit);
-	}
-	if(list_size(tabla_lock)>0){
-		list_destroy_and_destroy_elements(tabla_lock, (void*)block_destroy);
-	}else{
-		list_destroy(tabla_lock);
-	}
-	if(list_size(tabla_programas)>0){
-		list_destroy_and_destroy_elements(tabla_programas, (void*) prog_destroy);
-	}else{
-		list_destroy(tabla_programas);
-	}
-//
+//	pthread_mutex_destroy(&sem_new);
+//	pthread_mutex_destroy(&sem_lock);
+//	pthread_mutex_destroy(&sem_exit);
+//	pthread_mutex_destroy(&wt);
+//	pthread_mutex_destroy(&multi);
+////
+//	if(list_size(tabla_new)>0){
+//		list_destroy_and_destroy_elements(tabla_new, (void*)new_destroy);
+//	}else{
+//		list_destroy(tabla_new);
+//	}
+//	if(list_size(tabla_exit)>0){
+//		list_destroy_and_destroy_elements(tabla_exit, (void*)new_destroy);
+//	} else{
+//		list_destroy(tabla_exit);
+//	}
+//	if(list_size(tabla_lock)>0){
+//		list_destroy_and_destroy_elements(tabla_lock, (void*)block_destroy);
+//	}else{
+//		list_destroy(tabla_lock);
+//	}
+//	if(list_size(tabla_programas)>0){
+//		list_destroy_and_destroy_elements(tabla_programas, (void*) prog_destroy);
+//	}else{
+//		list_destroy(tabla_programas);
+//	}
+//******************esto dejar comentado
 ////	queue_destroy_and_destroy_elements(sem_blocked, (void*) block_destroy);
 ////	int* sem_values;
 //	for(int i=0; i<config_suse->cantSem; i++){

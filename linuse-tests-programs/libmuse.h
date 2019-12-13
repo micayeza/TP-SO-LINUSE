@@ -27,6 +27,7 @@
 	#include <string.h>
 	#include <stdio.h>
 	#include <commons/log.h>
+	#include <commons/string.h>
     #include <stdlib.h>
 
 typedef enum {

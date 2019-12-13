@@ -223,13 +223,32 @@ void muse_free(uint32_t posicion){
 
 int muse_cpy(uint32_t dst, void* src, int n){
 
-	void* frase = malloc(n);
-	memcpy(frase, src, n);
-
-
 	enviarInt(muse, COPIAR);
 	enviarUint32_t(muse, dst);
+
+
+	void* frase;
+	frase = malloc(n);
+	memcpy(frase, src, n);
+	if(n==4){
+		char* extra = string_itoa(*(int*)src);
+		printf("Copiar: %s \n" , extra);
+		free(extra);
+//		int len = strlen(extra);
+//		while(len<n){
+//			extra[len]='\0';
+//			len++;
+
+//		memcpy(frase, extra, n);
+////		frase = malloc(strlen(extra));
+	}else{
+//		memcpy(frase, src, n);
+		printf("Copiar: %s \n" , (char*)src);
+	}
+
+
 	enviarInt(muse, n );
+
 //	enviarTexto(muse, frase);
 	enviarVoid(muse, frase, n);
 
@@ -241,7 +260,7 @@ int muse_cpy(uint32_t dst, void* src, int n){
 
 				close(muse);
 			}
-	}
+ }
 	return res;
 }
 
@@ -253,12 +272,22 @@ int muse_get(void* dst, uint32_t src, size_t n){
 
 //	char* copiar = recibirTexto(muse);
 	void* copiar = recibirVoid(muse);
+
 	if(copiar == NULL){
 		return -1;
 	}else{
+
 //	char* result = strcpy(dst, copiar);
-	memcpy(dst, copiar, n);
-	printf("El dato obtenido fue: %s \n", dst);
+		if(n==4){
+			printf("El dato obtenido fue: %d \n", *(int*)copiar);
+//			int resp = atoi(copiar);
+//			memcpy(dst, &resp, n);
+		}
+		else{
+//			memcpy(dst, copiar, n);
+			printf("El dato obtenido fue: %s \n", (char*)copiar);
+		}
+		memcpy(dst, copiar, n);
 		if(copiar == NULL){
 			int res = recibirInt(muse);
 					if(res == 0){

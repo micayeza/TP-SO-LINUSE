@@ -34,7 +34,7 @@
 
 //#define rutaConfigMuse "../../configs/muse.cfg"
 #define rutaConfigMuse "/home/utnso/workspace/tp-2019-2c-capitulo-2/configs/muse.cfg"
-#define rutaSwap "swap.txt"
+//#define rutaSwap "swap.txt"
 #define ERROR -1
 #define CHAR (sizeof(char))
 typedef struct {
@@ -43,6 +43,7 @@ typedef struct {
 	int tamanio_pagina;
 	int tamanio_swap;
 	int paginas_totales; //sumo las paginas de mi memoria + swap, mas de eso no puedo tener. ;)
+	char* rutaSwap;
 } t_configuracion;
 
 
