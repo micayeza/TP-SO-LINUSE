@@ -6,8 +6,19 @@
  */
 #include "SACServer.h"
 
+int modificarFechas(char* path, struct timespec tiempoCreacion, struct timespec tiempoModificacion){
+	int numNodo = existeArchivo(path);
+	if(numNodo == ERROR)
+		return -ENOENT;
+	t_nodo* nodo = obtenerNodo(numNodo);
+	nodo->fecha_creacion = tiempoCreacion;
+	nodo->fecha_modificacion = tiempoModificacion;
+
+	return 0;
+}
+
 //No es necesario chequear si ya existía el directorio (lo hace fuse usando getattr)
-int crearNodoDirectorio(char* path){
+int crearNodoDirectorioArchivo(char* path, int esDirectorio){
 	int numeroNodoLibre = buscarNodoLibre();
 	//No hay espacio para guardar nodo
 	if(numeroNodoLibre == ERROR){
@@ -17,12 +28,16 @@ int crearNodoDirectorio(char* path){
 	char** pathSeparado = string_split(path, "/");
 	int tam = sizeArrayChar(pathSeparado);
 	char* nombreDir = pathSeparado[tam-1];
+	if(string_length(nombreDir) > TAM_MAX_NOMBRE_ARCHIVO)
+			return ENAMETOOLONG;
 	char* pathPadre = cortarPathPadre(path);
 	int numPadre = existeArchivo(pathPadre);
 
 	//Se crea y persiste el nodo
 	t_nodo* nodo = crearNodoVacio();
-	nodo->estado = 2;
+	if(esDirectorio == 1)
+		nodo->estado = 2;
+	else nodo->estado = 1;
 	strcpy(&(nodo->nombre_archivo), nombreDir);
 	nodo->bloque_padre = numPadre;
 	gettimeofday(&(nodo->fecha_creacion), NULL);
@@ -420,12 +435,10 @@ int main(){
 
 	/*nodo->estado = 1;
 	strcpy(&(nodo->nombre_archivo), "mmm.txt");
-	nodo->bloque_padre = 5;
-	nodo->tam_archivo = 22;
-	gettimeofday(&(nodo->fecha_modificacion), NULL);
-	nodo->p_indirectos[0] = 122;
-	nodo->p_indirectos[1] = 123;
-	nodo->p_indirectos[2] = 128;*/
+	nodo->bloque_padre = res;
+	nodo->tam_archivo = 0;
+	gettimeofday(&(nodo->fecha_modificacion), NULL);*/
+
 
 	//persistirNodo(8, nodo);
 	//int numeroNodoLibre = buscarNodoLibre();

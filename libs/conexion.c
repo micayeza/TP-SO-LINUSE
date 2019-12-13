@@ -113,12 +113,11 @@ int recibirEntero(int fdOrigen, t_log* logger){
 	return enteroRecibido;
 }
 
-struct timespec* recibirTiempo(int fdOrigen, t_log* logger){
-	struct timespec* tiempoRecibido = malloc(sizeof(struct timespec));
-	int resTiempo = recv(fdOrigen, tiempoRecibido, sizeof(struct timespec), MSG_WAITALL);
+struct timespec recibirTiempo(int fdOrigen, t_log* logger){
+	struct timespec tiempoRecibido;
+	int resTiempo = recv(fdOrigen, &tiempoRecibido, sizeof(struct timespec), MSG_WAITALL);
 	if(resTiempo == ERROR){
-		log_error(logger, "Hubo un error al recibir Timeval de %i", fdOrigen);
-		return ERROR;
+		log_error(logger, "Hubo un error al recibir Tiempo de %i", fdOrigen);
 	}
 	return tiempoRecibido;
 }
