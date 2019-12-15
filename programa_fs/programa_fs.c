@@ -6,7 +6,7 @@ int main(void)
 {
 	//FILE* aaa = fopen("/home/utnso/pppp.txt","w+");
 
-	truncate("/home/utnso/pipo/ggg.yt",11);
+	truncate("/home/utnso/pipo/jjj.txt",4296);
 	/*FILE* arch = fopen("/home/utnso/ggg.yt","w+");
 	ftruncate(arch,120);
 	fclose(arch);

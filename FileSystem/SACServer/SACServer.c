@@ -21,6 +21,7 @@ int cambiarTamanioArchivo(char* path, int tamanio){
 			int posPunteroOcupar = cantBloquesActual;
 			for(int i = 0; i < cantBloquesAdicionales; i++){
 				int numBloque = ocuparBloqueLibreBitmap();
+				nodo->tam_archivo = tamanio;
 				nodo->p_indirectos[posPunteroOcupar + i] = numBloque;
 			}
 			persistirNodo(numNodo, nodo);
@@ -31,12 +32,14 @@ int cambiarTamanioArchivo(char* path, int tamanio){
 			cantBloquesAdicionales = cantBloquesAdicionales * -1;
 			int posPunteroBorrar = cantBloquesActual - 1;
 			for(int i = 0; i < cantBloquesAdicionales; i++){
-				desocuparBloqueBitmap(posPunteroBorrar - i);
+				desocuparBloqueBitmap(nodo->p_indirectos[posPunteroBorrar - i]);
+				nodo->tam_archivo = tamanio;
 				nodo->p_indirectos[posPunteroBorrar - i] = NULL; //Indica desocupado
 			}
 			persistirNodo(numNodo, nodo);
 		}else{
 			//No hacer nada
+			nodo->tam_archivo = tamanio;
 		}
 	}
 	return resultado;
@@ -273,9 +276,12 @@ void formatearSAC(){
 
 	//BLOQUES DE DATOS
 	int tam_bloques_datos = (tamFS / TAM_BLOQUE) - 1 - TAM_TABLA_NODOS - bloques_bm;
-	char caracterVacio = '\0';
+	char* caracterVacio;// = malloc(TAM_BLOQUE);
+	char* caracter = malloc(1);
+	*caracter = '\0';
+	caracterVacio = string_repeat('\0', TAM_BLOQUE);
 	for(int i = 0; i < tam_bloques_datos; i++){
-		fwrite(&caracterVacio,1,TAM_BLOQUE,archivo_fs);
+		fwrite(caracterVacio,TAM_BLOQUE,1,archivo_fs);
 	}
 	closeFS();
 }
@@ -426,10 +432,10 @@ t_bitarray* obtenerBitmap(){
 	fseek(archivo_fs, TAM_BLOQUE, SEEK_SET); //Me desplazo hasta terminar el header
 
 	fread(bytesArch,tamanio,1,archivo_fs);
+	closeFS();
 	return bitarray_create_with_mode(bytesArch,TAM_BLOQUE,MSB_FIRST);
 	//Byte 127)  11111111
 	//Byte 128)  11000000 -->Hasta bloque 1025 ocupado. Bloque 1026 libre.
-	closeFS();
 }
 
 void persistirBitmap(t_bitarray* bitarray){
@@ -455,7 +461,7 @@ int ocuparBloqueLibreBitmap(){
 
 int desocuparBloqueBitmap(int numBloque){
 	t_bitarray* bitarray = obtenerBitmap();
-	if(bitarray_get_max_bit(bitarray) > numBloque){
+	if(numBloque > bitarray_get_max_bit(bitarray) - 1){
 		//Numero de bloque no existente.
 		return ERROR;
 	}
@@ -489,11 +495,23 @@ int main(){
 	inicializacion();
 	//formatearSAC();
 	abrirHeaderFS();
-	cambiarTamanioArchivo("/AAA/CCC/ppp.txt", 8324);
+
+	//cambiarTamanioArchivo("/AAA/CCC/ppp.txt", 8692);
+	//cambiarTamanioArchivo("/AAA/CCC/ppp.txt", 4296);
 
 	//int res = existeArchivo("/AAA");
 	//char* archivos = obtenerArchivosDeDirectorio("/AAA/CCC");
-	//t_nodo* nodoNuevo = obtenerNodo(res);
+	//t_nodo* nodoNuevo = obtenerNodo(0);
+
+	//crearNodoDirectorioArchivo("/jjj.txt", 0);
+	//cambiarTamanioArchivo("/jjj.txt", 4296);
+	/*fseek(archivo_fs, (fs_header->inicio_bloques_datos) * TAM_BLOQUE + TAM_BLOQUE * 2, SEEK_SET);
+	long pos = ftell(archivo_fs);
+	char* unBloque = malloc(TAM_BLOQUE);
+	fread(unBloque,TAM_BLOQUE,1,archivo_fs);*/
+	//fseek(archivo_fs, numeroNodo * TAM_BLOQUE, SEEK_CUR);
+	//long pos = ftell(archivo_fs);
+
 	//char* archivos = obtenerArchivosDeDirectorio("/AAA");
 
 	//t_nodo* nodo = crearNodoVacio();

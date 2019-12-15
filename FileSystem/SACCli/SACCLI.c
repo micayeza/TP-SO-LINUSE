@@ -260,7 +260,7 @@ static int fuse_truncate(const char *path, off_t offset) {
 	int res = enviarEntero(socketServidor, SYS_TRUNCATE, log_interno);
 
 	res = enviarTexto(socketServidor, path, log_interno);
-	res = enviarEntero(socketServidor, &offset,  log_interno);
+	res = enviarEntero(socketServidor, offset,  log_interno);
 	if(res >0){
 		res = recibirEntero(socketServidor, log_interno);
 	}
