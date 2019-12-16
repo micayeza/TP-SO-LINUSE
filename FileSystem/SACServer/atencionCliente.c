@@ -59,6 +59,11 @@ void atenderCliente(t_cliente* cliente){
 			}
 			case SYS_WRITE:{
 				char* path = recibirTexto(cliente->socket, log_interno);
+				int offset = recibirEntero(cliente->socket, log_interno);
+				int size = recibirEntero(cliente->socket, log_interno);
+				void* datos = recibirDatos(cliente->socket, log_interno);
+				int resultado = escribirArchivo(path, offset, size, datos);
+				enviarEntero(cliente->socket, resultado,  log_interno);
 				break;
 			}
 			case SYS_READ:{
