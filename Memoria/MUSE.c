@@ -7,6 +7,62 @@
 #include "MUSE.h"
 
 //MENSAJEEEEEEEEEEEEEEEEEEES
+
+char** descomponer_auxiliar(char* auxiliar, int len){
+
+
+	 int a = 0;
+	 int cantidad_de_palabras = 0;
+	 while(a<=len){
+		 if(auxiliar[a] == '\0'){
+			 if(auxiliar[a+1] == '\0'){
+				 break;
+			 }
+			 cantidad_de_palabras ++;
+
+		 }
+		 a++;
+	 }
+
+		cantidad_de_palabras++;
+
+		char** retorno = malloc(sizeof(char*) * (cantidad_de_palabras));
+
+		int inicio_palabra = 0;
+		int letra_actual = 0;
+
+		for(int i = 0; i < cantidad_de_palabras; i++){
+
+			int cantidad_letras = 0;
+
+
+			while(auxiliar[letra_actual] != '\0' && len > letra_actual){
+				cantidad_letras++;
+				letra_actual++;
+			}
+				letra_actual++;
+			char* palabra = malloc(cantidad_letras + 1);
+
+			memcpy(palabra, auxiliar + inicio_palabra, cantidad_letras);
+			palabra[cantidad_letras] = '\0';
+
+			retorno[i] = palabra;
+
+	//		printf("Palabra actual: %s\n", palabra);
+
+			inicio_palabra += cantidad_letras + 1;
+
+
+		}
+
+		retorno[cantidad_de_palabras] = NULL;
+		return retorno;
+
+
+}
+
+
+
 char* recibirTexto(int fdOrigen){
 	int tamanio;
 	int resTamanio = recv(fdOrigen, &tamanio, sizeof(int), MSG_WAITALL);
@@ -627,6 +683,7 @@ void vaciarSegmento(t_segmento* segmento, t_list* bloquesLibres, t_list* tabla_s
 				t_segmento* anterior = buscar_segmento(seg->base - config_muse->tamanio_pagina, proceso->segmentos);
 				anterior->ultimo = true;
 			}
+			free(seg->paginas);
 			free(seg);
 
 
@@ -1455,6 +1512,7 @@ int unmapMuse(uint32_t  fd,t_proceso* proceso, bool sg){
 		 return -1;}
 	 }
 	 //Tengo que desligar la memoria
+	 if(seg->shared == SHARED){
 	 bool busco_archivoo(void* arch){
 	 				return (strcmp(((t_archivo*)arch)->nombre,seg->path) ==0) ;
 	 			}
@@ -1471,6 +1529,7 @@ int unmapMuse(uint32_t  fd,t_proceso* proceso, bool sg){
 	 					}
 
 	 	//Elimino de la tabla de procesos del archivo al proceso
+
 	 	t_ip_id* existe = list_remove_by_condition(archivo->proceso, &busco_id_ips);
 	 	if(existe == NULL){
 			 log_error(logMuse, "El archivo no habia sido mapeado por el proceso o ya realizo muse_unmap \n");
@@ -1489,7 +1548,7 @@ int unmapMuse(uint32_t  fd,t_proceso* proceso, bool sg){
 	 		if(anterior != NULL)
 	 		anterior->ultimo = true;
 
-	 		if(seg->shared == SHARED) free(seg->path);
+	 		if(seg->path != NULL) free(seg->path);
 	 		free(seg);
 
 
@@ -1548,8 +1607,15 @@ int unmapMuse(uint32_t  fd,t_proceso* proceso, bool sg){
 		free(segFantasma->path);
 
 		return 0;
+	 }
+	 else{//SEGMENTO PRIVADO
 
 
+		 vaciarSegmento(seg, proceso->bloquesLibres, proceso->segmentos, proceso);
+
+	 }
+
+	 return 0;
 }
 
 
@@ -1586,10 +1652,10 @@ int syncMuse(uint32_t fd,size_t len,t_proceso* proceso, bool sg){
 	 int tam = calcular_paginas_malloc(len);//necesito saber cuantas paginas escribir
 	 if(tam > list_size(seg->paginas)) tam = list_size(seg->paginas);
 
-//		FILE* buffer_archivo = fopen(seg->path, "r+"); // Creo un nuevo archivo para persistir el bloque (píso el anterior si existe)
-	 int fd_archivo = open(seg->path, O_RDWR, S_IRUSR | S_IRGRP | S_IROTH);
-//	 if ( buffer_archivo == NULL){
-	 if(fd_archivo <0){
+		FILE* buffer_archivo = fopen(seg->path, "wb+"); // Creo un nuevo archivo para persistir el bloque (píso el anterior si existe)
+//	 int fd_archivo = open(seg->path, O_RDWR, S_IRUSR | S_IRGRP | S_IROTH);
+	 if ( buffer_archivo == NULL){
+//	 if(fd_archivo <0){
 			log_error(logMuse, "No se pudo abrir el archivo, verificar que aun existe. \n");
 			return -1;
 		}
@@ -1599,40 +1665,51 @@ int syncMuse(uint32_t fd,size_t len,t_proceso* proceso, bool sg){
 		chmod(seg->path, permisos); // Aplico permisos al archivo
 
 //En la primer pagina tomo los 4 primeros porque rompe
-
+//		char* auxiliar = malloc(len);
+		char* auxiliar = string_repeat('\0', len);
 
 	 for(int i = 0; i<tam;i++){
 		 t_pagina* pag = buscar_segmento_pagina(proceso->segmentos, seg->segmento, i, proceso);
 			t_semaforo* sem = list_get(lista_marcos_memoria, pag->marco);
 			pthread_mutex_lock(&sem->marco);
-//		 pthread_mutex_lock(&global);
-		 char* puntero = punteroMemoria + (config_muse->tamanio_pagina * pag->marco);
-		 int result;
-//		 if(i ==0){
-//			 result = fwrite(puntero, sizeof(int), 1, buffer_archivo);
-//			 result = fwrite(puntero, CHAR, config_muse->tamanio_pagina - 4, buffer_archivo);
-//		 }else{
-//		    result = fwrite(puntero, CHAR, config_muse->tamanio_pagina, buffer_archivo); // Escribo el contenido del bloque en el archivo
-//		 }
-		 if(i==0){ //excluyo la primer parte la puta madre
-			 puntero +=4;
-		 }
-		 result = write(fd_archivo, puntero, config_muse->tamanio_pagina);
-		if(result == config_muse->tamanio_pagina){
-			log_info(logMuse, "Se grabo ok el marco i del archivo \n");
-		}
+
+		 void* puntero = punteroMemoria + (config_muse->tamanio_pagina * pag->marco);
+
+		if(i==0){
+			int aux;
+			memcpy(&aux,puntero, 4);
+			putc(aux, buffer_archivo);
+			memcpy(auxiliar, puntero+4, config_muse->tamanio_pagina-4);
+		}else{
+				memcpy((auxiliar+(i*config_muse->tamanio_pagina)-4),  puntero, config_muse->tamanio_pagina);
+			}
+
+
 		pthread_mutex_unlock(&sem->marco);
-//		 pthread_mutex_unlock(&global);
 
 		 t_clock* clock = buscar_clock(pag->marco);
 		 clock->m = 0;
 
 
 	 }
-//	 fseek(buffer_archivo, len -1, SEEK_SET);
-//	 fwrite("-1",1,1,buffer_archivo);
-	 close(fd_archivo);
-//	int close = fclose(buffer_archivo);
+
+	 char** leo = descomponer_auxiliar(auxiliar, len);
+
+	 int a=0;
+	 while(leo[a] != NULL){
+		 fputs(leo[a], buffer_archivo);
+		 a++;
+	 }
+	 while(leo[a] != NULL){
+		 free(leo[a]);
+	 }
+	 free(leo);
+    // int result = fputs(auxiliar, buffer_archivo);
+//		if(result == config_muse->tamanio_pagina){
+//			log_info(logMuse, "Se grabo ok el marco i del archivo \n");
+//		}
+	 free(auxiliar);
+	int close = fclose(buffer_archivo);
 	 return 0;
 
 }

@@ -274,5 +274,6 @@ static void pag_destroy(t_pagina *self);
 static void archivos_destroy(t_archivo *self);
 static void sem_destroy(t_semaforo *self);
 
+char** descomponer_auxiliar(char* auxiliar, int len);
 
 #endif /* MUSE_H_ */
