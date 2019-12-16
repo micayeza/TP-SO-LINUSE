@@ -201,12 +201,11 @@ static int fuse_write(const char *path, const char *buf, size_t size, off_t offs
 
 	int res = enviarEntero(socketServidor, SYS_WRITE,  log_interno);
 
-	    res = enviarTexto(socketServidor, path, log_interno);
-	    res = enviarTexto(socketServidor,  buf,  log_interno);
-	    res = send(socketServidor, &size, sizeof(size_t), MSG_WAITALL);
-	    res = send(socketServidor, &offset, sizeof(off_t),MSG_WAITALL);
+	//res = enviarTexto(socketServidor, path, log_interno);
+	//res = send(socketServidor, &size, sizeof(size_t), MSG_WAITALL);
+	//res = send(socketServidor, &offset, sizeof(off_t),MSG_WAITALL);
 
-	    res = recibirEntero(socketServidor,  log_info);
+	//res = recibirEntero(socketServidor,  log_info);
 
 	if(res == ENOSPC){
 		return -ENOSPC;
@@ -251,26 +250,21 @@ static int fuse_move(const char* path, const char *newPath) {
 }
 
 static int fuse_chmod(const char *path, struct fuse_file_info *fi) {
-	int a = 1;
+
 	return 0;
 }
 
+//No hay que chequear la existencia, ya que antes del truncate se ejecuta Getattr
+//y si no existe el archivo Fuse no ejecuta truncate.
 static int fuse_truncate(const char *path, off_t offset) {
 	int res = enviarEntero(socketServidor, SYS_TRUNCATE, log_interno);
 
 	res = enviarTexto(socketServidor, path, log_interno);
-	res = send(socketServidor, &offset, sizeof(off_t), MSG_WAITALL);
+	res = enviarEntero(socketServidor, offset,  log_interno);
 	if(res >0){
 		res = recibirEntero(socketServidor, log_interno);
-	//Respuesta del servidor
-
-	if(res == -1){ //Archivo muy grande como para truncarlo
-
-		return -EFBIG;
 	}
-
-}
-	return 0;
+	return res;
 
 }
 

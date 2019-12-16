@@ -50,8 +50,15 @@ void atenderCliente(t_cliente* cliente){
 				enviarEntero(cliente->socket, resultado,  log_interno);
 				break;
 			}
+			case SYS_TRUNCATE:{
+				char* path = recibirTexto(cliente->socket, log_interno);
+				int nuevoSize = recibirEntero(cliente->socket, log_interno);
+				int resultado = cambiarTamanioArchivo(path, nuevoSize);
+				enviarEntero(cliente->socket, resultado,  log_interno);
+				break;
+			}
 			case SYS_WRITE:{
-
+				char* path = recibirTexto(cliente->socket, log_interno);
 				break;
 			}
 			case SYS_READ:{
