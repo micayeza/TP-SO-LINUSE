@@ -412,7 +412,7 @@ t_pagina* buscar_segmento_pagina(t_list* segmentos , int seg, int pag, t_proceso
 }
 
 int swap(t_pagina* pag_swap, bool nueva, t_proceso* proceso , t_segmento* segmento){
-	char* aux_swap = malloc(config_muse->tamanio_pagina);
+
 	bool actualizar_viejo = false;
 
 	//Busco a la vistima, primero veo si tengo un marco libre
@@ -540,6 +540,7 @@ int swap(t_pagina* pag_swap, bool nueva, t_proceso* proceso , t_segmento* segmen
 	int marco_swap = pag_swap->marco;
 	if(actualizar_viejo){//Si hay que "actualizar" lo viejo es que antes habia algo en memoria que pasa a swap
 		//Primero bloqueo el marco, paso lo que tiene a un auxiliar y LUEGO lo marco como libre y bsuco uno nuevo
+		char* aux_swap = malloc(config_muse->tamanio_pagina);
 		t_semaforo* sem_swap = list_get(lista_marcos_swap, marco_swap);
 		pthread_mutex_lock(&sem_swap->marco);
 
@@ -974,7 +975,7 @@ int freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesLi
 	t_clock* clock = list_get(tabla_clock , pagina1->marco);//buscar_clock(proceso, segmento->segmento, pag1);
 	clock->m       = 1;
 	head1->isFree  = true;
-
+	proceso->memLiberada += head1->size;
 		//Veo si hay desperdicio
 		if(config_muse->tamanio_pagina - (desplazamiento1 + 5 + head1->size) < 5 ){
 			head1->size += (config_muse->tamanio_pagina - (desplazamiento1 + 5 + head1->size));
@@ -1525,11 +1526,13 @@ int unmapMuse(uint32_t  fd,t_proceso* proceso, bool sg){
 	 fd -=5;
 	 t_segmento* seg = buscar_segmento(fd, proceso->segmentos);
 
+
 	 if(seg == NULL){
 		 log_error(logMuse, "No es una posicion valida \n");
 		 sg=true;
 		 return -1;
 	 }
+
 	 if(seg->dinamico){
 		 log_error(logMuse, "No es una posicion mappeada \n");
 		 return -1;
@@ -1540,6 +1543,7 @@ int unmapMuse(uint32_t  fd,t_proceso* proceso, bool sg){
 		 log_error(logMuse, "No esta completo el path en el segmento \n");
 		 return -1;}
 	 }
+	 proceso->memLiberada += list_size(seg->paginas)*config_muse->tamanio_pagina;
 	 //Tengo que desligar la memoria
 	 if(seg->shared == SHARED){
 	 bool busco_archivoo(void* arch){
@@ -1852,9 +1856,10 @@ int crearPaginasmapeadas(int tam,size_t len,t_segmento* segmento,t_proceso* proc
 			  		if(res != 0){
 
 			  			memcpy(punteroAux+4, contenido, config_muse->tamanio_pagina-4);
-			  			pthread_mutex_unlock(&sem->marco);
+
 			  			free(contenido);
 			  		}
+			  		pthread_mutex_unlock(&sem->marco);
 			  		continue;
 		  }
 		char* contenido = malloc(config_muse->tamanio_pagina);
@@ -2586,12 +2591,14 @@ void atenderConexiones(int parametros){
 	proceso->ip 	 = malloc(INET6_ADDRSTRLEN);
 	proceso->segmentos = list_create();
 	proceso->bloquesLibres = list_create();
+	proceso->memLiberada  = 0;
+	proceso->memReservada = 0;
 
 
 	ip_de_programa(proceso->cliente, proceso->ip);
-	activo = true;
 
-	while(activo){
+
+	while(1){
 		int operacion = recibirInt(proceso->cliente);
 		if(operacion == -1) operacion= CERRAR;
 		switch (operacion) {
@@ -2613,6 +2620,7 @@ void atenderConexiones(int parametros){
 		case CERRAR:{
 			//TEngo que liberar absolutamente todo
 			log_info(logMuse,"Se desconecto el proceso %d : \n", parametros);
+			printefearMetricas();
 			liberarTodo(proceso);
 
 			pthread_exit("CHAU");
@@ -2625,9 +2633,9 @@ void atenderConexiones(int parametros){
 					break;
 				}
 				log_info(logMuse, "MALLOC  %d \n", tamanio);
-
+				proceso->memReservada += tamanio;
 			uint32_t posicion = mallocMuse(tamanio, proceso);
-
+			printefearMetricas();
 //			for(int i=0; i<cantidad_paginas;i++){
 //				t_semaforo* sem = list_get(lista_marcos_memoria, i);
 //				pthread_mutex_lock(&sem->marco);
@@ -2654,7 +2662,7 @@ void atenderConexiones(int parametros){
 			log_info(logMuse, "FREE %d \n", posicionAliberar);
 
 			int res = freeMuse(posicionAliberar, proceso->segmentos, proceso->bloquesLibres, proceso, sg);
-
+			printefearMetricas();
 			enviarInt(proceso->cliente, res);
 
 			if(sg){
@@ -2670,7 +2678,7 @@ void atenderConexiones(int parametros){
 			log_info(logMuse, "GET %d ", posicion);
 
 			char* frase = getMuse(posicion, bytes, proceso->segmentos, proceso, sg);
-
+			printefearMetricas();
 //			enviarTexto(proceso->cliente, frase);
 			enviarVoid(proceso->cliente, frase, bytes);
 			if(frase == NULL){
@@ -2709,6 +2717,7 @@ void atenderConexiones(int parametros){
 				log_info(logMuse, "COPY %s en %d \n", copia, posicionACopiar );
 			}
 			int resultado = copiarMuse(posicionACopiar, bytes, copia,proceso->segmentos, proceso, sg);
+			printefearMetricas();
 //			for(int i=0; i<cantidad_paginas;i++){
 //				t_semaforo* sem = list_get(lista_marcos_memoria, i);
 //				pthread_mutex_lock(&sem->marco);
@@ -2730,9 +2739,11 @@ void atenderConexiones(int parametros){
 			int flag   = recibirInt(proceso->cliente);
 			size_t len = recibirSizet(proceso->cliente);
 			char* path = recibirTexto(proceso->cliente);
-
+			proceso->memReservada += len;
+			pthread_mutex_lock(&sem_mapeo);
 			uint32_t result = mappearMuse(path, len, flag, proceso);
-
+			pthread_mutex_unlock(&sem_mapeo);
+			printefearMetricas();
 //			if(result ==  0){
 //				log_error(logMuse,"Comienza compactacion por falta de espacio: \n");
 //				compactar(proceso->segmentos, proceso->bloquesLibres, proceso);
@@ -2748,18 +2759,19 @@ void atenderConexiones(int parametros){
 			size_t   len = recibirSizet(proceso->cliente);
 			uint32_t fd  = recibirUint32_t(proceso->cliente);
 
-
+			pthread_mutex_lock(&sem_mapeo);
 			int result = syncMuse(fd, len, proceso, sg);
-
-
+			pthread_mutex_unlock(&sem_mapeo);
+			printefearMetricas();
 			enviarInt(proceso->cliente, result);
 		} break;
 		case DESMAP:{
 			uint32_t fd = recibirUint32_t(proceso->cliente);
 
-
+			pthread_mutex_lock(&sem_mapeo);
 			int result = unmapMuse( fd, proceso, sg);
-
+			pthread_mutex_unlock(&sem_mapeo);
+			printefearMetricas();
 			enviarInt(proceso->cliente, result);
 			if(sg){
 				enviarInt(proceso->cliente, 0);
@@ -2809,6 +2821,70 @@ void atenderConexiones(int parametros){
 
 
 }
+
+
+void printefearMetricas(){
+
+	if(list_size(tabla_procesos)-1 ==0) return;
+
+
+	int super_total = 0;
+		for(int i = 1; i< list_size(tabla_procesos); i++){
+			t_proceso* proceso = list_get(tabla_procesos, i);
+			int x = 0;
+			int total = 0;
+			int frag  = 0;
+			int compartida = 0;
+			while(x<list_size(proceso->segmentos)){
+				t_segmento* seg = list_get(proceso->segmentos, x);
+
+				total += seg->tamanio;
+				if(!seg->dinamico){
+					compartida += seg->tamanio;
+				}
+				if(seg->ultimo){
+					if(seg->dinamico){
+
+					t_pagina* pag = list_get(seg->paginas, list_size(seg->paginas)-1);
+					if(pag->ultimo_header != 0){
+						frag = pag->tamanio_header;
+					}
+				}else{
+					t_segmento* anterior = buscar_segmento(seg->base -1, proceso->segmentos);
+				   if(anterior!=NULL){
+					if(anterior->dinamico){
+
+						t_pagina* pag = list_get(seg->paginas, list_size(seg->paginas)-1);
+						if(pag->ultimo_header != 0){
+							frag = pag->tamanio_header;
+						}else{
+							frag = 0;
+					}
+				    }
+				}else{
+					frag=0;
+				}
+				}
+				}
+
+			log_info(logMuse, "Metrica del Programa: %d - %s \n", proceso->id, proceso->ip);
+			log_info(logMuse, "Memoria Total Pedida: %d bytes \n", proceso->memReservada);
+			log_info(logMuse, "Memoria Total Liberada: %d bytes \n", proceso->memLiberada);
+			log_info(logMuse, "Porcentaje asignacion Memoria: %d % \n", 100*total/(config_muse->tamanio_total+config_muse->tamanio_swap));
+			log_info(logMuse, "Porcentaje Memoria Compartida: %d % \n", 100*compartida/total); //Calculo el porcentaje
+			//de memoria compartida sobre el total asignada al proceso nomas
+			log_info(logMuse, "Fragmentación interna: %d bytes \n", frag);
+			super_total += total;
+
+			x++;
+		}
+
+
+		}
+		log_info(logMuse, "Metrica del sistema: Cantidad Memoria Dispoible %d bytes \n",(config_muse->tamanio_total+config_muse->tamanio_swap)-super_total );
+}
+
+
 
 void ip_de_programa(int s, char* ip){
 	socklen_t len;
@@ -2982,6 +3058,7 @@ void inicializarMemoria(){
 	pthread_mutex_init(&sem_cant_pag,NULL);
 	pthread_mutex_init(&sem_procesos,NULL);
 	pthread_mutex_init(&sem_clock,NULL);
+	pthread_mutex_init(&sem_mapeo,NULL);
 
 
 	lista_marcos_memoria = list_create();
@@ -3172,7 +3249,7 @@ void handler(){
 	exit(0);
 }
 
-	int main() {
+int main() {
 		signal(SIGINT, &handler);
 		remove("MUSE.txt");
 		int v_error = crearConfigMemoria();

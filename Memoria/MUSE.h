@@ -77,6 +77,9 @@ typedef struct{
 	char* ip;
 	t_list* segmentos;
 	t_list*  bloquesLibres;
+	int memReservada;
+	int memLiberada;
+
 } t_proceso;
 
 
@@ -156,12 +159,13 @@ t_log *logMuse;
 
 //FILE * archivoSwap;
 void* punteroSwap;
-bool activo;
+
 bool stop;
 int  paginas_usadas;
 char* bitmap_marcos;
 char* bitmap_swap;
 //char* aux_swap;
+pthread_mutex_t sem_mapeo;
 pthread_mutex_t sem_bitmap_swap;
 pthread_mutex_t sem_bitmap_marco;
 pthread_mutex_t sem_paginas;
@@ -276,5 +280,6 @@ static void archivos_destroy(t_archivo *self);
 static void sem_destroy(t_semaforo *self);
 
 char** descomponer_auxiliar(char* auxiliar, int len);
+void printefearMetricas();
 
 #endif /* MUSE_H_ */
