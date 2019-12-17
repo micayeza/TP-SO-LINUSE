@@ -23,7 +23,7 @@ int escribirArchivo(char* path, int offset, int tamanio, void* datos){
 	int iBloqueFinal = (offset + tamanio) / TAM_BLOQUE;
 	int finEscrituraBloqueFinal = (offset + tamanio) % TAM_BLOQUE;//Offset dentro bloque final
 
-	int cantidadBloques = iBloqueInicial - iBloqueFinal + 1;
+	int cantidadBloques = iBloqueFinal -iBloqueInicial  + 1;
 	int desplazamiento = 0;
 
 	//Escribo bloque inicial
@@ -55,11 +55,21 @@ int escribirArchivo(char* path, int offset, int tamanio, void* datos){
 
 void escribirBloqueDatos(int numBloque, int offset, int size, void* dato, int desplazamientoDato){
 	openFS();
-	fseek(archivo_fs, fs_header->inicio_bloques_datos * TAM_BLOQUE, SEEK_SET); //Me muevo hasta el inicio de los bloques de datos
-	fseek(archivo_fs,numBloque * TAM_BLOQUE,SEEK_CUR); //Hasta el primer byte del bloque
+	fseek(archivo_fs,numBloque * TAM_BLOQUE,SEEK_SET); //Hasta el primer byte del bloque
 	fseek(archivo_fs,offset,SEEK_CUR); //Hasta el byte del offset
-	fwrite(dato+desplazamientoDato,size,1,archivo_fs);
+	void* nuevoApuntador = dato + desplazamientoDato;
+	fwrite(nuevoApuntador,size,1,archivo_fs);
 	closeFS();
+}
+
+void* obtenerDatosDeBloque(int numBloque, int offset, int size){
+	openFS();
+	void* datos = malloc(size);
+	fseek(archivo_fs,numBloque * TAM_BLOQUE,SEEK_SET); //Hasta el primer byte del bloque
+	fseek(archivo_fs,offset,SEEK_CUR); //Hasta el byte del offset
+	fread(datos,size,1,archivo_fs);
+	closeFS();
+	return datos;
 }
 
 int cambiarTamanioArchivo(char* path, int tamanio){
@@ -264,10 +274,12 @@ void free_nodo(t_nodo* nodo){
 
 void openFS(){
 	archivo_fs = fopen(config->pathFs,"r+");
+	//printf("--OPEN\n");
 }
 
 void closeFS(){
 	fclose(archivo_fs);
+	//printf("--CLOSE\n");
 }
 
 int sizeArrayChar(char** array){
@@ -556,16 +568,26 @@ int main(){
 	//formatearSAC();
 	abrirHeaderFS();
 
-	char* datos;// = malloc(TAM_BLOQUE);
-	datos = string_repeat('h', TAM_BLOQUE);
-	escribirArchivo("/AAA/CCC/ppp.txt", 5095, 7242, datos);
-
-	//cambiarTamanioArchivo("/AAA/CCC/ppp.txt", 12488);
+	//cambiarTamanioArchivo("/AAA/CCC/ppp.txt", 16584);
 	//cambiarTamanioArchivo("/AAA/CCC/ppp.txt", 4296);
+
+	char* datos;// = malloc(TAM_BLOQUE);
+	datos = string_repeat('h', 7243);
+	//escribirArchivo("/AAA/CCC/ppp.txt", 9191, 7243, datos);
+
+	void* infoBloqueA = obtenerDatosDeBloque(1026, 0, TAM_BLOQUE);
+	void* infoBloqueB = obtenerDatosDeBloque(1027, 0, TAM_BLOQUE);
+	void* infoBloqueC = obtenerDatosDeBloque(1028, 0, TAM_BLOQUE);
+	void* infoBloqueD = obtenerDatosDeBloque(2561, 0, TAM_BLOQUE);
+	void* infoBloqueE = obtenerDatosDeBloque(3560, 0, TAM_BLOQUE);
+
+	int a = 1;
 
 	//int res = existeArchivo("/AAA");
 	//char* archivos = obtenerArchivosDeDirectorio("/AAA/CCC");
-	//t_nodo* nodoNuevo = obtenerNodo(0);
+	t_nodo* nodoNuevo0 = obtenerNodo(0);
+	t_nodo* nodoNuevo1023 = obtenerNodo(1023);
+	t_nodo* nodoNuevo1024 = obtenerNodo(1060);
 
 	//crearNodoDirectorioArchivo("/jjj.txt", 0);
 	//cambiarTamanioArchivo("/jjj.txt", 4296);
