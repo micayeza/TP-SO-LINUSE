@@ -170,6 +170,7 @@ pthread_mutex_t global;
 pthread_mutex_t sem_cant_pag;
 pthread_mutex_t sem_procesos;
 
+
 //typedef struct {
 // pthread_mutex_t marco;
 //} t_semaforo;
@@ -225,7 +226,7 @@ uint32_t crearPaginas(int tam, uint32_t tamanio, t_segmento* segmento, t_list* b
 int calcular_paginas_malloc(uint32_t tamanio);
 int buscar_marco_libre(char* bitmap);
 
-int swap(int pag_swap, bool nueva);
+int swap(t_pagina* pag_swap, bool nueva, t_proceso* proceso, t_segmento* segmento);
 void agregar_pag_clock(int id, char* ip, int m ,int u, t_segmento* seg, int pag, int marco);
 t_clock* buscar_clock(int marco);
 void remover_clocky(int marco, t_proceso* proceso);
