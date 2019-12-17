@@ -6,6 +6,62 @@
  */
 #include "SACServer.h"
 
+int escribirArchivo(char* path, int offset, int tamanio, void* datos){
+	int numNodo = existeArchivo(path);
+	t_nodo* nodo = obtenerNodo(numNodo);
+	int nuevoTamanio = offset + tamanio;
+
+	//Ya que si el tamanio de lo q voy a escribir es menor no tengo que truncar el archivo
+	if(nuevoTamanio > nodo->tam_archivo)
+		cambiarTamanioArchivo(path, nuevoTamanio);
+
+	//Bloque inicial
+	int iBloqueInicial = offset / TAM_BLOQUE;
+	int offsetBloqueInicial = offset % TAM_BLOQUE;//Offset dentro bloque inicial
+
+	//Bloque final
+	int iBloqueFinal = (offset + tamanio) / TAM_BLOQUE;
+	int finEscrituraBloqueFinal = (offset + tamanio) % TAM_BLOQUE;//Offset dentro bloque final
+
+	int cantidadBloques = iBloqueInicial - iBloqueFinal + 1;
+	int desplazamiento = 0;
+
+	//Escribo bloque inicial
+	int numBloqueInicial = nodo->p_indirectos[iBloqueInicial];
+	int tamanioEscribirInicial;
+	if(cantidadBloques == 1)
+		tamanioEscribirInicial = tamanio;
+	else
+		tamanioEscribirInicial = TAM_BLOQUE - offsetBloqueInicial;
+	escribirBloqueDatos(numBloqueInicial, offsetBloqueInicial, tamanioEscribirInicial, datos, desplazamiento);
+	desplazamiento += tamanioEscribirInicial;
+
+	//Escribo bloques intermedios
+	for(int i = iBloqueInicial + 1; i < iBloqueFinal; i++){
+		int numBloque = nodo->p_indirectos[i];
+		escribirBloqueDatos(numBloque, 0, TAM_BLOQUE, datos, desplazamiento);
+		desplazamiento += TAM_BLOQUE;
+	}
+
+	//Escribo bloque final
+	if(cantidadBloques > 1){
+		int numBloque = nodo->p_indirectos[iBloqueFinal];
+		escribirBloqueDatos(numBloque, 0, finEscrituraBloqueFinal, datos, desplazamiento);
+		desplazamiento += finEscrituraBloqueFinal;
+	}
+
+	return tamanio;
+}
+
+void escribirBloqueDatos(int numBloque, int offset, int size, void* dato, int desplazamientoDato){
+	openFS();
+	fseek(archivo_fs, fs_header->inicio_bloques_datos * TAM_BLOQUE, SEEK_SET); //Me muevo hasta el inicio de los bloques de datos
+	fseek(archivo_fs,numBloque * TAM_BLOQUE,SEEK_CUR); //Hasta el primer byte del bloque
+	fseek(archivo_fs,offset,SEEK_CUR); //Hasta el byte del offset
+	fwrite(dato+desplazamientoDato,size,1,archivo_fs);
+	closeFS();
+}
+
 int cambiarTamanioArchivo(char* path, int tamanio){
 	int numNodo = existeArchivo(path);
 	t_nodo* nodo = obtenerNodo(numNodo);
@@ -28,7 +84,7 @@ int cambiarTamanioArchivo(char* path, int tamanio){
 		}else resultado = ERROR;
 	}else{
 		if(cantBloquesAdicionales < 0){
-			//Borrar blques
+			//Borrar bloques
 			cantBloquesAdicionales = cantBloquesAdicionales * -1;
 			int posPunteroBorrar = cantBloquesActual - 1;
 			for(int i = 0; i < cantBloquesAdicionales; i++){
@@ -39,7 +95,11 @@ int cambiarTamanioArchivo(char* path, int tamanio){
 			persistirNodo(numNodo, nodo);
 		}else{
 			//No hacer nada
-			nodo->tam_archivo = tamanio;
+			if(tamanio > nodo->tam_archivo){
+				nodo->tam_archivo = tamanio;
+			}else{
+				nodo->tam_archivo = tamanio;
+			}
 		}
 	}
 	return resultado;
@@ -496,7 +556,11 @@ int main(){
 	//formatearSAC();
 	abrirHeaderFS();
 
-	//cambiarTamanioArchivo("/AAA/CCC/ppp.txt", 8692);
+	char* datos;// = malloc(TAM_BLOQUE);
+	datos = string_repeat('h', TAM_BLOQUE);
+	escribirArchivo("/AAA/CCC/ppp.txt", 5095, 7242, datos);
+
+	//cambiarTamanioArchivo("/AAA/CCC/ppp.txt", 12488);
 	//cambiarTamanioArchivo("/AAA/CCC/ppp.txt", 4296);
 
 	//int res = existeArchivo("/AAA");
@@ -533,7 +597,7 @@ int main(){
 	ocuparBloqueLibreBitmap(bitarray);
 	persistirBitmap(bitarray);*/
 
-	aceptarClientes();
+	//aceptarClientes();
 
 	finalizar();
 }

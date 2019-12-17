@@ -85,6 +85,23 @@ int enviarTiempo(int fdDestinatario, struct timespec tiempoEnviar,  t_log* logge
 	return resTiempo;
 }
 
+int enviarDatos(int fdDestinatario, void* datoEnviar, int tamanio,  t_log* logger){
+	int resTamanio = send(fdDestinatario, &tamanio, sizeof(int), MSG_WAITALL);
+	if(resTamanio == ERROR){
+		log_error(logger, "Hubo un error al enviar Tamanio a %i", fdDestinatario);
+		return ERROR;
+	}
+	if(tamanio != 0){
+		int resDato = send(fdDestinatario, datoEnviar, tamanio, MSG_WAITALL);
+		if(resDato== ERROR){
+			log_error(logger, "Hubo un error al enviar el Dato a %i", fdDestinatario);
+			return ERROR;
+		}
+		return resDato;
+	}
+	return 0;
+}
+
 int enviarTexto(int fdDestinatario, char* textoEnviar,  t_log* logger){
 	int tamanio = pesoString(textoEnviar);
 	int resTamanio = send(fdDestinatario, &tamanio, sizeof(int), MSG_WAITALL);
@@ -93,12 +110,12 @@ int enviarTexto(int fdDestinatario, char* textoEnviar,  t_log* logger){
 		return ERROR;
 	}
 	if(tamanio != 0){
-	int resTexto = send(fdDestinatario, (void*)textoEnviar, tamanio, MSG_WAITALL);
-	if(resTexto == ERROR){
-		log_error(logger, "Hubo un error al enviar el Texto a %i", fdDestinatario);
-		return ERROR;
-	}
-	return resTexto;
+		int resTexto = send(fdDestinatario, (void*)textoEnviar, tamanio, MSG_WAITALL);
+		if(resTexto == ERROR){
+			log_error(logger, "Hubo un error al enviar el Texto a %i", fdDestinatario);
+			return ERROR;
+		}
+		return resTexto;
 	}
 	return 0;
 }
@@ -120,6 +137,25 @@ struct timespec recibirTiempo(int fdOrigen, t_log* logger){
 		log_error(logger, "Hubo un error al recibir Tiempo de %i", fdOrigen);
 	}
 	return tiempoRecibido;
+}
+
+void* recibirDatos(int fdOrigen, t_log* logger){
+	int tamanio;
+	int resTamanio = recv(fdOrigen, &tamanio, sizeof(int), MSG_WAITALL);
+	if(resTamanio == ERROR){
+		log_error(logger, "Hubo un error al recibir Tamanio de Dato de %i", fdOrigen);
+		return NULL;
+	}
+	if(tamanio == 0){
+		return NULL;
+	}
+	void* datoRecibido = malloc(tamanio);
+	int resDato = recv(fdOrigen, datoRecibido, tamanio, MSG_WAITALL);
+	if(resDato == ERROR){
+		log_error(logger, "Hubo un error al recibir Dato de %i", fdOrigen);
+		return NULL;
+	}
+	return datoRecibido;
 }
 
 char* recibirTexto(int fdOrigen, t_log* logger){
