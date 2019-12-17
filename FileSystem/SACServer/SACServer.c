@@ -6,6 +6,64 @@
  */
 #include "SACServer.h"
 
+int leerArchivo(char* path, int offset, int tamanio, void* buf){
+	int numNodo = existeArchivo(path);
+	t_nodo* nodo = obtenerNodo(numNodo);
+
+	//Si desde el offset leyendo ese tamanio me paso del archivo, paso a leer menos.
+	//(guardo el sobrante ya que me va aservir para completar el buffer con nulo)
+	int tamSobrante = 0;
+	if(offset + tamanio > nodo->tam_archivo){
+		tamSobrante = offset + tamanio - nodo->tam_archivo;
+		tamanio = nodo->tam_archivo - offset;
+	}
+
+	//Bloque inicial
+	int iBloqueInicial = offset / TAM_BLOQUE;
+	int offsetBloqueInicial = offset % TAM_BLOQUE;//Offset dentro bloque inicial
+
+	//Bloque final
+	int iBloqueFinal = (offset + tamanio) / TAM_BLOQUE;
+	int finLecturaBloqueFinal = (offset + tamanio) % TAM_BLOQUE;//Offset dentro bloque final
+
+	int cantidadBloques = iBloqueFinal - iBloqueInicial  + 1;
+
+	int tamLeido = 0;
+	//Leo bloque inicial
+	int numBloqueInicial = nodo->p_indirectos[iBloqueInicial];
+	int tamanioLeerInicial;
+	if(cantidadBloques == 1)
+		tamanioLeerInicial = tamanio;
+	else
+		tamanioLeerInicial = TAM_BLOQUE - offsetBloqueInicial;
+	tamLeido += leerBloqueDatos(numBloqueInicial, offsetBloqueInicial, tamanioLeerInicial, buf);
+	buf += tamanioLeerInicial;
+
+	//Leo bloques intermedios
+	for(int i = iBloqueInicial + 1; i < iBloqueFinal; i++){
+		int numBloque = nodo->p_indirectos[i];
+		tamLeido += leerBloqueDatos(numBloque, 0, TAM_BLOQUE, buf);
+		buf += TAM_BLOQUE;
+	}
+
+	//Leer bloque final
+	if(cantidadBloques > 1){
+		int numBloque = nodo->p_indirectos[iBloqueFinal];
+		tamLeido += leerBloqueDatos(numBloque, 0, finLecturaBloqueFinal, buf);
+		buf += finLecturaBloqueFinal;
+	}
+
+	//Completar sobrante
+	if(tamSobrante > 0){
+		char* bytesCopiar = malloc(tamSobrante);
+		bytesCopiar = string_repeat('j', tamSobrante);
+		memcpy(buf, bytesCopiar, tamSobrante);
+	}
+
+	return tamLeido;
+
+}
+
 int escribirArchivo(char* path, int offset, int tamanio, void* datos){
 	int numNodo = existeArchivo(path);
 	t_nodo* nodo = obtenerNodo(numNodo);
@@ -23,9 +81,10 @@ int escribirArchivo(char* path, int offset, int tamanio, void* datos){
 	int iBloqueFinal = (offset + tamanio) / TAM_BLOQUE;
 	int finEscrituraBloqueFinal = (offset + tamanio) % TAM_BLOQUE;//Offset dentro bloque final
 
-	int cantidadBloques = iBloqueFinal -iBloqueInicial  + 1;
-	int desplazamiento = 0;
+	int cantidadBloques = iBloqueFinal - iBloqueInicial  + 1;
+	//int desplazamiento = 0;
 
+	int tamEscrito = 0;
 	//Escribo bloque inicial
 	int numBloqueInicial = nodo->p_indirectos[iBloqueInicial];
 	int tamanioEscribirInicial;
@@ -33,43 +92,42 @@ int escribirArchivo(char* path, int offset, int tamanio, void* datos){
 		tamanioEscribirInicial = tamanio;
 	else
 		tamanioEscribirInicial = TAM_BLOQUE - offsetBloqueInicial;
-	escribirBloqueDatos(numBloqueInicial, offsetBloqueInicial, tamanioEscribirInicial, datos, desplazamiento);
-	desplazamiento += tamanioEscribirInicial;
+	tamEscrito += escribirBloqueDatos(numBloqueInicial, offsetBloqueInicial, tamanioEscribirInicial, datos);
+	datos += tamanioEscribirInicial;
 
 	//Escribo bloques intermedios
 	for(int i = iBloqueInicial + 1; i < iBloqueFinal; i++){
 		int numBloque = nodo->p_indirectos[i];
-		escribirBloqueDatos(numBloque, 0, TAM_BLOQUE, datos, desplazamiento);
-		desplazamiento += TAM_BLOQUE;
+		tamEscrito += escribirBloqueDatos(numBloque, 0, TAM_BLOQUE, datos);
+		datos += TAM_BLOQUE;
 	}
 
 	//Escribo bloque final
 	if(cantidadBloques > 1){
 		int numBloque = nodo->p_indirectos[iBloqueFinal];
-		escribirBloqueDatos(numBloque, 0, finEscrituraBloqueFinal, datos, desplazamiento);
-		desplazamiento += finEscrituraBloqueFinal;
+		tamEscrito += escribirBloqueDatos(numBloque, 0, finEscrituraBloqueFinal, datos);
+		datos += finEscrituraBloqueFinal;
 	}
 
-	return tamanio;
+	return tamEscrito;
 }
 
-void escribirBloqueDatos(int numBloque, int offset, int size, void* dato, int desplazamientoDato){
+int escribirBloqueDatos(int numBloque, int offset, int size, void* dato){
 	openFS();
 	fseek(archivo_fs,numBloque * TAM_BLOQUE,SEEK_SET); //Hasta el primer byte del bloque
 	fseek(archivo_fs,offset,SEEK_CUR); //Hasta el byte del offset
-	void* nuevoApuntador = dato + desplazamientoDato;
-	fwrite(nuevoApuntador,size,1,archivo_fs);
+	int tamEscrito = fwrite(dato,sizeof(char),size,archivo_fs);
 	closeFS();
+	return tamEscrito;
 }
 
-void* obtenerDatosDeBloque(int numBloque, int offset, int size){
+int leerBloqueDatos(int numBloque, int offset, int size, void* buf){
 	openFS();
-	void* datos = malloc(size);
 	fseek(archivo_fs,numBloque * TAM_BLOQUE,SEEK_SET); //Hasta el primer byte del bloque
 	fseek(archivo_fs,offset,SEEK_CUR); //Hasta el byte del offset
-	fread(datos,size,1,archivo_fs);
+	int tamLeido = fread(buf,sizeof(char),size,archivo_fs);
 	closeFS();
-	return datos;
+	return tamLeido;
 }
 
 int cambiarTamanioArchivo(char* path, int tamanio){
@@ -571,15 +629,23 @@ int main(){
 	//cambiarTamanioArchivo("/AAA/CCC/ppp.txt", 16584);
 	//cambiarTamanioArchivo("/AAA/CCC/ppp.txt", 4296);
 
-	char* datos;// = malloc(TAM_BLOQUE);
-	datos = string_repeat('h', 7243);
-	//escribirArchivo("/AAA/CCC/ppp.txt", 9191, 7243, datos);
+	/*char* datos;// = malloc(TAM_BLOQUE);
+	datos = string_repeat('h', 7242);
+	int tamEscrito = escribirArchivo("/AAA/CCC/ppp.txt", 5095, 7242, datos);*/
 
-	void* infoBloqueA = obtenerDatosDeBloque(1026, 0, TAM_BLOQUE);
-	void* infoBloqueB = obtenerDatosDeBloque(1027, 0, TAM_BLOQUE);
-	void* infoBloqueC = obtenerDatosDeBloque(1028, 0, TAM_BLOQUE);
-	void* infoBloqueD = obtenerDatosDeBloque(2561, 0, TAM_BLOQUE);
-	void* infoBloqueE = obtenerDatosDeBloque(3560, 0, TAM_BLOQUE);
+	char* buf = malloc(16384);
+	int tamLeido = leerArchivo("/AAA/CCC/ppp.txt", 4096, 12288, buf);
+
+	void* infoBloqueA = malloc(TAM_BLOQUE);
+	void* infoBloqueB = malloc(TAM_BLOQUE);
+	void* infoBloqueC = malloc(TAM_BLOQUE);
+	void* infoBloqueD = malloc(TAM_BLOQUE);
+	void* infoBloqueE = malloc(TAM_BLOQUE);
+	leerBloqueDatos(1026, 0, TAM_BLOQUE, infoBloqueA);
+	leerBloqueDatos(1027, 0, TAM_BLOQUE, infoBloqueB);
+	leerBloqueDatos(1028, 0, TAM_BLOQUE, infoBloqueC);
+	leerBloqueDatos(1029, 0, TAM_BLOQUE, infoBloqueD);
+	leerBloqueDatos(1030, 0, TAM_BLOQUE, infoBloqueE);
 
 	int a = 1;
 
