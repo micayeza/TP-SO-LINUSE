@@ -50,7 +50,7 @@ int enviarTexto(int fdDestinatario, char* textoEnviar,  t_log* logger);
 int enviarTiempo(int fdDestinatario, struct timespec tiempoEnviar,  t_log* logger);
 int enviarDatos(int fdDestinatario, void* datoEnviar, int tamanio,  t_log* logger);
 int recibirEntero(int fdOrigen, t_log* logger);
-void* recibirDatos(int fdOrigen, t_log* logger);
+int recibirDatos(int fdOrigen, void* datos, t_log* logger);
 char* recibirTexto(int fdOrigen, t_log* logger);
 struct timespec recibirTiempo(int fdOrigen, t_log* logger);
 

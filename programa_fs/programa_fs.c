@@ -4,21 +4,26 @@
 
 int main(void)
 {
+	//fseek(arch, 3, SEEK_SET);
 	//FILE* arch = fopen("/home/utnso/pipo/AAA/CCC/ppp.txt","r+");
 	FILE* arch = fopen("/home/utnso/ppp.txt","r+");
-	fseek(arch, 3, SEEK_SET);
-	char* texto = malloc(22);
-	texto = "karmapalmatranzapanza";
+
+	char* texto = malloc(6);
+	texto = "karma";
 	int pos = ftell(arch);
-	fwrite(texto, sizeof(char), 21, arch);
-	pos = ftell(arch);
+	//fwrite(texto, sizeof(char), 3, arch);
+
+
+	char* buf = malloc(1000);
+	fread(buf,sizeof(char), 1000, arch);
+	fclose(arch);
 
 	/*char* texto2 = malloc(13);
 	texto2 = "BuenaPersona";
 	fwrite(texto2, sizeof(char), 13, arch);
 	pos = ftell(arch);*/
 
-	fclose(arch);
+
 
 	/*FILE* arch2 = fopen("/home/utnso/ppp.txt","r+");
 	char* mensaje = malloc(16);

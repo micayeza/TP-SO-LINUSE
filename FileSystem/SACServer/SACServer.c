@@ -6,6 +6,65 @@
  */
 #include "SACServer.h"
 
+int leerArchivo(char* path, int offset, int tamanio, void* buf){
+	int numNodo = existeArchivo(path);
+	t_nodo* nodo = obtenerNodo(numNodo);
+
+	//Si desde el offset leyendo ese tamanio me paso del archivo, paso a leer menos.
+	//(guardo el sobrante ya que me va aservir para completar el buffer con nulo)
+	int tamSobrante = 0;
+	if(offset + tamanio > nodo->tam_archivo){
+		tamSobrante = offset + tamanio - nodo->tam_archivo;
+		tamanio = nodo->tam_archivo - offset;
+	}
+
+	//Bloque inicial
+	int iBloqueInicial = offset / TAM_BLOQUE;
+	int offsetBloqueInicial = offset % TAM_BLOQUE;//Offset dentro bloque inicial
+
+	//Bloque final
+	int iBloqueFinal = (offset + tamanio) / TAM_BLOQUE;
+	int finLecturaBloqueFinal = (offset + tamanio) % TAM_BLOQUE;//Offset dentro bloque final
+
+	int cantidadBloques = iBloqueFinal - iBloqueInicial  + 1;
+
+	int tamLeido = 0;
+	//Leo bloque inicial
+	int numBloqueInicial = nodo->p_indirectos[iBloqueInicial];
+	int tamanioLeerInicial;
+	if(cantidadBloques == 1)
+		tamanioLeerInicial = tamanio;
+	else
+		tamanioLeerInicial = TAM_BLOQUE - offsetBloqueInicial;
+	tamLeido += leerBloqueDatos(numBloqueInicial, offsetBloqueInicial, tamanioLeerInicial, buf);
+	buf += tamanioLeerInicial;
+
+	//Leo bloques intermedios
+	for(int i = iBloqueInicial + 1; i < iBloqueFinal; i++){
+		int numBloque = nodo->p_indirectos[i];
+		tamLeido += leerBloqueDatos(numBloque, 0, TAM_BLOQUE, buf);
+		buf += TAM_BLOQUE;
+	}
+
+	//Leer bloque final
+	if(cantidadBloques > 1){
+		int numBloque = nodo->p_indirectos[iBloqueFinal];
+		tamLeido += leerBloqueDatos(numBloque, 0, finLecturaBloqueFinal, buf);
+		buf += finLecturaBloqueFinal;
+	}
+
+	//Completar sobrante
+	if(tamSobrante > 0){
+		char* bytesCopiar = malloc(tamSobrante);
+		bytesCopiar = string_repeat('j', tamSobrante);
+		memcpy(buf, bytesCopiar, tamSobrante);
+		free(bytesCopiar);
+	}
+	free_nodo(nodo);
+	return tamLeido;
+
+}
+
 int escribirArchivo(char* path, int offset, int tamanio, void* datos){
 	int numNodo = existeArchivo(path);
 	t_nodo* nodo = obtenerNodo(numNodo);
@@ -23,9 +82,10 @@ int escribirArchivo(char* path, int offset, int tamanio, void* datos){
 	int iBloqueFinal = (offset + tamanio) / TAM_BLOQUE;
 	int finEscrituraBloqueFinal = (offset + tamanio) % TAM_BLOQUE;//Offset dentro bloque final
 
-	int cantidadBloques = iBloqueFinal -iBloqueInicial  + 1;
-	int desplazamiento = 0;
+	int cantidadBloques = iBloqueFinal - iBloqueInicial  + 1;
+	//int desplazamiento = 0;
 
+	int tamEscrito = 0;
 	//Escribo bloque inicial
 	int numBloqueInicial = nodo->p_indirectos[iBloqueInicial];
 	int tamanioEscribirInicial;
@@ -33,43 +93,43 @@ int escribirArchivo(char* path, int offset, int tamanio, void* datos){
 		tamanioEscribirInicial = tamanio;
 	else
 		tamanioEscribirInicial = TAM_BLOQUE - offsetBloqueInicial;
-	escribirBloqueDatos(numBloqueInicial, offsetBloqueInicial, tamanioEscribirInicial, datos, desplazamiento);
-	desplazamiento += tamanioEscribirInicial;
+	tamEscrito += escribirBloqueDatos(numBloqueInicial, offsetBloqueInicial, tamanioEscribirInicial, datos);
+	datos += tamanioEscribirInicial;
 
 	//Escribo bloques intermedios
 	for(int i = iBloqueInicial + 1; i < iBloqueFinal; i++){
 		int numBloque = nodo->p_indirectos[i];
-		escribirBloqueDatos(numBloque, 0, TAM_BLOQUE, datos, desplazamiento);
-		desplazamiento += TAM_BLOQUE;
+		tamEscrito += escribirBloqueDatos(numBloque, 0, TAM_BLOQUE, datos);
+		datos += TAM_BLOQUE;
 	}
 
 	//Escribo bloque final
 	if(cantidadBloques > 1){
 		int numBloque = nodo->p_indirectos[iBloqueFinal];
-		escribirBloqueDatos(numBloque, 0, finEscrituraBloqueFinal, datos, desplazamiento);
-		desplazamiento += finEscrituraBloqueFinal;
+		tamEscrito += escribirBloqueDatos(numBloque, 0, finEscrituraBloqueFinal, datos);
+		datos += finEscrituraBloqueFinal;
 	}
 
-	return tamanio;
+	free_nodo(nodo);
+	return tamEscrito;
 }
 
-void escribirBloqueDatos(int numBloque, int offset, int size, void* dato, int desplazamientoDato){
+int escribirBloqueDatos(int numBloque, int offset, int size, void* dato){
 	openFS();
 	fseek(archivo_fs,numBloque * TAM_BLOQUE,SEEK_SET); //Hasta el primer byte del bloque
 	fseek(archivo_fs,offset,SEEK_CUR); //Hasta el byte del offset
-	void* nuevoApuntador = dato + desplazamientoDato;
-	fwrite(nuevoApuntador,size,1,archivo_fs);
+	int tamEscrito = fwrite(dato,sizeof(char),size,archivo_fs);
 	closeFS();
+	return tamEscrito;
 }
 
-void* obtenerDatosDeBloque(int numBloque, int offset, int size){
+int leerBloqueDatos(int numBloque, int offset, int size, void* buf){
 	openFS();
-	void* datos = malloc(size);
 	fseek(archivo_fs,numBloque * TAM_BLOQUE,SEEK_SET); //Hasta el primer byte del bloque
 	fseek(archivo_fs,offset,SEEK_CUR); //Hasta el byte del offset
-	fread(datos,size,1,archivo_fs);
+	int tamLeido = fread(buf,sizeof(char),size,archivo_fs);
 	closeFS();
-	return datos;
+	return tamLeido;
 }
 
 int cambiarTamanioArchivo(char* path, int tamanio){
@@ -112,6 +172,7 @@ int cambiarTamanioArchivo(char* path, int tamanio){
 			}
 		}
 	}
+	free_nodo(nodo);
 	return resultado;
 }
 
@@ -122,6 +183,8 @@ int modificarFechas(char* path, struct timespec tiempoCreacion, struct timespec 
 	t_nodo* nodo = obtenerNodo(numNodo);
 	nodo->fecha_creacion = tiempoCreacion;
 	nodo->fecha_modificacion = tiempoModificacion;
+	persistirNodo(numNodo, nodo);
+	free_nodo(nodo);
 
 	return 0;
 }
@@ -133,12 +196,16 @@ int crearNodoDirectorioArchivo(char* path, int esDirectorio){
 	if(numeroNodoLibre == ERROR){
 		return -EDQUOT;
 	}
-
-	char** pathSeparado = string_split(path, "/");
+	char* barra = string_new();
+	strcpy(barra,"/");
+	char** pathSeparado = string_split(path, barra);
+	free(barra);
 	int tam = sizeArrayChar(pathSeparado);
 	char* nombreDir = pathSeparado[tam-1];
-	if(string_length(nombreDir) > TAM_MAX_NOMBRE_ARCHIVO)
-			return ENAMETOOLONG;
+	if(string_length(nombreDir) > TAM_MAX_NOMBRE_ARCHIVO){
+		free_char_as_as(pathSeparado);
+		return ENAMETOOLONG;
+	}
 	char* pathPadre = cortarPathPadre(path);
 	int numPadre = existeArchivo(pathPadre);
 
@@ -152,22 +219,31 @@ int crearNodoDirectorioArchivo(char* path, int esDirectorio){
 	gettimeofday(&(nodo->fecha_creacion), NULL);
 	gettimeofday(&(nodo->fecha_modificacion), NULL);
 	persistirNodo(numeroNodoLibre, nodo);
-
+	free_nodo(nodo);
+	free_char_as_as(pathSeparado);
+	free(pathPadre);
 	return 0;
 }
 
 char* cortarPathPadre(char* path){
-	char* barra = "/";
-	char** pathSeparado = string_split(path, "/");
-	int tam = sizeArrayChar(pathSeparado);
-	if(tam == 1)
-		return ""; //Si se está intentando crear en el raiz.
-
+	char* barra = string_new();
+	strcpy(barra,"/");
+	char** pathSeparado = string_split(path, barra);
 	char* pathPadre = string_new();
+	int tam = sizeArrayChar(pathSeparado);
+	if(tam == 1){
+		strcpy(pathPadre,"");
+		free(barra);
+		free_char_as_as(pathSeparado);
+		return pathPadre; //Si se está intentando crear en el raiz.
+	}
+
 	for(int i = 0; i < tam - 1; i++){
 		string_append(&pathPadre,barra);
 		string_append(&pathPadre,pathSeparado[i]);
 	}
+	free(barra);
+	free_char_as_as(pathSeparado);
 	return pathPadre;
 }
 
@@ -178,13 +254,21 @@ t_nodo* obtenerNodoDePath(char* path){
 }
 
 char* obtenerArchivosDeDirectorio(char* path){
-	char* separador = ";";
-	char* punto = ".";
-	char* dosPuntos = "..";
+	char* separador = string_new();
+	strcpy(separador,";");
+	char* punto = string_new();
+	strcpy(punto,".");
+	char* dosPuntos = string_new();
+	strcpy(dosPuntos,"..");
 	int numNodo = existeArchivo(path);
-	if(numNodo == ERROR)
-		return "";
 	char* nombresArchivos = string_new();
+	if(numNodo == ERROR){
+		free(separador);
+		free(punto);
+		free(dosPuntos);
+		strcpy(nombresArchivos, "");
+		return nombresArchivos;
+	}
 	string_append(&nombresArchivos,punto);
 	string_append(&nombresArchivos,separador);
 	string_append(&nombresArchivos,dosPuntos);
@@ -194,7 +278,11 @@ char* obtenerArchivosDeDirectorio(char* path){
 			string_append(&nombresArchivos,separador);
 			string_append(&nombresArchivos,&(nodo->nombre_archivo));
 		}
+		free_nodo(nodo);
 	}
+	free(separador);
+	free(punto);
+	free(dosPuntos);
 	return nombresArchivos;
 
  }
@@ -223,19 +311,7 @@ int SacServerOpen(const char *path) {
  }
 
 
-void inicializacion(){
-	log_resultados = log_create("log_resultados.txt", "LOG-RES", false, LOG_LEVEL_INFO);
-	log_info(log_resultados, "------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
-	log_interno = log_create("log_interno.txt", "LOG-INT", false, LOG_LEVEL_INFO);
-	log_info(log_interno, "------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
-
-	configPath = string_new();
-	string_append(&configPath, "/home/utnso/workspace/tp-2019-2c-capitulo-2/configs/SAC.config");
-	config = getConfigSAC(configPath);
-
-	fs_header = malloc(sizeof(t_header));
-}
-
+//CONEXION CLIENTES----------------
 void aceptarClientes(){
 
 	int socket_escucha = crearSocketEscucha(config->listenPort, log_interno);
@@ -262,33 +338,10 @@ t_cliente* create_cliente(int socket){
 	return cliente;
 }
 
-void free_cliente(t_cliente* cliente){
-	free(cliente);
-}
+//---------------------------
 
-void free_nodo(t_nodo* nodo){
-	free(nodo->nombre_archivo);
-	free(nodo->p_indirectos);
-	free(nodo);
-}
 
-void openFS(){
-	archivo_fs = fopen(config->pathFs,"r+");
-	//printf("--OPEN\n");
-}
-
-void closeFS(){
-	fclose(archivo_fs);
-	//printf("--CLOSE\n");
-}
-
-int sizeArrayChar(char** array){
-	int tam = 0;
-	while(array[tam] != NULL){
-		tam++;
-	}
-	return tam;
-}
+//INICIALIZACION ------------------------
 
 void formatearSAC(){
 	openFS();
@@ -319,12 +372,13 @@ void formatearSAC(){
 		bitarray_set_bit(bitmap, i);
 	}
 	fwrite(bitmap->bitarray,1,bloques_bm * TAM_BLOQUE,archivo_fs);
+	free(bytesBitmap);
+	bitarray_destroy(bitmap);
 
 	//TABLA DE NODOS
 	//Agrego el nodo correspondiente a la raiz.
 	t_nodo* nodoRaiz = crearNodoVacio();
 	nodoRaiz->estado = 2;
-	long pos = ftell(archivo_fs);
 	fwrite(&(nodoRaiz->estado),1,1,archivo_fs);
 	strcpy(nodoRaiz->nombre_archivo, "");
 	fwrite(nodoRaiz->nombre_archivo,sizeof(char),71,archivo_fs);
@@ -334,6 +388,7 @@ void formatearSAC(){
 	fwrite(&(nodoRaiz->fecha_creacion),sizeof(struct timespec),1,archivo_fs);
 	fwrite(&(nodoRaiz->fecha_modificacion),sizeof(struct timespec),1,archivo_fs);
 	fwrite(nodoRaiz->p_indirectos,sizeof(int)*TAM_MAX_PUNT_IND,1,archivo_fs);
+	free_nodo(nodoRaiz);
 	//Agrego el resto de los nodos
 	t_nodo* nodo= crearNodoVacio();
 	for(int i = 1; i < TAM_TABLA_NODOS; i++){
@@ -345,16 +400,16 @@ void formatearSAC(){
 		fwrite(&(nodo->fecha_modificacion),sizeof(struct timespec),1,archivo_fs);
 		fwrite(nodo->p_indirectos,sizeof(int)*TAM_MAX_PUNT_IND,1,archivo_fs);
 	}
+	free_nodo(nodo);
 
 	//BLOQUES DE DATOS
 	int tam_bloques_datos = (tamFS / TAM_BLOQUE) - 1 - TAM_TABLA_NODOS - bloques_bm;
 	char* caracterVacio;// = malloc(TAM_BLOQUE);
-	char* caracter = malloc(1);
-	*caracter = '\0';
 	caracterVacio = string_repeat('\0', TAM_BLOQUE);
 	for(int i = 0; i < tam_bloques_datos; i++){
 		fwrite(caracterVacio,TAM_BLOQUE,1,archivo_fs);
 	}
+	free(caracterVacio);
 	closeFS();
 }
 
@@ -389,6 +444,7 @@ void abrirHeaderFS(){
 	fs_header->tam_bloques_datos = (fs_header->T / TAM_BLOQUE) - 1 - TAM_TABLA_NODOS - fs_header->tam_bitmap;
 	closeFS();
 }
+//---------------------------------
 
 
 //TABLA DE NODOS -------------------
@@ -399,7 +455,6 @@ t_nodo* obtenerNodo(int numeroNodo){
 	t_nodo* nodo = malloc(sizeof(t_nodo));
 	fseek(archivo_fs, (fs_header->tam_bitmap + 1) * TAM_BLOQUE, SEEK_SET);
 	fseek(archivo_fs, numeroNodo * TAM_BLOQUE, SEEK_CUR);
-	long pos = ftell(archivo_fs);
 	fread(&(nodo->estado),sizeof(uint8_t),1,archivo_fs);
 	fread(&(nodo->nombre_archivo),sizeof(char),TAM_MAX_NOMBRE_ARCHIVO,archivo_fs);
 	fread(&(nodo->bloque_padre),sizeof(uint32_t),1,archivo_fs);
@@ -433,29 +488,40 @@ int buscarNodoLibre(){
 		//Me muevo hasta el inicio de la Tabla de Nodos. Luego cada 1, bloque, cada 2, cada 3, etc.
 		t_nodo* nodo = obtenerNodo(i);
 		if(nodo->estado == 0){
+			free_nodo(nodo);
 			return i;
 		}
+		free_nodo(nodo);
 	}
 	log_info(log_interno , "No quedan nodos libre.");
-	return -1;
+	return ERROR;
 }
 
 //Retorna el ID del nodo si existe o ERROR en caso de no existir.
 int existeArchivo(char* path){
-	char barra = "/";
-	char** pathSeparado = string_split(path, "/");
+	char* barra = string_new();
+	strcpy(barra, "/");
+	char** pathSeparado = string_split(path, barra);
+	free(barra);
 	int tam = sizeArrayChar(pathSeparado);
-	if(tam == 0) //Si el contenido es barra sola devuelve 0 que es el id del bloque raiz
+	if(tam == 0){ //Si el contenido es barra sola devuelve 0 que es el id del bloque raiz
+		free_char_as_as(pathSeparado);
 		return 0;
+	}
 	for(int i = 0; i < TAM_TABLA_NODOS; i++){
 		int i_path = tam - 1;
 		t_nodo* nodo = obtenerNodo(i);
 
 		if(nodo->estado != 0 && strcmp(pathSeparado[i_path], nodo->nombre_archivo) == 0){
-			if(chequearNombrePadre(pathSeparado, i_path, nodo->bloque_padre) == 0)
+			if(chequearNombrePadre(pathSeparado, i_path, nodo->bloque_padre) == 0){
+				free_nodo(nodo);
+				free_char_as_as(pathSeparado);
 				return i;
+			}
 		}
+		free_nodo(nodo);
 	}
+	free_char_as_as(pathSeparado);
 	return ERROR;
 }
 
@@ -466,8 +532,10 @@ int chequearNombrePadre(char** pathSeparado, int i_path, int padre){
 	i_path--;
 	if(nodo->estado != 0 && strcmp(pathSeparado[i_path], nodo->nombre_archivo) == 0){
 		int resultado = chequearNombrePadre(pathSeparado, i_path, nodo->bloque_padre);
+		free_nodo(nodo);
 		return resultado;
 	}
+	free_nodo(nodo);
 	return ERROR;
 }
 
@@ -505,9 +573,10 @@ t_bitarray* obtenerBitmap(){
 
 	fread(bytesArch,tamanio,1,archivo_fs);
 	closeFS();
-	return bitarray_create_with_mode(bytesArch,TAM_BLOQUE,MSB_FIRST);
-	//Byte 127)  11111111
-	//Byte 128)  11000000 -->Hasta bloque 1025 ocupado. Bloque 1026 libre.
+	t_bitarray* bitarray = bitarray_create_with_mode(bytesArch,TAM_BLOQUE,MSB_FIRST);
+	free(bytesArch);
+
+	return bitarray;
 }
 
 void persistirBitmap(t_bitarray* bitarray){
@@ -525,9 +594,11 @@ int ocuparBloqueLibreBitmap(){
 		if(bitarray_test_bit(bitarray,i) == 0){
 			bitarray_set_bit(bitarray, i);
 			persistirBitmap(bitarray);
+			bitarray_destroy(bitarray);
 			return i;
 		}
 	}
+	bitarray_destroy(bitarray);
 	return ERROR;
 }
 
@@ -535,10 +606,12 @@ int desocuparBloqueBitmap(int numBloque){
 	t_bitarray* bitarray = obtenerBitmap();
 	if(numBloque > bitarray_get_max_bit(bitarray) - 1){
 		//Numero de bloque no existente.
+		bitarray_destroy(bitarray);
 		return ERROR;
 	}
 	bitarray_clean_bit(bitarray, numBloque);
 	persistirBitmap(bitarray);
+	bitarray_destroy(bitarray);
 	return 0;
 }
 
@@ -550,17 +623,73 @@ int hayBloquesLibres(int cantidad){
 		if(bitarray_test_bit(bitarray,i) == 0){
 			cantidad--;
 			if(cantidad == 0){
+				bitarray_destroy(bitarray);
 				return 1;
 			}
 		}
 	}
+	bitarray_destroy(bitarray);
 	return 0;
 }
 
 //----------------------------
 
+void inicializacion(){
+	log_resultados = log_create("log_resultados.txt", "LOG-RES", false, LOG_LEVEL_INFO);
+	log_info(log_resultados, "------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
+	log_interno = log_create("log_interno.txt", "LOG-INT", false, LOG_LEVEL_INFO);
+	log_info(log_interno, "------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
+
+	config = getConfigSAC(pathConfig);
+
+	fs_header = malloc(sizeof(t_header));
+}
+
 void finalizar(){
 	freeConfig(config);
+	free_header(fs_header);
+	log_destroy(log_resultados);
+	log_destroy(log_interno);
+}
+
+void openFS(){
+	archivo_fs = fopen(config->pathFs,"r+");
+	//printf("--OPEN\n");
+}
+
+void closeFS(){
+	fclose(archivo_fs);
+	//printf("--CLOSE\n");
+}
+
+int sizeArrayChar(char** array){
+	int tam = 0;
+	while(array[tam] != NULL){
+		tam++;
+	}
+	return tam;
+}
+
+void free_cliente(t_cliente* cliente){
+	free(cliente);
+}
+
+void free_nodo(t_nodo* nodo){
+	free(nodo);
+}
+
+void free_header(t_header* header){
+	free(header->identificador);
+	free(header);
+}
+
+void free_char_as_as(char** array){
+	int i=0;
+	while(array[i] != NULL){
+		free(array[i]);
+		i++;
+	}
+	free(array);
 }
 
 int main(){
@@ -568,26 +697,23 @@ int main(){
 	//formatearSAC();
 	abrirHeaderFS();
 
+	//crearNodoDirectorioArchivo("/AAA/BBB/ggg.rar", 0);
+
 	//cambiarTamanioArchivo("/AAA/CCC/ppp.txt", 16584);
 	//cambiarTamanioArchivo("/AAA/CCC/ppp.txt", 4296);
 
-	char* datos;// = malloc(TAM_BLOQUE);
-	datos = string_repeat('h', 7243);
-	//escribirArchivo("/AAA/CCC/ppp.txt", 9191, 7243, datos);
+	/*char* datos;// = malloc(TAM_BLOQUE);
+	datos = string_repeat('h', 7242);
+	int tamEscrito = escribirArchivo("/AAA/CCC/ppp.txt", 5095, 7242, datos);*/
 
-	void* infoBloqueA = obtenerDatosDeBloque(1026, 0, TAM_BLOQUE);
-	void* infoBloqueB = obtenerDatosDeBloque(1027, 0, TAM_BLOQUE);
-	void* infoBloqueC = obtenerDatosDeBloque(1028, 0, TAM_BLOQUE);
-	void* infoBloqueD = obtenerDatosDeBloque(2561, 0, TAM_BLOQUE);
-	void* infoBloqueE = obtenerDatosDeBloque(3560, 0, TAM_BLOQUE);
+	/*char* buf = malloc(16384);
+	int tamLeido = leerArchivo("/AAA/CCC/ppp.txt", 4096, 12288, buf);*/
 
-	int a = 1;
+	/*void* infoBloqueA = malloc(TAM_BLOQUE);
+	leerBloqueDatos(1026, 0, TAM_BLOQUE, infoBloqueA);*/
 
 	//int res = existeArchivo("/AAA");
 	//char* archivos = obtenerArchivosDeDirectorio("/AAA/CCC");
-	t_nodo* nodoNuevo0 = obtenerNodo(0);
-	t_nodo* nodoNuevo1023 = obtenerNodo(1023);
-	t_nodo* nodoNuevo1024 = obtenerNodo(1060);
 
 	//crearNodoDirectorioArchivo("/jjj.txt", 0);
 	//cambiarTamanioArchivo("/jjj.txt", 4296);

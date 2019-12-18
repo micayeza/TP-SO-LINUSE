@@ -38,9 +38,11 @@
 #define TAM_P_BLOQUE 4
 #define TAM_MAX_PUNT_IND 1000
 
+#define pathConfig "/home/utnso/workspace/tp-2019-2c-capitulo-2/configs/SAC.config"
+
 typedef enum e_estado {BORRADO, OCUPADO, DIRECTORIO} e_estado;
 
-char* configPath;
+//char* configPath;
 t_log* log_resultados;
 t_log* log_interno;
 FILE* archivo_fs;
@@ -89,7 +91,6 @@ t_configSAC* config;
 
 //FUNCIONES CONFIG
 t_configSAC* getConfigSAC(char* configPath);
-void freeConfig(t_configSAC* config);
 
 //FUNCIONES SAC SERVER
 t_cliente* create_cliente(int socket);
@@ -100,9 +101,13 @@ void atenderCliente(t_cliente* cliente);
 //FUNCIONES FILESYSTEM
 void abrirHeaderFS();
 t_nodo* crearNodoVacio();
-void free_nodo(t_nodo* nodo);
 t_nodo* obtenerNodo(int numeroNodo);
 char* cortarPathPadre(char* path);
 
+//FUNCIONES FREE
+void freeonfig(t_configSAC* config);
+void free_nodo(t_nodo* nodo);
+void free_header();
+void free_char_as_as(char** array);
 
 #endif /* SACSERVER_H_ */
