@@ -7,11 +7,16 @@ void atenderPrograma(void* par){
 	t_new*  hilo_exec = NULL;
 
 	t_list* joins = list_create();
+	bool matado = false;
 
 	//Me mantengo a la espera de Recibir Mensaje de este PCB->socket
 	while(1){
 
 		int operacionRecibida = recibirInt(parametros->programa);
+		  if(operacionRecibida == -1) {
+			  	  operacionRecibida = CLOSE;
+			  	  matado =true;
+		  }
 		switch(operacionRecibida){
 			case CREATE_HILO:{
 
@@ -74,9 +79,11 @@ void atenderPrograma(void* par){
 
 			}break;
 			case CLOSE:{
+
 				int tid = recibirInt(parametros->programa);
+				if(matado) tid = parametros->id;
 				log_info(log_interno, "[CLOSE] %d \n",tid);
-				hilo_exec = close_hilo(tid, parametros, parametros->tablaReady, hilo_exec, joins);//Hacer los pasos para un Close.
+				hilo_exec = close_hilo(tid, parametros, parametros->tablaReady, hilo_exec, joins, matado);//Hacer los pasos para un Close.
 				printefearMetricas();
 				if(parametros->estado == FINALIZADO){
 					for(int i=0; i<list_size(parametros->tablaReady);i++){
@@ -87,9 +94,57 @@ void atenderPrograma(void* par){
 						t_join* jo = list_remove(joins, i);
 						free(jo);
 					}
+
 					free(parametros->tablaReady);
 					free(joins);
 					if(hilo_exec != NULL)free(hilo_exec);
+
+//					*LO NUEVOOOOOOOO, si se cierra le quito lo que tiene reservado
+					for(int x=0 ; x<config_suse->cantSem;x++){
+						t_sem_retenidos* aux = list_get(parametros->semaforos, x);
+						if(aux->cantidad >0){
+							if(sem_values[x] < config_suse->semMax[x]){
+									sem_values[x]++;
+									log_info(log_interno, "[SIGNAL] Semaforo %s. Valor actual: %d",config_suse->semId[x],sem_values[x]);
+									if(sem_values[x]<=0){
+										t_block* block = getNextFromSemaforo(x);
+
+											log_info(log_interno, "Desbloqueado de Semaforo %s, PID: %d",config_suse->semId[x],block->id);
+
+
+												t_programa* programa = buscar_programa_bool(block->programa);
+												t_pth_programas* mut = buscar_mutex(programa->programa);
+												pthread_mutex_lock(&mut->mtx);
+
+												if(programa != NULL){
+												t_hilo* hilo = buscar_hilo_bool(block->id, programa);
+
+												hilo->estado = READY;
+												hilo->enLock += clock()-hilo->initLock;
+												hilo->initReady = clock();
+
+												t_new* nuevo = malloc(sizeof(t_new));
+												nuevo->id 		= block->id;
+												nuevo->programa = block->programa;
+												nuevo->estimado = block->estimado;
+
+
+												list_add(programa->tablaReady, nuevo);
+												pthread_mutex_unlock(&mut->mtx);
+
+												pthread_mutex_lock(&sem_lista_semaforos);
+												t_sem_contador* contador = buscar_contador(nuevo->programa);
+												sem_post(&contador->cont);
+												pthread_mutex_unlock(&sem_lista_semaforos);
+												}
+								}
+							}
+
+						}
+						if(aux != NULL)free(aux);
+					}
+					free(parametros->semaforos);
+
 					pthread_exit("Chau");
 
 				}else{
@@ -103,7 +158,7 @@ void atenderPrograma(void* par){
 				char* semName = recibirTexto(parametros->programa, log_interno);
 				log_info(log_interno, "[WAIT] %s \n",semName);
 				pthread_mutex_lock(&wt);
-				int resultadoWait = wait_hilo(tid,semName); //Hacer los pasos para un Wait.
+				int resultadoWait = wait_hilo(tid,semName, parametros->semaforos); //Hacer los pasos para un Wait.
 
 				 if(resultadoWait == 1){//Se bloqueo
 					 log_info(log_interno, "Se bloquea el hilo %d a la espera del semaforo %s \n",tid, semName);
@@ -154,7 +209,7 @@ void atenderPrograma(void* par){
 
 				char* semName  = recibirTexto(parametros->programa, log_interno);
 				log_info(log_interno, "[SIGNAL] %s \n",semName);
-				t_block* block = signal_hilo(tid,semName); //Hacer los pasos para un Signal.
+				t_block* block = signal_hilo(tid,semName, parametros->semaforos); //Hacer los pasos para un Signal.
 				if(block != NULL){
 					bool buscar_lock(void* blo){
 						return ((t_block*)blo)->id == block->id &&
@@ -288,7 +343,7 @@ void create_hilo(int tid, t_programa* programa){
 	hijo->id     		 = tid;//list_size(hermanos);
 	hijo->real	   		 = 0;
 	hijo->initNew  		 = clock();
-
+	//****************************************LONUEVO
 	hijo->dNaM = 0; hijo->deNaR = 0; hijo->enExec = 0; hijo->enLock =0; hijo->enReady = 0;
 
 
@@ -363,11 +418,11 @@ void join_hilo(int tid, int programa, t_list* joins){
 
 }
 
-t_new* close_hilo(int tid, t_programa* programa, t_list* tabla_ready, t_new* hilo_exec, t_list* joins){
+t_new* close_hilo(int tid, t_programa* programa, t_list* tabla_ready, t_new* hilo_exec, t_list* joins, bool matado){
 
 	if(tid == programa->id){
 		//NO puedo cerrar el hilo central porque hay hilos pendientes, qqueda bloqueado
-		if(list_size(joins)>0){
+		if(list_size(joins)>0 && !matado){
 			log_error(log_interno, "No se puede cerrar el hilo %d ya que aun hay hilos joineados", tid);
 			return NULL;
 			}
@@ -382,7 +437,7 @@ t_new* close_hilo(int tid, t_programa* programa, t_list* tabla_ready, t_new* hil
 
 	switch(hilo->estado){
 	 case NEW:{
-			log_info(log_interno, "El hilo ha cerrar estaba en estado nuevo \n");
+			log_info(log_interno, "El hilo a cerrar estaba en estado nuevo \n");
 		 hilo->deNaR   = -1;
 
 		 bool buscar_new(void* h){
@@ -400,7 +455,7 @@ t_new* close_hilo(int tid, t_programa* programa, t_list* tabla_ready, t_new* hil
 
 	 }break;
 	 case READY:{
-		 log_info(log_interno, "El hilo ha cerrar estaba en estado ready \n");
+		 log_info(log_interno, "El hilo a cerrar estaba en estado ready \n");
 		 hilo->enReady += clock() - hilo->initReady;
 			 bool buscar_ready(void* h){
 				 return ((t_new*)h)->id == hilo->id;
@@ -465,6 +520,7 @@ t_new* close_hilo(int tid, t_programa* programa, t_list* tabla_ready, t_new* hil
 	pthread_mutex_unlock(&multi);
 	hilo->estado = EXIT;
 
+
 	bool buscar_int(void* joi){
 		return ((t_join*)joi)->id == tid;
 	}
@@ -474,40 +530,6 @@ t_new* close_hilo(int tid, t_programa* programa, t_list* tabla_ready, t_new* hil
 	if(list_size(joins)==0)programa->estado = ACTIVO;
 	return hilo_exec;
 
-	//***************** esto deja de ser necesario, solo sacarlo de join
-	//Algun otro hilo estaba trabado esperando qeu el termine?
-
-//			int i = 0;
-//			pthread_mutex_lock(&sem_lock);
-//			while(i<list_size(tabla_lock)){
-//
-//				t_block* bloc = list_get(tabla_lock, i);
-//
-//				if(bloc->tid == hilo->id && bloc->programa == programa->programa){
-//
-//					bloc = list_remove(tabla_lock, i);
-//
-//					log_info(log_interno, "Se desbloquea el hilo %d, del programa %d por haber finalizado el hilo %d \n", bloc->id, bloc->programa, tid );
-//					t_hilo* hiloAready    = buscar_prog_hilo(bloc->programa, bloc->id);
-//					hiloAready->enLock   += clock() - hiloAready->initLock;
-//					hiloAready->initReady = clock();
-//					hiloAready->estado    = READY;
-//
-//					t_new* bloc_a_ready = malloc(sizeof(t_new));
-//					bloc_a_ready->estimado = 0;
-//					bloc_a_ready->id       = bloc->id;
-//					bloc_a_ready->programa = programa->programa;
-//
-//					list_add(tabla_ready, bloc_a_ready);
-//
-//
-//					free(bloc);
-//
-//				}
-//			}
-//			pthread_mutex_unlock(&sem_lock);
-
-//	return hilo_exec;
 }
 
 void bloquearEnSemaforo(t_block* block, char* sem_id){
@@ -531,12 +553,18 @@ int posicionSemaforo(char* sem_id){
 }
 
 
-int wait_hilo(int tid,char* semName){
+int wait_hilo(int tid,char* semName, t_list* lista_semaforos){
 
 	    int bloquear = 0;
 		int pos = posicionSemaforo(semName);if(pos==-1)return -1;
-//		if(sem_values[pos]>0)
+
 			sem_values[pos]--;
+//			*** LOS CAMBIOS
+						t_sem_retenidos* aux = list_get(lista_semaforos, pos);
+						if(aux != NULL){
+							aux->cantidad ++;
+						}
+//			*** LOS CAMBIOS
 
 		log_info(log_interno, "Semaforo %s. Valor actual: %d",semName,sem_values[pos]);
 		if(sem_values[pos]<0){
@@ -550,9 +578,16 @@ t_block* getNextFromSemaforo(int sem_pos){
 	return block;
 }
 
-t_block* signal_hilo(int tid, char* semName){
+t_block* signal_hilo(int tid, char* semName, t_list* lista_semaforos){
 
 	int pos = posicionSemaforo(semName);if(pos==-1)return NULL;
+	//			*** LOS CAMBIOS
+							t_sem_retenidos* aux = list_get(lista_semaforos, pos);
+							if(aux != NULL){
+								aux->cantidad --;
+							}
+	//			*** LOS CAMBIOS
+
 		if(sem_values[pos] < config_suse->semMax[pos]){
 		sem_values[pos]++;
 		log_info(log_interno, "[SIGNAL] Semaforo %s. Valor actual: %d",semName,sem_values[pos]);

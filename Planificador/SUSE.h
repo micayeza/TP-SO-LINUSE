@@ -98,6 +98,7 @@ typedef struct{
 	double   fin;
 	t_list*  tablaReady;
 	int      cant_hilos;
+	t_list*  semaforos;
 }t_programa;
 
 typedef struct{
@@ -122,6 +123,12 @@ t_list* tabla_new;
 t_list* tabla_lock;
 t_list* tabla_exit;
 t_list* tabla_programas;
+
+typedef struct{
+	int pos;
+	int cantidad;
+}t_sem_retenidos;
+
 
 typedef struct{
 	int 	id;
@@ -188,9 +195,9 @@ void create_hilo(int tid, t_programa* programa);
 t_new* next_hilo(t_list* tabla_ready);
 void recalcularEstimado(t_hilo* hilo);
 
-t_new* close_hilo(int tid, t_programa* programa, t_list* tabla_ready, t_new* hilo_exec, t_list* joins);
-int wait_hilo(int tid,char* semName);
-t_block* signal_hilo(int tid, char* semName);
+t_new* close_hilo(int tid, t_programa* programa, t_list* tabla_ready, t_new* hilo_exec, t_list* joins, bool matado);
+int wait_hilo(int tid,char* semName, t_list* lista_semaforos);
+t_block* signal_hilo(int tid, char* semName, t_list* lista_semaforos);
 void inicializarSemaforos();
 int posicionSemaforo(char* sem_id);
 void bloquearEnSemaforo(t_block* block, char* sem_id);
