@@ -167,20 +167,17 @@ static int fuse_open(const char *path, struct fuse_file_info *fi) {
 
 //Leer archivo
 static int fuse_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
-	size_t len;
-	(void) fi;
-	if (strcmp(path, DEFAULT_FILE_PATH) != 0)
-		return -ENOENT;
+	int res = enviarEntero(socketServidor, SYS_WRITE,  log_interno);
 
-	len = strlen(DEFAULT_FILE_CONTENT);
-	if (offset < len) {
-		if (offset + size > len)
-			size = len - offset;
-		memcpy(buf, DEFAULT_FILE_CONTENT + offset, size);
-	} else
-		size = 0;
+	res = enviarTexto(socketServidor, path, log_interno);
+	res = enviarEntero(socketServidor, offset,  log_interno);
+	res = enviarEntero(socketServidor, size,  log_interno);
+	res = enviarDatos(socketServidor, (void*) buf, size,  log_interno);
 
-	return size;
+	res = recibirDatos(socketServidor, buf,log_interno);
+	res = recibirEntero(socketServidor, log_interno);
+
+	return res;
 }
 
 //Borrar archivo

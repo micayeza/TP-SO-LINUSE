@@ -139,23 +139,22 @@ struct timespec recibirTiempo(int fdOrigen, t_log* logger){
 	return tiempoRecibido;
 }
 
-void* recibirDatos(int fdOrigen, t_log* logger){
+int recibirDatos(int fdOrigen, void* datos, t_log* logger){
 	int tamanio;
 	int resTamanio = recv(fdOrigen, &tamanio, sizeof(int), MSG_WAITALL);
 	if(resTamanio == ERROR){
 		log_error(logger, "Hubo un error al recibir Tamanio de Dato de %i", fdOrigen);
-		return NULL;
+		return ERROR;
 	}
 	if(tamanio == 0){
-		return NULL;
+		return ERROR;
 	}
-	void* datoRecibido = malloc(tamanio);
-	int resDato = recv(fdOrigen, datoRecibido, tamanio, MSG_WAITALL);
+	int resDato = recv(fdOrigen, datos, tamanio, MSG_WAITALL);
 	if(resDato == ERROR){
 		log_error(logger, "Hubo un error al recibir Dato de %i", fdOrigen);
-		return NULL;
+		return ERROR;
 	}
-	return datoRecibido;
+	return 0;
 }
 
 char* recibirTexto(int fdOrigen, t_log* logger){
