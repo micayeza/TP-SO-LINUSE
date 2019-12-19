@@ -64,13 +64,20 @@ static int fuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off
 	char* nombresArchivos = recibirTexto(socketServidor, log_interno);
 	//El servidor retornará vacio cuando no existe el path
 	if(strcmp(nombresArchivos, "") == 1){
+		free(nombresArchivos);
 		return -ENOENT;
 	}
-	char** archivos = string_split(nombresArchivos, ";");
+	char* puntoComa = malloc(2);
+	strcpy(puntoComa, ";");
+	char** archivos = string_split(nombresArchivos, puntoComa);
+	free(puntoComa);
 	int tam = sizeArrayChar(archivos);
 	for(int i = 0; i < tam; i++){
 		filler(buf, archivos[i], NULL, 0);
 	}
+
+	free(nombresArchivos);
+	free_char_as_as(archivos);
 
 	return 0;
 }
@@ -264,6 +271,15 @@ int sizeArrayChar(char** array){
 		tam++;
 	}
 	return tam;
+}
+
+void free_char_as_as(char** array){
+	int i=0;
+	while(array[i] != NULL){
+		free(array[i]);
+		i++;
+	}
+	free(array);
 }
 
 int main(int argc, char *argv[]) {

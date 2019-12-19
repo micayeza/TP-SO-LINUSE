@@ -170,6 +170,7 @@ char* recibirTexto(int fdOrigen, t_log* logger){
 	char* textoRecibido = malloc(tamanio);
 	int resTexto = recv(fdOrigen, textoRecibido, tamanio, MSG_WAITALL);
 	if(resTexto == ERROR){
+		free(textoRecibido);
 		log_error(logger, "Hubo un error al recibir Texto de %i", fdOrigen);
 		return NULL;
 	}

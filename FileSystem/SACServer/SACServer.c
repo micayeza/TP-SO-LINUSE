@@ -698,6 +698,7 @@ void free_cliente(t_cliente* cliente){
 }
 
 void free_nodo(t_nodo* nodo){
+	if(nodo == NULL) return;
 	free(nodo->nombre_archivo);
 	free(nodo);
 }
@@ -765,7 +766,7 @@ int main(){
 
 	//crearNodoDirectorioArchivo("/AAA", 1);
 
-	//cambiarTamanioArchivo("/AAA/CCC/ppp.txt", 16584);
+	//cambiarTamanioArchivo("/home/utnso/pipo/BBB/aaa.txt", 5000);
 	//cambiarTamanioArchivo("/AAA/CCC/ppp.txt", 4296);
 
 	/*char* datos;//
@@ -812,7 +813,7 @@ int main(){
 	ocuparBloqueLibreBitmap(bitarray);
 	persistirBitmap(bitarray);*/
 
-	//aceptarClientes();
+	aceptarClientes();
 
 	finalizar();
 }
