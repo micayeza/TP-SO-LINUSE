@@ -58,7 +58,7 @@ int leerArchivo(char* path, int offset, int tamanio, void* buf){
 	//Completar sobrante
 	if(tamSobrante > 0){
 		char* bytesCopiar = malloc(tamSobrante);
-		bytesCopiar = string_repeat('j', tamSobrante);
+		bytesCopiar = string_repeat('\0', tamSobrante);
 		memcpy(buf, bytesCopiar, tamSobrante);
 		free(bytesCopiar);
 	}

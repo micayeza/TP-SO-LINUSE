@@ -108,6 +108,7 @@ char* cortarPathPadre(char* path);
 int escribirArchivo(char* path, int offset, int tamanio, void* datos);
 t_nodo* obtenerNodoDePath(char* path);
 char* obtenerArchivosDeDirectorio(char* path);
+int leerArchivo(char* path, int offset, int tamanio, void* buf);
 
 //FUNCIONES FREE
 void freeConfig(t_configSAC* config);

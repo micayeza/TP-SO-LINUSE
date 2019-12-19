@@ -77,6 +77,7 @@ void atenderCliente(t_cliente* cliente){
 				int resultado = escribirArchivo(path, offset, size, datos);
 				enviarEntero(cliente->socket, resultado,  log_interno);
 				free(path);
+				free(datos);
 				//FREE VOID* (datos) !!!!!!!!!!!!!!!?
 				printf("SERVER: WRITE. \n");
 				break;
@@ -90,6 +91,7 @@ void atenderCliente(t_cliente* cliente){
 				enviarDatos(cliente->socket, datos, size, log_interno);
 				enviarEntero(cliente->socket, resultado,  log_interno);
 				free(path);
+				free(datos);
 				//FREE VOID* (datos) !!!!!!!!!!!!!!!?
 				printf("SERVER: READ. \n");
 				break;
