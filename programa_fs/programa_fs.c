@@ -1,21 +1,34 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 int main(void)
 {
 	//fseek(arch, 3, SEEK_SET);
-	//FILE* arch = fopen("/home/utnso/pipo/AAA/CCC/ppp.txt","r+");
-	FILE* arch = fopen("/home/utnso/ppp.txt","r+");
+	//FILE* arch = open("/home/utnso/ppp.txt","r+");
+	FILE* arch = fopen("/home/utnso/pipo/AAA/CCC/ppp.txt","r+");
 
-	char* texto = malloc(6);
+	char* datos;
+	datos = string_repeat('h', 5000);
+	//int pos = ftell(arch);
+	//fseek(arch,0,SEEK_SET);
+	//pos = ftell(arch);
+	fwrite(datos, sizeof(char), 5000, arch);
+
+
+	/*char* buf = malloc(10000);
+	int res = fread(buf,sizeof(char), 10000, arch);
+	printf("Bytes lectura: %d \n", res);*/
+
+	/*char* texto = malloc(6);
 	texto = "karma";
 	int pos = ftell(arch);
-	//fwrite(texto, sizeof(char), 3, arch);
+	fwrite(texto, sizeof(char), 3, arch);*/
 
 
-	char* buf = malloc(1000);
-	fread(buf,sizeof(char), 1000, arch);
+	/*char* buf = malloc(1000);
+	fread(buf,sizeof(char), 1000, arch);*/
 	fclose(arch);
 
 	/*char* texto2 = malloc(13);

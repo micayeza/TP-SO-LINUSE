@@ -32,7 +32,7 @@ static int fuse_getattr(const char *path, struct stat *stbuf) {
 			}
 
 		}
-		printf("CLIENTE: UN GETATTR. \n");
+		printf("CLIENTE: GETATTR. \n");
 	}
 	return res;
 }
@@ -167,7 +167,7 @@ static int fuse_open(const char *path, struct fuse_file_info *fi) {
 
 //Leer archivo
 static int fuse_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
-	int res = enviarEntero(socketServidor, SYS_WRITE,  log_interno);
+	int res = enviarEntero(socketServidor, SYS_READ,  log_interno);
 
 	res = enviarTexto(socketServidor, path, log_interno);
 	res = enviarEntero(socketServidor, offset,  log_interno);
@@ -182,16 +182,18 @@ static int fuse_read(const char *path, char *buf, size_t size, off_t offset, str
 
 //Borrar archivo
 int fuse_unlink(const char *path) {
-	int resEnvioOperacion = enviarEntero(socketServidor, SYS_UNLINK,  log_interno);
+	/*int resEnvioOperacion = enviarEntero(socketServidor, SYS_UNLINK,  log_interno);
 	int resEnvioTexto = enviarTexto(socketServidor, path, log_interno);
-	return recibirEntero(socketServidor, log_interno);
+	return recibirEntero(socketServidor, log_interno);*/
+	return 0;
 }
 
 //Borrrar directorio
 static int fuse_rmdir(const char *path) {
-	int res = enviarEntero(socketServidor, SYS_RMDIR, log_interno);
+	/*int res = enviarEntero(socketServidor, SYS_RMDIR, log_interno);
 	    res = enviarTexto(socketServidor, path, log_interno);
-	return recibirEntero(socketServidor, log_interno);
+	return recibirEntero(socketServidor, log_interno);*/
+	return 0;
 }
 
 static int fuse_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi){
@@ -211,7 +213,7 @@ static int fuse_write(const char *path, const char *buf, size_t size, off_t offs
 static int fuse_move(const char* path, const char *newPath) {
 
 	//Path origen
-	int res = enviarTexto(socketServidor, path, log_interno);
+	/*int res = enviarTexto(socketServidor, path, log_interno);
 	    res = enviarTexto(socketServidor, newPath, log_interno);
 
 	//Recibir respuesta
@@ -230,7 +232,7 @@ static int fuse_move(const char* path, const char *newPath) {
 				return -EACCES;
 
 			}
-	//Libero todas las estructuras
+	//Libero todas las estructuras*/
 
 
 	return 0;
