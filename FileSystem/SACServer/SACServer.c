@@ -8,6 +8,8 @@
 
 int leerArchivo(char* path, int offset, int tamanio, void* buf){
 	int numNodo = existeArchivo(path);
+	if(numNodo == ERROR)
+		return ERROR;
 	t_nodo* nodo = obtenerNodo(numNodo);
 
 	//Si desde el offset leyendo ese tamanio me paso del archivo, paso a leer menos.
@@ -68,12 +70,17 @@ int leerArchivo(char* path, int offset, int tamanio, void* buf){
 int escribirArchivo(char* path, int offset, int tamanio, void* datos){
 
 	int numNodo = existeArchivo(path);
+	if(numNodo == ERROR)
+		return ERROR;
 	t_nodo* nodo = obtenerNodo(numNodo);
 	int nuevoTamanio = offset + tamanio;
 
 	//Ya que si el tamanio de lo q voy a escribir es menor no tengo que truncar el archivo
-	if(nuevoTamanio > nodo->tam_archivo)
+	if(nuevoTamanio > nodo->tam_archivo){
+		free_nodo(nodo);
 		cambiarTamanioArchivo(path, nuevoTamanio);
+		nodo = obtenerNodo(numNodo);
+	}
 
 	//Bloque inicial
 	int iBloqueInicial = offset / TAM_BLOQUE;
@@ -149,9 +156,9 @@ int cambiarTamanioArchivo(char* path, int tamanio){
 			int posPunteroOcupar = cantBloquesActual;
 			for(int i = 0; i < cantBloquesAdicionales; i++){
 				int numBloque = ocuparBloqueLibreBitmap();
-				nodo->tam_archivo = tamanio;
 				nodo->p_indirectos[posPunteroOcupar + i] = numBloque;
 			}
+			nodo->tam_archivo = tamanio;
 			persistirNodo(numNodo, nodo);
 		}else resultado = ERROR;
 	}else{
@@ -161,9 +168,9 @@ int cambiarTamanioArchivo(char* path, int tamanio){
 			int posPunteroBorrar = cantBloquesActual - 1;
 			for(int i = 0; i < cantBloquesAdicionales; i++){
 				desocuparBloqueBitmap(nodo->p_indirectos[posPunteroBorrar - i]);
-				nodo->tam_archivo = tamanio;
 				nodo->p_indirectos[posPunteroBorrar - i] = NULL; //Indica desocupado
 			}
+			nodo->tam_archivo = tamanio;
 			persistirNodo(numNodo, nodo);
 		}else{
 			//No hacer nada
@@ -441,7 +448,6 @@ void abrirHeaderFS(){
 	}*/
 
 	openFS();
-
 
 	//Tamanio Archivo
 	fseek(archivo_fs, 0, SEEK_END); //Me paro al final del archivo
@@ -733,18 +739,23 @@ int main(){
 	nodo->bloque_padre = 3;
 	strcpy(nodo->nombre_archivo,"KKK");
 	nodo->tam_archivo = 0;
-
 	persistirNodo(5,nodo);
 	free_nodo(nodo);*/
+
+	/*char* buf = malloc(6);
+	int res = leerArchivo("/AAA/CCC/aaa.txt", 4100, 6, buf);
+	printf("INFO: %s \n", buf);
+	free(buf);*/
+
 
 	/*char* datos = malloc(20);
 	strcpy(datos,"acbdefghijklmnopqrs");*/
 
-	//char* datos = string_repeat('h', 2000);
+	//cambiarTamanioArchivo("/AAA/CCC/aaa.txt", 4000);
+	/*char* datos = string_repeat('h', 4000);
+	escribirArchivo("/AAA/CCC/aaa.txt", 0, 4000, datos);
+	free(datos);*/
 
-	//escribirArchivo("/BBB/uuu.rar", 4000, 2000, datos);
-	/*char* datos = malloc(1500);
-	leerArchivo("/BBB/uuu.rar", 4000, 1500, datos);*/
 
 	//leerBloqueDatos(1027, 300, 20, datos);
 
@@ -761,7 +772,6 @@ int main(){
 	t_nodo* nodo = obtenerNodo(numNodoLibre);*/
 
 	//int existe = existeArchivo("/CCC/BBB/aaa.txt");
-
 
 
 	//crearNodoDirectorioArchivo("/AAA", 1);

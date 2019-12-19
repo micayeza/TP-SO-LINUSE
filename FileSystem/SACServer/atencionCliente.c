@@ -72,7 +72,7 @@ void atenderCliente(t_cliente* cliente){
 				char* path = recibirTexto(cliente->socket, log_interno);
 				int offset = recibirEntero(cliente->socket, log_interno);
 				int size = recibirEntero(cliente->socket, log_interno);
-				void* datos;
+				void* datos = malloc(size);
 				recibirDatos(cliente->socket, datos, log_interno);
 				int resultado = escribirArchivo(path, offset, size, datos);
 				enviarEntero(cliente->socket, resultado,  log_interno);

@@ -7,23 +7,27 @@ int main(void)
 {
 	//fseek(arch, 3, SEEK_SET);
 	//FILE* arch = open("/home/utnso/ppp.txt","r+");
-	FILE* arch = fopen("/home/utnso/pipo/BBB/aaa.txt","r+");
-	/*char* texto = malloc(6);
+	/*FILE* arch = fopen("/home/utnso/pipo/AAA/CCC/aaa.txt","r+");
+	char* texto = malloc(6);
 	texto = "karma";
-	int pos = ftell(arch);
-	fwrite(texto, sizeof(char), 3, arch);
+	fseek(arch,4100,SEEK_SET);
+	int tam = fwrite(texto, sizeof(char), 3, arch);
+	printf("Bytes escritura: %d \n", tam);
 	fclose(arch);*/
 
-	char* datos = string_repeat('h', 5000);
+	/*char* datos = string_repeat('h', 5000);
 	//int pos = ftell(arch);
 	//fseek(arch,0,SEEK_SET);
 	//pos = ftell(arch);
-	fwrite(datos, sizeof(char), 5000, arch);/*
+	int tam = fwrite(datos, sizeof(char), 5000, arch);*/
 
 
-	/*char* buf = malloc(10000);
-	int res = fread(buf,sizeof(char), 10000, arch);
-	printf("Bytes lectura: %d \n", res);*/
+	FILE* arch = fopen("/home/utnso/pipo/AAA/CCC/aaa.txt","r+");
+	char* buf = malloc(5000);
+	fseek(arch,4100,SEEK_SET);
+	int res = fread(buf,sizeof(char), 5000, arch);
+	printf("Bytes lectura: %s \n", buf);
+	fclose(arch);
 
 
 	/*char* buf = malloc(1000);
