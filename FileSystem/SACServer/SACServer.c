@@ -664,6 +664,7 @@ int hayBloquesLibres(int cantidad){
 //----------------------------
 
 void inicializacion(){
+	pthread_mutex_init(&m_acceso_fs, NULL);
 	log_resultados = log_create("log_resultados.txt", "LOG-RES", false, LOG_LEVEL_INFO);
 	log_info(log_resultados, "------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
 	log_interno = log_create("log_interno.txt", "LOG-INT", false, LOG_LEVEL_INFO);

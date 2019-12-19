@@ -48,6 +48,7 @@ t_log* log_interno;
 FILE* archivo_fs;
 t_config* config;
 
+pthread_mutex_t m_acceso_fs;
 
 typedef struct {
 	int listenPort; //Puerto TCP utilizado para recibir las conexiones de CPU y I/O.
