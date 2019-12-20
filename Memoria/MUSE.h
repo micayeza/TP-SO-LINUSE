@@ -33,7 +33,7 @@
 
 
 //#define rutaConfigMuse "../../configs/muse.cfg"
-#define rutaConfigMuse "/home/utnso/workspace/tp-2019-2c-capitulo-2/configs/muse.cfg"
+#define rutaConfigMuse "../configs/muse.cfg"
 //#define rutaSwap "swap.txt"
 #define ERROR -1
 #define CHAR (sizeof(char))

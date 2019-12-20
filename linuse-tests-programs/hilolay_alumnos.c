@@ -154,21 +154,21 @@ static struct hilolay_operations hiloops = {
 
 void hilolay_init(void){
 
-	char* configPath = string_new();
-	string_append(&configPath, "/home/utnso/workspace/tp-2019-2c-capitulo-2/configs/SUSE.config");
-	t_config* ruta = config_create(configPath);
+//	char* configPath = string_new();
+//	string_append(&configPath, "../../configs/SUSE.config");
+//	t_config* ruta = config_create(configPath);
 
-	char* ip 	 = config_get_string_value(ruta, "IP");
-	int   puerto = config_get_int_value(ruta, "LISTEN_PORT");
+//	char* ip 	 = config_get_string_value(ruta, "IP");
+//	int   puerto = config_get_int_value(ruta, "LISTEN_PORT");
 
 
 	log_interno = log_create("log_interno.txt", "LOG-INT", true, LOG_LEVEL_INFO);
-	socketServidor = crearSocketCliente(ip, puerto, log_interno); //Está hardcodeado - Habría que obtener IP y puerto del archivo de configuración?
+	socketServidor = crearSocketCliente("192.168.3.12", 5003, log_interno); //Está hardcodeado - Habría que obtener IP y puerto del archivo de configuración?
 
 	//Enviar mensaje con un INIT. No recibo respuesta.
 	enviarEntero(socketServidor, INIT,  log_interno);
 
 	init_internal(&hiloops);
 
-	config_destroy(ruta);
+//	config_destroy(ruta);
 }
