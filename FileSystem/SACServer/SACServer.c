@@ -6,6 +6,74 @@
  */
 #include "SACServer.h"
 
+int eliminarDirectorioArchivo(char* path, int esDirectorio){
+	int numNodo = existeArchivo(path);
+	if(numNodo == ERROR)
+		return EACCES;
+
+	if(esDirectorio == 1){
+		char* archivosDirectorio = obtenerArchivosDeDirectorio(path);
+		char* separador = malloc(2);
+		strcpy(separador,";");
+		char** archivosSeparados = string_split(archivosDirectorio, separador);
+		int tam = sizeArrayChar(archivosSeparados);
+		free(separador);
+		free(archivosDirectorio);
+		free_char_as_as(archivosSeparados);
+		if(tam > 2){
+			return ENOTEMPTY;
+		}
+	}
+
+	t_nodo* nodo = obtenerNodo(numNodo);
+	if(esDirectorio == 0){
+		for(int i = 0 ; i < TAM_MAX_PUNT_IND; i++){
+			int numBloque = nodo->p_indirectos[i];
+			if(numBloque != NULL){
+				desocuparBloqueBitmap(numBloque);
+			}
+		}
+	}
+	t_nodo* nodoNuevo = crearNodoVacio();
+	persistirNodo(numNodo, nodoNuevo);
+	free_nodo(nodo);
+	free_nodo(nodoNuevo);
+
+	return 0;
+}
+
+int cambiarUbicacion(char* path, char* newPath){
+	int numNodo = existeArchivo(path);
+	char* pathPadreNuevo = cortarPathPadre(newPath);
+	int numNodoPadreNuevo = existeArchivo(pathPadreNuevo);
+	free(pathPadreNuevo);
+	//Chequeo si no existe el archivo original o si ya existe el nuevo o si el nuevo padre no existe
+	if(numNodo == ERROR || existeArchivo(newPath) != ERROR || numNodoPadreNuevo == ERROR){
+		return EEXIST;
+	}
+	//Chequeo que el nuevo nombre no sea de tamanio mayor al permitido
+	char* barra = malloc(2);
+	strcpy(barra,"/");
+	char** pathSeparado = string_split(newPath, barra);
+	int tam = sizeArrayChar(pathSeparado);
+	char* nombreNuevoArchivo = pathSeparado[tam-1];
+	if(string_length(nombreNuevoArchivo)+1 > TAM_MAX_NOMBRE_ARCHIVO){
+		free(barra);
+		free_char_as_as(pathSeparado);
+		return ENAMETOOLONG;
+	}
+
+	t_nodo* nodo = obtenerNodo(numNodo);
+	strcpy(nodo->nombre_archivo,nombreNuevoArchivo);
+	nodo->bloque_padre = numNodoPadreNuevo;
+	persistirNodo(numNodo, nodo);
+	free_nodo(nodo);
+	free(barra);
+	free_char_as_as(pathSeparado);
+	return 0;
+
+}
+
 int leerArchivo(char* path, int offset, int tamanio, void* buf){
 	int numNodo = existeArchivo(path);
 	if(numNodo == ERROR)
@@ -297,30 +365,6 @@ char* obtenerArchivosDeDirectorio(char* path){
 	return nombresArchivos;
 
  }
-
-int SacServerOpen(const char *path) {
-	 return 0;
-
- }
-
- int SacServerWrite(const char *path, const char *buf, size_t size, off_t offset){
-	 return 0;
- }
-
- //BORRAR ARCHIVO
- int SacServerUnlink(const char *path) {
-	 return 0;
- }
-
- int SacServerRmdir(const char *path) {
-	 return 0;
- }
-
- //CAMBIAR EL VALOR DE RETORNO
- int SacServerReaddir(const char* path){
-	 return 0;
- }
-
 
 //CONEXION CLIENTES----------------
 void aceptarClientes(){
@@ -781,6 +825,10 @@ int main(int argc, char *argv[]){
 
 	abrirHeaderFS();
 
+	//int res = cambiarUbicacion("/BBB/abb.txt","/AAA/CCC/aaa.rar");
+	//int res = cambiarUbicacion("/AAA/CCC/aaa.rar","/BBB/abb.txt");
+
+	//int res = eliminarDirectorioArchivo("/BBB", 1);
 
 	/*t_nodo* nodo = crearNodoVacio();
 	nodo->estado = 2;

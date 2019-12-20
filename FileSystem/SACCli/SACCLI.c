@@ -40,7 +40,6 @@ static int fuse_getattr(const char *path, struct stat *stbuf) {
 			}
 
 		}
-		printf("CLIENTE: GETATTR. \n");
 	}
 	return res;
 }
@@ -86,7 +85,6 @@ static int fuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off
 	}
 	log_info(log_resultados, "***READDIR--> Path: %s.", path);
 	log_info(log_resultados, "      Contenido: %d.", nombresArchivos);
-	printf("CLIENTE: READDIR. \n");
 	free(nombresArchivos);
 	free_char_as_as(archivos);
 
@@ -99,7 +97,6 @@ int fuse_mkdir(const char *path, mode_t mode) {
 	int resEnvioTexto = enviarTexto(socketServidor, path, log_interno);
 	int resultado = recibirEntero(socketServidor, log_interno);
 	log_info(log_resultados, "***MKDIR--> Path: %s.", path);
-	printf("CLIENTE: MKDIR. \n");
 	return resultado;
 }
 
@@ -128,7 +125,6 @@ static int fuse_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 		return -EACCES;
 	}
 	log_info(log_resultados, "***CREATE--> Path: %s.", path);
-	printf("CLIENTE: CREATE. \n");
 	return 0;
 
 }
@@ -143,7 +139,6 @@ static int fuse_utimens(const char *path, const struct timespec tv[2]) {
 	log_info(log_resultados, "***UTIMENS--> Path: %s.", path);
 	log_info(log_resultados, "      Time Creacion: %d.", tv[0]);
 	log_info(log_resultados, "      Time Modificacion: %d.", tv[1]);
-	printf("CLIENTE: UTIMENS. \n");
 
 	return res;
 }
@@ -204,24 +199,41 @@ static int fuse_read(const char *path, char *buf, size_t size, off_t offset, str
 	log_info(log_resultados, "***READ--> Path: %s.", path);
 	log_info(log_resultados, "      Datos: %s.", (char*)buf);
 	log_info(log_resultados, "      Size: %d.", res);
-	printf("CLIENTE: READ. \n");
 
 	return res;
 }
 
 //Borrar archivo
 int fuse_unlink(const char *path) {
-	/*int resEnvioOperacion = enviarEntero(socketServidor, SYS_UNLINK,  log_interno);
-	int resEnvioTexto = enviarTexto(socketServidor, path, log_interno);
-	return recibirEntero(socketServidor, log_interno);*/
+	int res = enviarEntero(socketServidor, SYS_UNLINK,  log_interno);
+	res = enviarTexto(socketServidor, path, log_interno);
+	res = recibirEntero(socketServidor, log_interno);
+
+	if(res == EACCES){
+		log_info(log_resultados, "***UNLINK--> Path: %s. INACCESIBLE", path);
+		return -EACCES;
+	}
+
+	log_info(log_resultados, "***UNLINK--> Path: %s.", path);
 	return 0;
 }
 
 //Borrrar directorio
 static int fuse_rmdir(const char *path) {
-	/*int res = enviarEntero(socketServidor, SYS_RMDIR, log_interno);
-	    res = enviarTexto(socketServidor, path, log_interno);
-	return recibirEntero(socketServidor, log_interno);*/
+	int res = enviarEntero(socketServidor, SYS_RMDIR,  log_interno);
+	res = enviarTexto(socketServidor, path, log_interno);
+	res = recibirEntero(socketServidor, log_interno);
+
+	if(res == ENOTEMPTY){
+		log_info(log_resultados, "***RMDIR--> Path: %s. NO VACIO", path);
+		return -ENOTEMPTY;
+	}
+	if(res == EACCES){
+		log_info(log_resultados, "***RMDIR--> Path: %s. INACCESIBLE", path);
+		return -EACCES;
+	}
+
+	log_info(log_resultados, "***RMDIR--> Path: %s.", path);
 	return 0;
 }
 
@@ -239,36 +251,32 @@ static int fuse_write(const char *path, const char *buf, size_t size, off_t offs
 	log_info(log_resultados, "***WRITE--> Path: %s.", path);
 	log_info(log_resultados, "      Datos: %s.", (char*)buf);
 	log_info(log_resultados, "      Size: %d.", res);
-	printf("CLIENTE: WRITE. \n");
 
 	return res;
 }
 
 static int fuse_move(const char* path, const char *newPath) {
+	int res = enviarEntero(socketServidor, SYS_MOVE,  log_interno);
+	res = enviarTexto(socketServidor, path, log_interno);
+	res = enviarTexto(socketServidor, newPath, log_interno);
 
-	//Path origen
-	/*int res = enviarTexto(socketServidor, path, log_interno);
-	    res = enviarTexto(socketServidor, newPath, log_interno);
+	res = recibirEntero(socketServidor, log_interno);
 
-	//Recibir respuesta
-	    res = recibirEntero(socketServidor, log_interno);
+	if(res == EEXIST){
+		log_info(log_resultados, "***MOVE--> ERROR.");
+		return -EEXIST;
+	}
+	if (res == ENAMETOOLONG){
+		log_info(log_resultados, "***MOVE--> NOMBRE MUY LARGO.");
+		return -ENAMETOOLONG;
+	}
+	if(res == EACCES){
+		log_info(log_resultados, "***MOVE--> PATH INACCESIBLE.");
+		return -EACCES;
+	}
 
-	//Procesar respuesta
-	    	if(res == EEXIST){
-	    		return -EEXIST;
-
-			}
-			if (res == ENAMETOOLONG){
-
-				return -ENAMETOOLONG;
-			}
-			if(res == EACCES){
-				return -EACCES;
-
-			}
-	//Libero todas las estructuras*/
-
-
+	log_info(log_resultados, "***MOVE--> Path: %s.", path);
+	log_info(log_resultados, "      New Path: %s.", newPath);
 	return 0;
 
 }
@@ -289,7 +297,6 @@ static int fuse_truncate(const char *path, off_t tamanio) {
 		res = recibirEntero(socketServidor, log_interno);
 		log_info(log_resultados, "***TRUNCATE--> Path: %s.", path);
 		log_info(log_resultados, "      Size: %d.", tamanio);
-		printf("CLIENTE: TRUNCATE. \n");
 	}
 	return res;
 
