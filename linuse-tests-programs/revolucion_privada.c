@@ -4,7 +4,7 @@
 #include <hilolay/hilolay.h>
 #include <string.h>
 
-#define RUTA_ARCHIVO "compartido"
+#define RUTA_ARCHIVO "../compartido"
 #define MAP_PRIVATE 0
 
 struct hilolay_sem_t* presion_emitida;

@@ -5,7 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#define RUTA_ARCHIVO "/home/utnso/workspace/tp-2019-2c-capitulo-2/linuse-tests-programs/compartido"
+#define RUTA_ARCHIVO "../compartido"
 #define MAP_SHARED 1
 
 struct hilolay_sem_t *presion_emitida;

@@ -538,6 +538,42 @@ int swap(t_pagina* pag_swap, bool nueva, t_proceso* proceso , t_segmento* segmen
 	pag_swap->p = 1;
 
 	pthread_mutex_unlock(&sem_clock);
+
+	t_pagina* pagina_vieja;
+	if(actualizar_viejo){
+		//El ultimo clock es el de la pagina que se fue, asique vamos a buscarla para ponerle marco y ṕ
+		bool buscar_proceso(void* proceso){
+
+					return (((t_proceso*)proceso)->id == clock->id) &&
+							(strcmp(((t_proceso*)proceso)->ip , clock->ip)==0);
+					}
+		pthread_mutex_lock(&sem_procesos);
+		t_proceso* proceso = list_find(tabla_procesos, &buscar_proceso);
+		pthread_mutex_unlock(&sem_procesos);
+
+		bool buscar_seg(void* seg){
+
+					return (((t_segmento*)seg)->segmento == clock->seg);
+					}
+		t_segmento* segmento = list_find(proceso->segmentos, &buscar_seg);
+		bool buscar_pag(void* pag){
+
+					return (((t_pagina*)pag)->numero == clock->pag);
+					}
+		pagina_vieja = list_find(segmento->paginas, &buscar_pag);
+
+		log_info(logMuse, "Victima : Pagina %d Segmento %d ", clock->pag, clock->seg);
+		pagina_vieja->p 	  = 0;
+//		pagina_vieja->marco = marco_swap;
+		free(clock->ip);
+		clock->id  = -1;
+		clock->m   =  0;
+		clock->pag = -1;
+		clock->seg = -1;
+		clock->u   =  0;
+
+	}
+
 	agregar_pag_clock(proceso->id, proceso->ip, 0, 1, segmento, pag_swap->numero, marco);
 
 	int marco_swap = pag_swap->marco;
@@ -565,6 +601,7 @@ int swap(t_pagina* pag_swap, bool nueva, t_proceso* proceso , t_segmento* segmen
 
 		bitmap_swap[pag_swap->marco] = '0';
 		marco_swap = buscar_marco_libre(bitmap_swap);
+		pagina_vieja->marco = marco_swap;
 		pthread_mutex_unlock(&sem_bitmap_swap);
 
 	t_semaforo* sem = list_get(lista_marcos_memoria, marco);
@@ -599,35 +636,6 @@ int swap(t_pagina* pag_swap, bool nueva, t_proceso* proceso , t_segmento* segmen
 
 	free(aux_swap);
 
-	//El ultimo clock es el de la pagina que se fue, asique vamos a buscarla para ponerle marco y ṕ
-	bool buscar_proceso(void* proceso){
-
-				return (((t_proceso*)proceso)->id == clock->id) &&
-						(strcmp(((t_proceso*)proceso)->ip , clock->ip)==0);
-				}
-	pthread_mutex_lock(&sem_procesos);
-	t_proceso* proceso = list_find(tabla_procesos, &buscar_proceso);
-	pthread_mutex_unlock(&sem_procesos);
-
-	bool buscar_seg(void* seg){
-
-				return (((t_segmento*)seg)->segmento == clock->seg);
-				}
-	t_segmento* segmento = list_find(proceso->segmentos, &buscar_seg);
-	bool buscar_pag(void* pag){
-
-				return (((t_pagina*)pag)->numero == clock->pag);
-				}
-	t_pagina* pagina = list_find(segmento->paginas, &buscar_pag);
-
-	pagina->p 	  = 0;
-	pagina->marco = marco_swap;
-	free(clock->ip);
-	clock->id  = -1;
-	clock->m   =  0;
-	clock->pag = -1;
-	clock->seg = -1;
-	clock->u   =  0;
 
 	}	else{ //Si no hay que actualizar lo viejo es que tengo el marco libre en memoria y nada que pasar a swap
 		//Lo que estaba en swap lo paso a memoria porqe no habia nada y libero el wap
@@ -657,8 +665,10 @@ int swap(t_pagina* pag_swap, bool nueva, t_proceso* proceso , t_segmento* segmen
 
 void vaciarSegmento(t_segmento* segmento, t_list* bloquesLibres, t_list* tabla_segmentos , t_proceso* proceso){
 
-		if(segmento->path != NULL){
+		if(!segmento->dinamico){
+			if(segmento->path != NULL){
 			free(segmento->path);
+		 }
 		}
 		while(list_size(segmento->paginas)>0){
 			pthread_mutex_lock(&sem_cant_pag);
@@ -1623,7 +1633,7 @@ int unmapMuse(uint32_t  fd,t_proceso* proceso){
 	 	//Si la tabla de procesos del archivo quedo vacio tengo que eliminar el segmento del proceso fantasma y
 	 	// eliminar cualquier pag que este en el clock
 
-	 	log_info(logMuse, "NO Hay mas procesos mapeando aun al archivo, elimino las paginas \n");
+	 	log_info(logMuse, "NO Hay mas procesos mapeando al archivo, elimino las paginas \n");
 	 	pthread_mutex_lock(&sem_procesos);
 	 	t_proceso* fantasma = list_get(tabla_procesos, 0);
 	 	pthread_mutex_unlock(&sem_procesos);
@@ -1642,7 +1652,7 @@ int unmapMuse(uint32_t  fd,t_proceso* proceso){
 		}
 
 		free(segFantasma->path);
-
+		free(segFantasma);
 		return 0;
 	 }
 	 else{//SEGMENTO PRIVADO
