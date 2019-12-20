@@ -143,9 +143,10 @@ void atenderPrograma(void* par){
 						}
 						if(aux != NULL)free(aux);
 					}
-					free(parametros->semaforos);
+					list_destroy(parametros->semaforos);
 
 					pthread_exit("Chau");
+
 
 				}else{
 					planificadorLargo();

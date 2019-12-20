@@ -14,9 +14,12 @@ struct hilolay_sem_t *presion_recibida;
 void grabar_archivo(uint32_t arch, char* palabra)
 {
 	uint32_t offset;
+	uint32_t tam = strlen(palabra) + 1;
 	muse_get(&offset, arch, sizeof(uint32_t));
-	muse_cpy(arch + offset, palabra, strlen(palabra) + 1);
-	offset += strlen(palabra) + 1;
+	muse_cpy(arch + offset, &tam, sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+	muse_cpy(arch + offset, palabra, tam);
+	offset += tam;
 	muse_cpy(arch, &offset, sizeof(uint32_t));
 	sleep(1);
 }
@@ -24,8 +27,7 @@ void grabar_archivo(uint32_t arch, char* palabra)
 void *presionar()
 {
 	uint32_t arch = muse_map(RUTA_ARCHIVO, 4096, MAP_PRIVATE);
-	uint32_t offset = 0;
-	offset = sizeof(uint32_t);
+	uint32_t offset = sizeof(uint32_t);
 
 	muse_cpy(arch, &offset, sizeof(uint32_t));
 
@@ -43,9 +45,8 @@ void *presionar()
 
 	muse_sync(arch, 4096);
 
-	hilolay_signal(presion_emitida);
-
 	muse_unmap(arch);
+	hilolay_signal(presion_emitida);
 	return 0;
 }
 

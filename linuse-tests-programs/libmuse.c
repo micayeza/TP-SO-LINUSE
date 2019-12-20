@@ -7,6 +7,7 @@
 
 #include "libmuse.h"
 #include <unistd.h>
+#include <signal.h>
 
 //MENSAJEEEEEEEEEEEEEEEEEEES
 char* recibirTexto(int fdOrigen){
@@ -121,6 +122,7 @@ int enviarVoid(int destinatario, void* textoEnviar, int tam){
 
 
 	int res = enviarInt(destinatario, tam);
+	if(tam!=0){
 	if(res != 0){
 	  res = send(destinatario, textoEnviar, tam, MSG_WAITALL);
 	if(res == -1){
@@ -129,7 +131,7 @@ int enviarVoid(int destinatario, void* textoEnviar, int tam){
 	}
 	return res;
 	}
-	return 0;
+	}	return 0;
 }
 
 
@@ -209,13 +211,13 @@ void muse_free(uint32_t posicion){
 		enviarUint32_t(muse, posicion);
 	}
 	res=recibirInt(muse);
-	if(res == -1){
-		res = recibirInt(muse);
-		if(res == 0){
+	if(res == -5){
+
 			printf("[SEGMENTATION FAULT] Abortando programa.... \n");
 
 			close(muse);
-		}
+			raise(SIGSEGV);
+
 	}
 
 }
@@ -234,32 +236,28 @@ int muse_cpy(uint32_t dst, void* src, int n){
 		char* extra = string_itoa(*(int*)src);
 		printf("Copiar: %s \n" , extra);
 		free(extra);
-//		int len = strlen(extra);
-//		while(len<n){
-//			extra[len]='\0';
-//			len++;
 
-//		memcpy(frase, extra, n);
-////		frase = malloc(strlen(extra));
+
 	}else{
-//		memcpy(frase, src, n);
+
 		printf("Copiar: %s \n" , (char*)src);
 	}
 
 
 	enviarInt(muse, n );
 
-//	enviarTexto(muse, frase);
+
+
 	enviarVoid(muse, frase, n);
 
 	int res = recibirInt(muse);
-	if(res == -1){
-	int res2 = recibirInt(muse);
-			if(res2 == 0){
-				printf("[SEGMENTATION FAULT] Abortando programa.... \n");
+	if(res == -5){
 
-				close(muse);
-			}
+		printf("[SEGMENTATION FAULT] Abortando programa.... \n");
+
+		close(muse);
+		raise(SIGSEGV);
+
  }
 	return res;
 }
@@ -270,35 +268,34 @@ int muse_get(void* dst, uint32_t src, size_t n){
 	enviarUint32_t(muse, src );
 	enviarSizet(muse, n);
 
-//	char* copiar = recibirTexto(muse);
 	void* copiar = recibirVoid(muse);
+	if(copiar != NULL){
+		if(strcmp(copiar, "SG_MICA")==0){
 
-	if(copiar == NULL){
-		return -1;
-	}else{
+				printf("[SEGMENTATION FAULT] Abortando programa.... \n");
+				free(copiar);
+				close(muse);
+				raise(SIGSEGV);
 
-//	char* result = strcpy(dst, copiar);
+		}
 		if(n==4){
 			printf("El dato obtenido fue: %d \n", *(int*)copiar);
-//			int resp = atoi(copiar);
-//			memcpy(dst, &resp, n);
 		}
 		else{
-//			memcpy(dst, copiar, n);
+
 			printf("El dato obtenido fue: %s \n", (char*)copiar);
 		}
 		memcpy(dst, copiar, n);
-		if(copiar == NULL){
-			int res = recibirInt(muse);
-					if(res == 0){
-						printf("[SEGMENTATION FAULT] Abortando programa.... \n");
-
-						close(muse);
-					}
+		free(copiar);
+		return 0;
+	}else{
 			return -1;
-		}
-	return 0;
+
 	}
+
+	return 0;
+
+
 
 
 }
@@ -333,7 +330,14 @@ int muse_sync(uint32_t addr, size_t len){
 
 	enviarUint32_t(muse, addr);
 	int result = recibirInt(muse);
+	if(result == -5){
 
+		printf("[SEGMENTATION FAULT] Abortando programa.... \n");
+
+		close(muse);
+		raise(SIGSEGV);
+
+ }
 	return result;
 }
 
@@ -343,13 +347,12 @@ int muse_unmap(uint32_t dir){
 	enviarUint32_t(muse,  dir);
 
 	int res =recibirInt(muse);
-	if(res == -1){
-	int res2 = recibirInt(muse);
-			if(res2 == 0){
-				printf("[SEGMENTATION FAULT] Abortando programa.... \n");
+	if(res == -5){
+		printf("[SEGMENTATION FAULT] Abortando programa.... \n");
 
-				close(muse);
-			}
+		close(muse);
+		raise(SIGSEGV);
+
 	}
 	return res;
 }

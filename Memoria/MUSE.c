@@ -175,6 +175,7 @@ int enviarVoid(int destinatario, void* textoEnviar, int tam){
 
 
 	int res = enviarInt(destinatario, tam);
+	if(tam != 0){
 	if(res != 0){
 	  res = send(destinatario, textoEnviar, tam, MSG_WAITALL);
 	if(res == -1){
@@ -183,7 +184,9 @@ int enviarVoid(int destinatario, void* textoEnviar, int tam){
 	}
 	return res;
 	}
+	}
 	return 0;
+
 }
 
 
@@ -654,6 +657,9 @@ int swap(t_pagina* pag_swap, bool nueva, t_proceso* proceso , t_segmento* segmen
 
 void vaciarSegmento(t_segmento* segmento, t_list* bloquesLibres, t_list* tabla_segmentos , t_proceso* proceso){
 
+		if(segmento->path != NULL){
+			free(segmento->path);
+		}
 		while(list_size(segmento->paginas)>0){
 			pthread_mutex_lock(&sem_cant_pag);
 			paginas_usadas --;
@@ -721,21 +727,19 @@ void vaciarSegmento(t_segmento* segmento, t_list* bloquesLibres, t_list* tabla_s
 
 }
 
-int copiarMuse(uint32_t posicionACopiar,int  bytes,char* src,t_list* tabla_segmentos, t_proceso* proceso, bool sg){
+int copiarMuse(uint32_t posicionACopiar,int  bytes,char* src,t_list* tabla_segmentos, t_proceso* proceso){
 //	int copiarMuse(uint32_t posicionACopiar,int  bytes,void* src,t_list* tabla_segmentos, t_proceso* proceso, bool sg){
 	posicionACopiar -= 5;
 	t_segmento* segmento = buscar_segmento(posicionACopiar, tabla_segmentos);
 		if(segmento == NULL){
 			log_error(logMuse, "[SEGFAULT] No existe el segmento  \n");
-			sg = true;
-			return -1;
+//			sg = true;
+			return -5;
 		}
 	 if((posicionACopiar +5) + bytes > segmento->base + segmento->tamanio){
 		 log_error(logMuse, "Segmentation Fault \n");
 
-		 sg=true;
-
-		 return -1;
+		 return -5;
 
 	 }
 
@@ -753,14 +757,16 @@ int copiarMuse(uint32_t posicionACopiar,int  bytes,char* src,t_list* tabla_segme
 		if(head->isFree){
 			log_error(logMuse, "La posición en la que solicitan copiar esta libre \n" );
 			pthread_mutex_unlock(&sem->marco);
+			log_error(logMuse, "Segmentation Fault, acceso invalido \n");
 
-			return -1;
+			return -5;
 		}
 		if(head->size < bytes){//Si  que quieren copiar es mayor a lo que hay
 			pthread_mutex_unlock(&sem->marco);
 
 			log_error(logMuse, "No hay suficiente espacio en  %d \n", posicionACopiar);
-			return -1;
+			bytes = head->size;
+			src[bytes]='\0';
 		}
 		  if(desplazamiento + 5 < config_muse->tamanio_pagina){
 			  desplazamiento += 5;
@@ -820,7 +826,7 @@ int copiarMuse(uint32_t posicionACopiar,int  bytes,char* src,t_list* tabla_segme
 
 }
 
-char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos, t_proceso* proceso, bool sg){
+char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos, t_proceso* proceso){
 
 
  posicion -=5;
@@ -828,14 +834,14 @@ char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos, t_proceso
  t_segmento* seg = buscar_segmento(posicion, tabla_segmentos);
  if(seg == NULL){
 	 log_error(logMuse, "No existe el segmento \n");
-	 sg = true;
-	 return NULL;
+
+	 return "SG_MICA";
  }
 
  if((posicion +5) + bytes > seg->base + seg->tamanio){
 	 log_error(logMuse, "Segmentation Fault \n");
-	 sg = true;
-	 return NULL;
+
+	 return "SG_MICA";
 
  }
 
@@ -861,12 +867,10 @@ char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos, t_proceso
 	  }
 	  if(head->size < bytes){
 		  pthread_mutex_unlock(&sem->marco);
-//		  pthread_mutex_unlock(&global);
+
 		  log_error(logMuse, "Lo que solicitan pisa otra asignacion");
 			 log_error(logMuse, "Segmentation Fault \n");
-			 sg=true;
-
-		  return NULL;
+			 return "SG_MICA";
 	  }
 	  if(desplazamiento + 5 < config_muse->tamanio_pagina){
 		  desplazamiento += 5;
@@ -933,16 +937,15 @@ char* getMuse(uint32_t posicion, size_t bytes,t_list* tabla_segmentos, t_proceso
 }
 
 
-int freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesLibres, t_proceso* proceso, bool sg){
+int freeMuse(uint32_t posicionAliberar,t_list* tabla_segmentos,t_list* bloquesLibres, t_proceso* proceso){
 	//La posicion que me mandan es despues del header
 	posicionAliberar -= 5;
 	//Primero libero lo que pidieron
 	t_segmento* segmento = buscar_segmento(posicionAliberar, tabla_segmentos);
 	if(segmento == NULL){
 		log_error(logMuse, "Posicion inexistente \n");
-		sg = true;
 
-		return -1;
+		return -5;
 	}
 	if(!segmento->dinamico){
 		log_error(logMuse, "No se liberan los archivos mapeados mediante free. Use munmmap \n");
@@ -1522,15 +1525,15 @@ bool mapeoElArchivo(t_segmento* seg, t_proceso* proceso){
 
 }
 
-int unmapMuse(uint32_t  fd,t_proceso* proceso, bool sg){
+int unmapMuse(uint32_t  fd,t_proceso* proceso){
 	 fd -=5;
 	 t_segmento* seg = buscar_segmento(fd, proceso->segmentos);
 
 
 	 if(seg == NULL){
 		 log_error(logMuse, "No es una posicion valida \n");
-		 sg=true;
-		 return -1;
+
+		 return -5;
 	 }
 
 	 if(seg->dinamico){
@@ -1589,7 +1592,8 @@ int unmapMuse(uint32_t  fd,t_proceso* proceso, bool sg){
 	 		seg->dinamico = true;
 	 		seg->empty    = true;
 	 		seg->paginas  = NULL;
-	 		if(seg->shared == SHARED) free(seg->path);
+	 		//VER QUE NO ROMPAAAAAAAAAAAAAAAAAAA
+	 		free(seg->path);
 
 	 		bool emp = true;
 			uint32_t posSig = seg->base + seg->tamanio;
@@ -1652,19 +1656,19 @@ int unmapMuse(uint32_t  fd,t_proceso* proceso, bool sg){
 }
 
 
-int syncMuse(uint32_t fd,size_t len,t_proceso* proceso, bool sg){
+int syncMuse(uint32_t fd,size_t len,t_proceso* proceso){
 
 	 fd -=5;
 	 t_segmento* seg = buscar_segmento(fd, proceso->segmentos);
 
 	 if(seg == NULL){
 		 log_error(logMuse, "No es una posicion valida \n");
-		 sg=true;
-		 return -1;
+
+		 return -5;
 	 }
 	 if(seg->dinamico){
 		 log_error(logMuse, "No es una posicion mappeada \n");
-		 return -1;
+		 return -5;
 	 }
 
 	 if(seg->shared == SHARED ){
@@ -1698,8 +1702,8 @@ int syncMuse(uint32_t fd,size_t len,t_proceso* proceso, bool sg){
 		chmod(seg->path, permisos); // Aplico permisos al archivo
 
 //En la primer pagina tomo los 4 primeros porque rompe
-//		char* auxiliar = malloc(len);
-		char* auxiliar = string_repeat('\0', len);
+
+//		char* auxiliar = string_repeat('\0', len);
 
 	 for(int i = 0; i<tam;i++){
 		 t_pagina* pag = buscar_segmento_pagina(proceso->segmentos, seg->segmento, i, proceso);
@@ -1708,16 +1712,8 @@ int syncMuse(uint32_t fd,size_t len,t_proceso* proceso, bool sg){
 
 		 void* puntero = punteroMemoria + (config_muse->tamanio_pagina * pag->marco);
 
-		if(i==0){
-			int aux;
-			memcpy(&aux,puntero, 4);
-			fwrite(&aux, sizeof(int), 1,buffer_archivo );
-//			putc(aux, buffer_archivo);
-			memcpy(auxiliar, puntero+4, config_muse->tamanio_pagina-4);
-		}else{
-				memcpy((auxiliar+(i*config_muse->tamanio_pagina)-4),  puntero, config_muse->tamanio_pagina);
-			}
 
+			fwrite(puntero, CHAR, config_muse->tamanio_pagina,buffer_archivo );
 
 		pthread_mutex_unlock(&sem->marco);
 
@@ -1727,22 +1723,7 @@ int syncMuse(uint32_t fd,size_t len,t_proceso* proceso, bool sg){
 
 	 }
 
-	 char** leo = descomponer_auxiliar(auxiliar, len);
-
-	 int a=0;
-	 while(leo[a] != NULL){
-		 fputs(leo[a], buffer_archivo);
-		 a++;
-	 }
-	 while(leo[a] != NULL){
-		 free(leo[a]);
-	 }
-	 free(leo);
-    // int result = fputs(auxiliar, buffer_archivo);
-//		if(result == config_muse->tamanio_pagina){
-//			log_info(logMuse, "Se grabo ok el marco i del archivo \n");
-//		}
-	 free(auxiliar);
+//	 csree(auxiliar);
 	int close = fclose(buffer_archivo);
 	if(close != 0){
 		log_error(logMuse, "No se cerro bien el archivo u.u \n");
@@ -2534,7 +2515,7 @@ uint32_t mallocMuse(uint32_t tamanio, t_proceso* proceso){
 }
 
 void liberarTodo(t_proceso* proceso){
-	bool asd =false;
+
 	while(list_size(proceso->segmentos) > 0){
 
 
@@ -2550,15 +2531,16 @@ void liberarTodo(t_proceso* proceso){
 					modificar_clock_bitmap(pagina, seg->segmento, proceso);
 					free(pagina);
 				}
-			free(seg->paginas);
+			free(seg->paginas)	;
+			free(seg);
 
 		} else{ //Es un segmento mapeado
-			int res = unmapMuse(seg->base, proceso, asd);
+			int res = unmapMuse(seg->base+5, proceso);
 			if(res < 0){
 				seg = list_remove(proceso->segmentos , 0);
 			}
 		}
-		free(seg);
+
      }//Cierra el while
 
 	while(list_size(proceso->bloquesLibres) > 0){
@@ -2582,9 +2564,11 @@ void liberarTodo(t_proceso* proceso){
 }
 
 
+
 void atenderConexiones(int parametros){
 
-	bool sg = false;
+//	bool sg = false;
+
 	t_proceso* proceso = malloc(sizeof(t_proceso));
 
 	proceso->cliente = parametros;
@@ -2661,12 +2645,12 @@ void atenderConexiones(int parametros){
 			uint32_t posicionAliberar = recibirUint32_t(proceso->cliente);
 			log_info(logMuse, "FREE %d \n", posicionAliberar);
 
-			int res = freeMuse(posicionAliberar, proceso->segmentos, proceso->bloquesLibres, proceso, sg);
+			int res = freeMuse(posicionAliberar, proceso->segmentos, proceso->bloquesLibres, proceso);
 			printefearMetricas();
 			enviarInt(proceso->cliente, res);
 
-			if(sg){
-				enviarInt(proceso->cliente, 0);
+			if(res == -5){
+
 				 liberarTodo(proceso);
 				 pthread_exit("ABORTAR");
 			}
@@ -2677,32 +2661,41 @@ void atenderConexiones(int parametros){
 			size_t   bytes    = recibirSizet(proceso->cliente );
 			log_info(logMuse, "GET %d ", posicion);
 
-			char* frase = getMuse(posicion, bytes, proceso->segmentos, proceso, sg);
+			char* frase = getMuse(posicion, bytes, proceso->segmentos, proceso);
 			printefearMetricas();
-//			enviarTexto(proceso->cliente, frase);
-			enviarVoid(proceso->cliente, frase, bytes);
-			if(frase == NULL){
-				if(!sg){
-				log_error(logMuse, "No se pudo obtener el dato solicitado");
-				} else{
 
-				enviarInt(proceso->cliente, 0);
+			if(frase == NULL){
+			  enviarVoid(proceso->cliente, frase, 0);
+			}else if (strcmp(frase, "SG_MICA")==0){
+
+				enviarVoid(proceso->cliente, frase, strlen("SG_MICA")+1);
+
 				liberarTodo(proceso);
 				pthread_exit("CHAU");
 				}
+			else{
+				enviarVoid(proceso->cliente, frase, bytes);
+			}
+			if(frase == NULL){
+
+
+				log_error(logMuse, "No se pudo obtener el dato solicitado");
+
+				break;
+
+
 			}
 			else{
-//				frase[bytes-1]='\0';
 				if(bytes == 4){
 					log_info(logMuse, "Dato solicitado %d \n", *(int*)frase );
 				}else{
 					log_info(logMuse, "Dato solicitado %s \n", frase );
 				}
-
+				free(frase);
 			}
 
 
-			free(frase);
+
 
 		}break;
 		case COPIAR:{
@@ -2716,7 +2709,7 @@ void atenderConexiones(int parametros){
 			}else{
 				log_info(logMuse, "COPY %s en %d \n", copia, posicionACopiar );
 			}
-			int resultado = copiarMuse(posicionACopiar, bytes, copia,proceso->segmentos, proceso, sg);
+			int resultado = copiarMuse(posicionACopiar, bytes, copia,proceso->segmentos, proceso);
 			printefearMetricas();
 //			for(int i=0; i<cantidad_paginas;i++){
 //				t_semaforo* sem = list_get(lista_marcos_memoria, i);
@@ -2727,8 +2720,7 @@ void atenderConexiones(int parametros){
 
 			free(copia);
 			enviarInt(proceso->cliente,  resultado);
-			if(sg){
-				enviarInt(proceso->cliente, 0);
+			if(resultado == -5){
 				liberarTodo(proceso);
 				pthread_exit("CHAU");
 			}
@@ -2748,6 +2740,7 @@ void atenderConexiones(int parametros){
 //				log_error(logMuse,"Comienza compactacion por falta de espacio: \n");
 //				compactar(proceso->segmentos, proceso->bloquesLibres, proceso);
 //				result = mappearMuse(path, len, flag, proceso);
+				free(path);
 				if(result == 0) log_error(logMuse, "Memoria llena por favor finalice algun proceso \n");
 
 //			}
@@ -2760,21 +2753,25 @@ void atenderConexiones(int parametros){
 			uint32_t fd  = recibirUint32_t(proceso->cliente);
 
 			pthread_mutex_lock(&sem_mapeo);
-			int result = syncMuse(fd, len, proceso, sg);
+			int result = syncMuse(fd, len, proceso);
 			pthread_mutex_unlock(&sem_mapeo);
 			printefearMetricas();
 			enviarInt(proceso->cliente, result);
+			if(result == -5){
+				 liberarTodo(proceso);
+				 pthread_exit("ABORTAR");
+			}
 		} break;
 		case DESMAP:{
 			uint32_t fd = recibirUint32_t(proceso->cliente);
 
 			pthread_mutex_lock(&sem_mapeo);
-			int result = unmapMuse( fd, proceso, sg);
+			int result = unmapMuse( fd, proceso);
 			pthread_mutex_unlock(&sem_mapeo);
 			printefearMetricas();
 			enviarInt(proceso->cliente, result);
-			if(sg){
-				enviarInt(proceso->cliente, 0);
+			if(result == -5){
+
 				liberarTodo(proceso);
 				pthread_exit("CHAU");
 			}
@@ -3191,14 +3188,18 @@ static void seg_destroy(t_segmento *self) {
 }
 
 static void proc_destroy(t_proceso *self) {
-    free(self->ip);
-    list_destroy_and_destroy_elements(self->bloquesLibres, (void*) libres_destroy);
-    list_destroy_and_destroy_elements(self->segmentos, (void*) seg_destroy);
+	if(self->ip != NULL) free(self->ip);
+    if(self->bloquesLibres != NULL){
+    list_destroy_and_destroy_elements(self->bloquesLibres, (void*) libres_destroy);}
+    if(self->segmentos != NULL){
+    list_destroy_and_destroy_elements(self->segmentos, (void*) seg_destroy);}
     free(self);
 }
 
 static void clock_destroy(t_clock *self) {
-    free(self->ip);
+	if(self != NULL){
+     free(self->ip);
+	}
     free(self);
 }
 
@@ -3232,7 +3233,11 @@ void handler(){
 	free(bitmap_swap);
 
 	list_destroy_and_destroy_elements(tabla_archivos, (void*) archivos_destroy);
-	list_destroy_and_destroy_elements(tabla_procesos, (void*) proc_destroy);
+	if(list_size(tabla_procesos)>0){
+		list_destroy_and_destroy_elements(tabla_procesos, (void*) proc_destroy);
+	}else{
+		list_destroy(tabla_procesos);
+	}
 	list_destroy_and_destroy_elements(tabla_clock, (void*) clock_destroy);
 
 	pthread_mutex_destroy(&sem_bitmap_marco);
@@ -3250,7 +3255,8 @@ void handler(){
 }
 
 int main() {
-		signal(SIGINT, &handler);
+
+	signal(SIGINT, &handler);
 		remove("MUSE.txt");
 		int v_error = crearConfigMemoria();
  		if(v_error == 0){
