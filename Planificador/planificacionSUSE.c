@@ -88,6 +88,7 @@ void atenderPrograma(void* par){
 				if(parametros->estado == FINALIZADO){
 					for(int i=0; i<list_size(parametros->tablaReady);i++){
 						t_new* read = list_remove(parametros->tablaReady, i);
+
 						free(read);
 					}
 					for(int i=0; i<list_size(joins);i++){
@@ -427,6 +428,9 @@ t_new* close_hilo(int tid, t_programa* programa, t_list* tabla_ready, t_new* hil
 			log_error(log_interno, "No se puede cerrar el hilo %d ya que aun hay hilos joineados", tid);
 			return NULL;
 			}
+		if(hilo_exec != NULL){
+			free(hilo_exec);
+		}
 		log_info(log_interno, "Se finaliza el programa %d \n",programa->programa);
 		programa->estado = FINALIZADO;
 		programa->fin = clock();
@@ -668,9 +672,9 @@ void printefearMetricas(){
 
 		double vida =clock() - prog->init;
 		if(prog->fin != 0) vida = prog->fin - prog->init;
-		if(prog->estado == ACTIVO)log_info(log_interno,"Programa %d. Estado Activo. Tiempo de vida %lf \n ", prog->programa, vida );
-		if(prog->estado == BLOQUEADO)log_info(log_interno,"Programa %d. Estado Bloqueado. Tiempo de vida %lf \n ", prog->programa, vida );
-		if(prog->estado == FINALIZADO)log_info(log_interno,"Programa %d. Estado Finalizado. Tiempo de vida %lf \n ", prog->programa, vida );
+		if(prog->estado == ACTIVO)log_info(log_interno,"Programa %d. Estado Activo. Tiempo de vida %lf \n ", prog->programa, vida/CLOCKS_PER_SEC );
+		if(prog->estado == BLOQUEADO)log_info(log_interno,"Programa %d. Estado Bloqueado. Tiempo de vida %lf \n ", prog->programa, vida/CLOCKS_PER_SEC );
+		if(prog->estado == FINALIZADO)log_info(log_interno,"Programa %d. Estado Finalizado. Tiempo de vida %lf \n ", prog->programa, vida/CLOCKS_PER_SEC );
 
 		log_info(log_interno," Cantidad de Hilos por estado \n " );
 		log_info(log_interno," Estado New     : %d \n", new);
@@ -682,15 +686,15 @@ void printefearMetricas(){
 		for(int x = 0; x<list_size(prog->hijos); x++){
 				t_hilo* hilo = list_get(prog->hijos, x);
 				algo += clock() - hilo->initNew;
-				if(hilo->enExec >0) div   = (hilo->enExec/vida)*100;
-				log_info(log_interno,"Metricas del hilo %d \n ", hilo->id/CLOCKS_PER_SEC );
+				if(hilo->enExec >0) div   = 100*hilo->enExec/vida;
+				log_info(log_interno,"Metricas del hilo %d \n ", hilo->id );
 				log_info(log_interno," Tiempo de ejecución  : %lf segundos \n", algo/CLOCKS_PER_SEC);
 				log_info(log_interno," Tiempo de espera     : %lf segundos \n", hilo->enReady/CLOCKS_PER_SEC );
 				log_info(log_interno," Tiempo de uso de CPU : %lf segundos \n", hilo->enExec/CLOCKS_PER_SEC);
 				log_info(log_interno," Tiempo bloqueado     : %lf segundos \n", hilo->enLock/CLOCKS_PER_SEC);
 				log_info(log_interno," Demora en entrar a Ready : %lf segundos \n", hilo->deNaR/CLOCKS_PER_SEC);
 				if(hilo->enExec >0)
-				log_info(log_interno," Porcentaje del Tiempo de Ejecución    : %lf segundos \n", div/CLOCKS_PER_SEC);
+				log_info(log_interno," Porcentaje del Tiempo de Ejecución    : %lf % \n", div);
 
 
 				}

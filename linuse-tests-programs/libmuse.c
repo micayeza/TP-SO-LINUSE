@@ -198,7 +198,13 @@ uint32_t muse_alloc(uint32_t tam){
 	if(res > 0){
 		res = enviarUint32_t(muse, tam);
 		if(res > 0){
-			return recibirUint32_t(muse);
+			int resultado= recibirUint32_t(muse);
+			if(resultado == -1){
+				printf("MUSE se quedo sin espacio. \n");
+				close(muse);
+				raise(SIGSEGV);
+			}
+			return resultado;
 		}
 	}
 

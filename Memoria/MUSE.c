@@ -2646,6 +2646,8 @@ void atenderConexiones(int parametros){
 //			    posicion = 	mallocMuse(tamanio, proceso);
 			    if(posicion == 0){
 			    	log_error(logMuse, "Memoria llena por favor finalice algun proceso \n");
+			    	enviarUint32_t(proceso->cliente,  -1);
+			    	break;
 			    }
 //			}
 			enviarUint32_t(proceso->cliente,  posicion);
@@ -3088,11 +3090,12 @@ void inicializarMemoria(){
 
 void* inicializarSwap(){
 
+	remove(config_muse->rutaSwap);
 
 	paginas_swap = config_muse->tamanio_swap/config_muse->tamanio_pagina;
 	bitmap_swap  = string_repeat('0', paginas_swap);
 
-	remove(config_muse->rutaSwap);
+
 
 	if(config_muse->tamanio_swap>0){
 	char mode[] = "0777"; // Permisos totales
@@ -3303,7 +3306,7 @@ int main() {
 
 		punteroSwap = inicializarSwap();
 
-		if(punteroSwap != NULL){
+		if(punteroSwap != NULL || config_muse->tamanio_swap ==0){
 			crearHiloParalelos();
 
 
