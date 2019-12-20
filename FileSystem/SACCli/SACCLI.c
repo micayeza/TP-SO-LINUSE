@@ -245,30 +245,27 @@ static int fuse_write(const char *path, const char *buf, size_t size, off_t offs
 }
 
 static int fuse_move(const char* path, const char *newPath) {
+	int res = enviarEntero(socketServidor, SYS_MOVE,  log_interno);
+	res = enviarTexto(socketServidor, path, log_interno);
+	res = enviarTexto(socketServidor, newPath, log_interno);
 
-	//Path origen
-	/*int res = enviarTexto(socketServidor, path, log_interno);
-	    res = enviarTexto(socketServidor, newPath, log_interno);
+	res = recibirEntero(socketServidor, log_interno);
 
-	//Recibir respuesta
-	    res = recibirEntero(socketServidor, log_interno);
+	if(res == EEXIST){
+		log_info(log_resultados, "***MOVE--> ERROR.");
+		return -EEXIST;
+	}
+	if (res == ENAMETOOLONG){
+		log_info(log_resultados, "***MOVE--> NOMBRE MUY LARGO.");
+		return -ENAMETOOLONG;
+	}
+	if(res == EACCES){
+		log_info(log_resultados, "***MOVE--> PATH INACCESIBLE.");
+		return -EACCES;
+	}
 
-	//Procesar respuesta
-	    	if(res == EEXIST){
-	    		return -EEXIST;
-
-			}
-			if (res == ENAMETOOLONG){
-
-				return -ENAMETOOLONG;
-			}
-			if(res == EACCES){
-				return -EACCES;
-
-			}
-	//Libero todas las estructuras*/
-
-
+	log_info(log_resultados, "***MOVE--> Path: %s.", path);
+	log_info(log_resultados, "      New Path: %s.", newPath);
 	return 0;
 
 }

@@ -120,6 +120,16 @@ void atenderCliente(t_cliente* cliente){
 				free(datos);
 				break;
 			}
+			case SYS_MOVE:{
+				char* path = recibirTexto(cliente->socket, log_interno);
+				char* newPath = recibirTexto(cliente->socket, log_interno);
+				int resultado = cambiarUbicacion(path,newPath);
+				enviarEntero(cliente->socket, resultado,  log_interno);
+				log_info(log_resultados, "***MOVE--> Path: %s.", path);
+				log_info(log_resultados, "      New Path: %s.", newPath);
+				printf("SERVER: READ. \n");
+				break;
+			}
 			case SYS_RMDIR:{
 
 				break;
