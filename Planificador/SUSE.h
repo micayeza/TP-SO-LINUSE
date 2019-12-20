@@ -218,6 +218,7 @@ void prog_destroy(t_programa *self);
 void hilos_destroy(t_hilo *self);
 void block_destroy(t_block *self);
 void new_destroy(t_new *self);
+void list_sem_destroy(t_sem_retenidos *self) ;
 
 t_sem_contador* buscar_contador(int id);
 t_hilo* buscar_hilo_bool(int id, t_programa* programa);

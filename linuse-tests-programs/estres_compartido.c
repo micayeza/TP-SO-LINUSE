@@ -5,7 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#define RUTA_ARCHIVO "una/ruta"
+#define RUTA_ARCHIVO "/home/utnso/workspace/tp-2019-2c-capitulo-2/linuse-tests-programs/compartido"
 #define MAP_SHARED 1
 
 struct hilolay_sem_t *presion_emitida;
@@ -36,7 +36,7 @@ uint32_t leer_archivo(uint32_t arch, uint32_t leido)
 	muse_get(&offset, arch, sizeof(uint32_t));
 
 	uint32_t len = offset - leido;
-	muse_get(palabra, arch + offset, len);
+	muse_get(palabra, arch + leido, len);
 	offset += strlen(palabra) + 1;
 
 	muse_cpy(arch, &offset, sizeof(uint32_t));

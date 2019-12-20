@@ -14,10 +14,16 @@ void hilos_destroy(t_hilo *self) {
 void ready_destroy(t_new *self) {
 	free(self);
 }
+void list_sem_destroy(t_sem_retenidos *self) {
+	free(self);
+}
 void prog_destroy(t_programa *self) {
-	list_destroy_and_destroy_elements(self->hijos, (void*) hilos_destroy);
-	if(list_size(self->tablaReady)){
+	list_destroy_and_destroy_elements(self->hijos, (void*)hilos_destroy);
+	list_destroy_and_destroy_elements(self->semaforos, (void*)list_sem_destroy);
+	if(self->tablaReady != NULL){
+	if(list_size(self->tablaReady)>0){
 		list_destroy_and_destroy_elements(self->tablaReady, (void*)ready_destroy);}
+	}
 	free(self);
 }
 void handler(){
@@ -27,27 +33,62 @@ void handler(){
 	pthread_mutex_destroy(&sem_exit);
 	pthread_mutex_destroy(&wt);
 	pthread_mutex_destroy(&multi);
-//
-	if(list_size(tabla_new)>0){
-		list_destroy_and_destroy_elements(tabla_new, (void*)new_destroy);
-	}else{
-		list_destroy(tabla_new);
+
+	int i =0;
+	while(i<list_size(tabla_new)){
+		t_new* aux = list_remove(tabla_new, 0);
+		free(aux);
 	}
-	if(list_size(tabla_exit)>0){
-		list_destroy_and_destroy_elements(tabla_exit, (void*)new_destroy);
-	} else{
-		list_destroy(tabla_exit);
+	list_destroy(tabla_new);
+
+	i=0;
+	while(i<list_size(tabla_exit)){
+		t_new* aux = list_remove(tabla_exit, 0);
+		free(aux);
 	}
-	if(list_size(tabla_lock)>0){
-		list_destroy_and_destroy_elements(tabla_lock, (void*)block_destroy);
-	}else{
-		list_destroy(tabla_lock);
+	list_destroy(tabla_exit);
+
+	i=0;
+	while(i<list_size(tabla_lock)){
+		t_block* aux = list_remove(tabla_lock, 0);
+
+		free(aux);
 	}
-	if(list_size(tabla_programas)>0){
-		list_destroy_and_destroy_elements(tabla_programas, (void*) prog_destroy);
-	}else{
-		list_destroy(tabla_programas);
+	list_destroy(tabla_lock);
+
+	i=0;
+	while(i<list_size(tabla_programas)){
+		t_programa* aux = list_remove(tabla_programas, 0);
+		int x=0;
+		while(x<list_size(aux->hijos)){
+			t_hilo* hilo = list_remove(aux->hijos, 0);
+			free(hilo);
+		}
+		list_destroy(aux->hijos);
+
+		if(aux->estado != FINALIZADO){
+			x=0;
+			while(x<list_size(aux->tablaReady)){
+				t_new* hilo = list_remove(aux->tablaReady, 0);
+				free(hilo);
+			}
+			list_destroy(aux->tablaReady);
+
+
+			x=0;
+			while(x<list_size(aux->semaforos)){
+			t_sem_retenidos* sem = list_remove(aux->semaforos, 0);
+			free(sem);
+		}
+		list_destroy(aux->semaforos);
+
+		}
+
+		free(aux);
 	}
+	list_destroy(tabla_programas);
+
+
 //******************esto dejar comentado
 ////	queue_destroy_and_destroy_elements(sem_blocked, (void*) block_destroy);
 ////	int* sem_values;
@@ -321,6 +362,7 @@ void aceptarClientes(){
 
 
 					pthread_t hiloPrograma;
+					pthread_detach(hiloPrograma);
 					pthread_create(&hiloPrograma, NULL, (void*)&atenderPrograma, (void*)programa);
 
 
