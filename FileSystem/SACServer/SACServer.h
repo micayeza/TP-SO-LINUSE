@@ -39,7 +39,8 @@
 #define TAM_MAX_PUNT_IND 1000
 #define TAM_IDENTIFICADOR 4
 
-#define pathConfig "/home/utnso/workspace/tp-2019-2c-capitulo-2/configs/SAC.config"
+#define pathConfigDebug "../../configs/SAC.config"
+#define pathConfigConsola "../../../configs/SAC.config"
 
 typedef enum e_estado {BORRADO, OCUPADO, DIRECTORIO} e_estado;
 
@@ -92,7 +93,7 @@ t_header* fs_header;
 t_configSAC* configSac;
 
 //FUNCIONES CONFIG
-void getConfigSAC(char* path);
+void getConfigSAC();
 
 //FUNCIONES SAC SERVER
 t_cliente* create_cliente(int socket);

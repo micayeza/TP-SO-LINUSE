@@ -669,7 +669,7 @@ void inicializacion(){
 	log_info(log_resultados, "------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
 	log_interno = log_create("log_interno.txt", "LOG-INT", false, LOG_LEVEL_INFO);
 	log_info(log_interno, "------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
-	getConfigSAC(pathConfig);
+	getConfigSAC();
 	fs_header = malloc(sizeof(t_header));
 	fs_header->identificador = malloc(TAM_IDENTIFICADOR);
 }
@@ -729,9 +729,51 @@ void free_bitarray(t_bitarray* bitarray){
 	bitarray_destroy(bitarray);
 }
 
-int main(){
+int setPathFS(int argc, char* argv[]){
+	//Validar ruta del archivo del FS
+	if(argc >= 2){
+		if(argv[1] == NULL){
+			printf("***ERROR: Debe ingresar por parámetro una ruta de archivo de FS.\n");
+			return ERROR;
+		}
+
+		FILE* arch = fopen(argv[1],"r+");
+		if(arch == NULL){
+			printf("***ERROR: La ruta ingresada no es de un archivo válido.\n");
+			return ERROR;
+		}
+		fclose(arch);
+		configSac->pathFs = malloc(string_length(argv[1])+1);
+		strcpy(configSac->pathFs, argv[1]);
+		printf("--------------------------------\n");
+		printf("***PATH FS: %s ***\n", configSac->pathFs);
+		printf("--------------------------------\n");
+		return 1;
+	}else{
+		configSac->pathFs = malloc(string_length("/home/utnso/workspace/tp-2019-2c-capitulo-2/FileSystem/disco.bin")+1);
+		strcpy(configSac->pathFs,"/home/utnso/workspace/tp-2019-2c-capitulo-2/FileSystem/disco.bin");
+		printf("--------------------------------\n");
+		printf("***PATH FS DEFAULT: /home/utnso/workspace/tp-2019-2c-capitulo-2/FileSystem/disco.bin ***\n");
+		printf("--------------------------------\n");
+		return 1;
+	}
+
+}
+
+int main(int argc, char *argv[]){
 	inicializacion();
-	//formatearSAC();
+
+	if(setPathFS(argc,argv) == ERROR){
+		finalizar();
+		return ERROR;
+	}
+
+
+	if(argv[2] != NULL && strcmp(argv[2], "-f") == 0){
+		//formatearSAC();
+		printf("***Se formatea el FS***\n");
+	}
+
 	abrirHeaderFS();
 
 

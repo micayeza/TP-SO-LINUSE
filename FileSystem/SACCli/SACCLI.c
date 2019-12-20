@@ -283,11 +283,18 @@ void free_char_as_as(char** array){
 }
 
 int main(int argc, char *argv[]) {
-	argc = 4;
-	argv[0] = "./SACCli";
-	argv[1] = "/home/utnso/pipo/";
-	argv[2] = "-d";
-	argv[3] = "-s";
+
+	if(argv[1] == NULL){
+		argc = 4;
+		argv[0] = "./SACCli";
+		argv[1] = "/home/utnso/pipo/";
+		argv[2] = "-d";
+		argv[3] = "-s";
+	}
+	printf("--------------------------------\n");
+	printf("FS levantado en: %s \n",argv[1]);
+	printf("--------------------------------\n");
+
 	struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 
 	memset(&runtime_options, 0, sizeof(struct t_runtime_options));
