@@ -11,6 +11,7 @@
 #include <conexion.h>
 
 t_log* log_interno;
+t_log* log_resultados;
 int socketServidor;
 
 #define DEFAULT_FILE_CONTENT "Hello World!\n"

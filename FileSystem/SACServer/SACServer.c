@@ -129,6 +129,7 @@ int escribirBloqueDatos(int numBloque, int offset, int size, void* dato){
 
 	int tamEscrito = fwrite(dato,sizeof(char),size,archivo_fs);
 	closeFS();
+	log_info(log_resultados, "<<< BLOQUES DE DATOS --> SE MODIFICA EL BLOQUE NUM: %d.", numBloque);
 	return tamEscrito;
 }
 
@@ -328,7 +329,7 @@ void aceptarClientes(){
 
 	int socket = 0;
 	while((socket = aceptarCliente(socket_escucha, log_interno)) > 0){
-
+		log_info(log_resultados, "<<< CONEXION CLIENTES --> SE CONECTA CLIENTE");
 		TipoOperacion operacionRecibida = (TipoOperacion) recibirEntero(socket, log_interno);
 		if(operacionRecibida == INIT){
 			t_cliente* nuevoCliente = create_cliente(socket);
@@ -508,6 +509,8 @@ void persistirNodo(int numeroNodo, t_nodo* nodo){
 	fwrite(&(nodo->fecha_modificacion),sizeof(struct timespec),1,archivo_fs);
 	fwrite(nodo->p_indirectos,sizeof(int)*TAM_MAX_PUNT_IND,1,archivo_fs);
 
+	log_info(log_resultados, "<<< TABLA DE NODOS --> SE MODIFICA NODO NUM: %d.", numeroNodo);
+
 	closeFS();
 }
 
@@ -622,6 +625,7 @@ int ocuparBloqueLibreBitmap(){
 		if(bitarray_test_bit(bitarray,i) == 0){
 			bitarray_set_bit(bitarray, i);
 			persistirBitmap(bitarray);
+			log_info(log_resultados, "<<< BITMAP --> SE OCUPA BLOQUE NUM: %d.", i);
 			free_bitarray(bitarray);
 			return i;
 		}
@@ -640,6 +644,7 @@ int desocuparBloqueBitmap(int numBloque){
 	}
 	bitarray_clean_bit(bitarray, numBloque);
 	persistirBitmap(bitarray);
+	log_info(log_resultados, "<<< BITMAP --> SE DESOCUPA BLOQUE NUM: %d.", numBloque);
 	free_bitarray(bitarray);
 	return 0;
 }
@@ -665,7 +670,7 @@ int hayBloquesLibres(int cantidad){
 
 void inicializacion(){
 	pthread_mutex_init(&m_acceso_fs, NULL);
-	log_resultados = log_create("log_resultados.txt", "LOG-RES", false, LOG_LEVEL_INFO);
+	log_resultados = log_create("log_resultados.txt", "LOG-RES", true, LOG_LEVEL_INFO);
 	log_info(log_resultados, "------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
 	log_interno = log_create("log_interno.txt", "LOG-INT", false, LOG_LEVEL_INFO);
 	log_info(log_interno, "------------------------------------------------------------------------------------------------------------------------------------------------------------------------");
@@ -770,7 +775,7 @@ int main(int argc, char *argv[]){
 
 
 	if(argv[2] != NULL && strcmp(argv[2], "-f") == 0){
-		//formatearSAC();
+		formatearSAC();
 		printf("***Se formatea el FS***\n");
 	}
 

@@ -21,9 +21,10 @@ void atenderCliente(t_cliente* cliente){
 						enviarTiempo(cliente->socket, nodo->fecha_modificacion,  log_interno);
 					}
 				}
+				log_info(log_resultados, "***GETATTR--> Path: %s.", path);
+				printf("SERVER: GETATTR. \n");
 				free_nodo(nodo);
 				free(path);
-				printf("SERVER: GETATTR. \n");
 				break;
 			}
 			case SYS_READDIR:{
@@ -32,9 +33,10 @@ void atenderCliente(t_cliente* cliente){
 				pthread_mutex_lock(&m_acceso_fs);
 				int resEnvioTexto = enviarTexto(cliente->socket, nombresArchivos, log_interno);
 				pthread_mutex_unlock(&m_acceso_fs);
+				log_info(log_resultados, "***READDIR--> Path: %s.", path);
+				printf("SERVER: READDIR. \n");
 				free(path);
 				free(nombresArchivos);
-				printf("SERVER: READDIR. \n");
 				break;
 			}
 			case SYS_MKDIR:{
@@ -43,8 +45,9 @@ void atenderCliente(t_cliente* cliente){
 				int resultado = crearNodoDirectorioArchivo(path, 1);
 				pthread_mutex_unlock(&m_acceso_fs);
 				enviarEntero(cliente->socket, resultado,  log_interno);
-				free(path);
+				log_info(log_resultados, "***MKDIR--> Path: %s.", path);
 				printf("SERVER: MKDIR. \n");
+				free(path);
 				break;
 			}
 			case SYS_CREATE:{
@@ -53,8 +56,9 @@ void atenderCliente(t_cliente* cliente){
 				int resultado = crearNodoDirectorioArchivo(path, 0);
 				pthread_mutex_unlock(&m_acceso_fs);
 				enviarEntero(cliente->socket, resultado,  log_interno);
-				free(path);
+				log_info(log_resultados, "***CREATE--> Path: %s.", path);
 				printf("SERVER: CREATE. \n");
+				free(path);
 				break;
 			}
 			case SYS_UTIMES:{
@@ -65,8 +69,9 @@ void atenderCliente(t_cliente* cliente){
 				int resultado = modificarFechas(path, tiempoCreacion, tiempoModificacion);
 				pthread_mutex_unlock(&m_acceso_fs);
 				enviarEntero(cliente->socket, resultado,  log_interno);
-				free(path);
+				log_info(log_resultados, "***UTIMES--> Path: %s.", path);
 				printf("SERVER: UTIMES. \n");
+				free(path);
 				break;
 			}
 			case SYS_TRUNCATE:{
@@ -76,8 +81,9 @@ void atenderCliente(t_cliente* cliente){
 				int resultado = cambiarTamanioArchivo(path, nuevoSize);
 				pthread_mutex_unlock(&m_acceso_fs);
 				enviarEntero(cliente->socket, resultado,  log_interno);
-				free(path);
+				log_info(log_resultados, "***TRUNCATE--> Path: %s.", path);
 				printf("SERVER: TRUNCATE. \n");
+				free(path);
 				break;
 			}
 			case SYS_WRITE:{
@@ -90,9 +96,11 @@ void atenderCliente(t_cliente* cliente){
 				int resultado = escribirArchivo(path, offset, size, datos);
 				pthread_mutex_unlock(&m_acceso_fs);
 				enviarEntero(cliente->socket, resultado,  log_interno);
+				log_info(log_resultados, "***WRITE--> Path: %s.", path);
+				log_info(log_resultados, "      Datos: %s.", (char*)datos);
+				printf("SERVER: WRITE. \n");
 				free(path);
 				free(datos);
-				printf("SERVER: WRITE. \n");
 				break;
 			}
 			case SYS_READ:{
@@ -105,9 +113,11 @@ void atenderCliente(t_cliente* cliente){
 				pthread_mutex_unlock(&m_acceso_fs);
 				enviarDatos(cliente->socket, datos, size, log_interno);
 				enviarEntero(cliente->socket, resultado,  log_interno);
+				log_info(log_resultados, "***READ--> Path: %s.", path);
+				log_info(log_resultados, "      Datos: %s.", (char*)datos);
+				printf("SERVER: READ. \n");
 				free(path);
 				free(datos);
-				printf("SERVER: READ. \n");
 				break;
 			}
 			case SYS_RMDIR:{
