@@ -362,7 +362,6 @@ void aceptarClientes(){
 
 
 					pthread_t hiloPrograma;
-					pthread_detach(hiloPrograma);
 					pthread_create(&hiloPrograma, NULL, (void*)&atenderPrograma, (void*)programa);
 
 
@@ -374,12 +373,10 @@ void aceptarClientes(){
 void atenderMetricas(){
 
 	while(1){
-		sleep(config_suse->metricas);
+		usleep(config_suse->metricas*1000000);
 		printefearMetricas();
 
 	}
-
-
 }
 
 
@@ -393,10 +390,12 @@ int main() {
 
 	socket_escucha = crearSocketEscucha(config_suse->puerto, log_interno);
 
-	aceptarClientes(); //Planificador de largo plazo, fifo
+
+	pthread_t hiloClientes;
+    pthread_create(&hiloClientes, NULL, (void*)&aceptarClientes, NULL); //Planificador de largo plazo, fifo
 
 	pthread_t hiloMetricas;
 	pthread_create(&hiloMetricas, NULL, (void*)&atenderMetricas, NULL);
-
-
+	pthread_join(hiloClientes, NULL);
+	//pthread_join(hiloMetricas, NULL);
 }
