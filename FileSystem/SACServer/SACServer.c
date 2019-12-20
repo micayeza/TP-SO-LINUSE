@@ -75,6 +75,8 @@ int cambiarUbicacion(char* path, char* newPath){
 }
 
 int leerArchivo(char* path, int offset, int tamanio, void* buf){
+	if(tamanio == 0)
+		return 0;
 	int numNodo = existeArchivo(path);
 	if(numNodo == ERROR)
 		return ERROR;
@@ -93,7 +95,7 @@ int leerArchivo(char* path, int offset, int tamanio, void* buf){
 	int offsetBloqueInicial = offset % TAM_BLOQUE;//Offset dentro bloque inicial
 
 	//Bloque final
-	int iBloqueFinal = (offset + tamanio) / TAM_BLOQUE;
+	int iBloqueFinal = (offset + tamanio - 1) / TAM_BLOQUE; //Resto un byte ya que empieza desde cero el offset
 	int finLecturaBloqueFinal = (offset + tamanio) % TAM_BLOQUE;//Offset dentro bloque final
 
 	int cantidadBloques = iBloqueFinal - iBloqueInicial  + 1;
