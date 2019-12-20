@@ -3197,9 +3197,7 @@ static void proc_destroy(t_proceso *self) {
 }
 
 static void clock_destroy(t_clock *self) {
-	if(self != NULL){
-     free(self->ip);
-	}
+
     free(self);
 }
 
@@ -3212,6 +3210,10 @@ static void ip_destroy(t_ip_id *self) {
     free(self);
 }
 static void pag_destroy(t_pagina *self) {
+	if(self->p == 1){
+		t_clock* clock = list_get(tabla_clock, self->marco);//buscar_clock(proceso, seg, pag);
+			free(clock->ip);
+	}
     free(self);
 }
 static void archivos_destroy(t_archivo *self) {
@@ -3233,11 +3235,37 @@ void handler(){
 	free(bitmap_swap);
 
 	list_destroy_and_destroy_elements(tabla_archivos, (void*) archivos_destroy);
-	if(list_size(tabla_procesos)>0){
-		list_destroy_and_destroy_elements(tabla_procesos, (void*) proc_destroy);
-	}else{
-		list_destroy(tabla_procesos);
+
+	t_proceso* fantasma = list_remove(tabla_procesos, 0);
+//	free(fantasma->ip);
+	list_destroy_and_destroy_elements(fantasma->segmentos, (void*) seg_destroy);
+
+	int i=0;
+	while(i< list_size(tabla_procesos)){
+		t_proceso* aux = list_remove(tabla_procesos, 0);
+		int x =0;
+		while(x<list_size(aux->segmentos)){
+			t_segmento* seg_aux = list_remove(aux->segmentos, 0);
+			if(!seg_aux->dinamico && seg_aux->shared){
+				free(seg_aux->path);
+				free(seg_aux);
+				continue;
+			}
+			list_destroy_and_destroy_elements(seg_aux->paginas, (void*) pag_destroy);
+
+			if(!seg_aux->dinamico){
+			free(seg_aux->path);
+			}
+			free(seg_aux);
+		}
+		list_destroy(aux->segmentos);
+
+	    list_destroy_and_destroy_elements(aux->bloquesLibres, (void*)libres_destroy);
+	    free(aux->ip);
+
 	}
+	list_destroy(tabla_procesos);
+
 	list_destroy_and_destroy_elements(tabla_clock, (void*) clock_destroy);
 
 	pthread_mutex_destroy(&sem_bitmap_marco);

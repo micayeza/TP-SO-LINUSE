@@ -34,43 +34,50 @@ void handler(){
 	pthread_mutex_destroy(&wt);
 	pthread_mutex_destroy(&multi);
 
-	for(int i =0; i<list_size(tabla_new); i++){
-		t_new* aux = list_remove(tabla_new, i);
+	int i =0;
+	while(i<list_size(tabla_new)){
+		t_new* aux = list_remove(tabla_new, 0);
 		free(aux);
 	}
 	list_destroy(tabla_new);
 
-	for(int i =0; i<list_size(tabla_exit); i++){
-		t_new* aux = list_remove(tabla_exit, i);
+	i=0;
+	while(i<list_size(tabla_exit)){
+		t_new* aux = list_remove(tabla_exit, 0);
 		free(aux);
 	}
 	list_destroy(tabla_exit);
 
-	for(int i =0; i<list_size(tabla_lock); i++){
-		t_block* aux = list_remove(tabla_lock, i);
+	i=0;
+	while(i<list_size(tabla_lock)){
+		t_block* aux = list_remove(tabla_lock, 0);
 
 		free(aux);
 	}
 	list_destroy(tabla_lock);
 
-	for(int i =0; i<list_size(tabla_programas); i++){
-		t_programa* aux = list_remove(tabla_programas, i);
-		for(int x = 0; x<list_size(aux->hijos); x++){
-			t_hilo* hilo = list_remove(aux->hijos, x);
+	i=0;
+	while(i<list_size(tabla_programas)){
+		t_programa* aux = list_remove(tabla_programas, 0);
+		int x=0;
+		while(x<list_size(aux->hijos)){
+			t_hilo* hilo = list_remove(aux->hijos, 0);
 			free(hilo);
 		}
 		list_destroy(aux->hijos);
 
 		if(aux->estado != FINALIZADO){
-			for(int x = 0; x<list_size(aux->tablaReady); x++){
-				t_new* hilo = list_remove(aux->tablaReady, x);
+			x=0;
+			while(x<list_size(aux->tablaReady)){
+				t_new* hilo = list_remove(aux->tablaReady, 0);
 				free(hilo);
 			}
 			list_destroy(aux->tablaReady);
 
 
-		for(int x = 0; x<list_size(aux->semaforos); x++){
-			t_sem_retenidos* sem = list_remove(aux->semaforos, x);
+			x=0;
+			while(x<list_size(aux->semaforos)){
+			t_sem_retenidos* sem = list_remove(aux->semaforos, 0);
 			free(sem);
 		}
 		list_destroy(aux->semaforos);
