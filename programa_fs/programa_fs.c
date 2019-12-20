@@ -1,22 +1,50 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 int main(void)
 {
 	//fseek(arch, 3, SEEK_SET);
-	//FILE* arch = fopen("/home/utnso/pipo/AAA/CCC/ppp.txt","r+");
-	FILE* arch = fopen("/home/utnso/ppp.txt","r+");
-
-	char* texto = malloc(6);
-	texto = "karma";
-	int pos = ftell(arch);
-	//fwrite(texto, sizeof(char), 3, arch);
-
-
-	char* buf = malloc(1000);
-	fread(buf,sizeof(char), 1000, arch);
+	//FILE* arch = open("/home/utnso/ppp.txt","r+");
+	FILE* arch = fopen("/home/utnso/pipo/AAA/CCC/aaa.txt","r+");
+	//char* texto = malloc(6);
+	//texto = "karma";
+	char* datos = string_repeat('h', 5000);
+	fseek(arch,0,SEEK_SET);
+	int tam = fwrite(datos, sizeof(char), 5000, arch);
+	printf("Bytes escritura: %d \n", tam);
 	fclose(arch);
+
+	/*char* datos = string_repeat('h', 5000);
+	//int pos = ftell(arch);
+	//fseek(arch,0,SEEK_SET);
+	//pos = ftell(arch);
+	int tam = fwrite(datos, sizeof(char), 5000, arch);*/
+
+
+	/*FILE* arch = fopen("/home/utnso/pipo/AAA/CCC/aaa.txt","r+");
+	char* buf = malloc(5000);
+	fseek(arch,4100,SEEK_SET);
+	int res = fread(buf,sizeof(char), 5000, arch);
+	printf("Bytes lectura: %s \n", buf);
+	fclose(arch);
+
+	arch = fopen("/home/utnso/pipo/AAA/CCC/aaa.txt","r+");
+	fseek(arch,4100,SEEK_SET);
+	res = fread(buf,sizeof(char), 5000, arch);
+	printf("Bytes lectura: %s \n", buf);
+	fclose(arch);
+
+	arch = fopen("/home/utnso/pipo/AAA/CCC/aaa.txt","r+");
+	fseek(arch,4100,SEEK_SET);
+	res = fread(buf,sizeof(char), 5000, arch);
+	printf("Bytes lectura: %s \n", buf);
+	fclose(arch);*/
+
+
+	/*char* buf = malloc(1000);
+	fread(buf,sizeof(char), 1000, arch);*/
 
 	/*char* texto2 = malloc(13);
 	texto2 = "BuenaPersona";

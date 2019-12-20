@@ -11,6 +11,7 @@
 #include <conexion.h>
 
 t_log* log_interno;
+t_log* log_resultados;
 int socketServidor;
 
 #define DEFAULT_FILE_CONTENT "Hello World!\n"
@@ -43,23 +44,23 @@ static struct fuse_operations fuse_oper = {
 		.getattr  = fuse_getattr,
 		.readdir  = fuse_readdir,
 		.open 	  = fuse_open,
-		//.read 	  = fuse_read,
+		.read 	  = fuse_read,
 		.mkdir 	  = fuse_mkdir,
-		//.rmdir 	  = fuse_rmdir,
-		//.unlink   = fuse_unlink,
+		.rmdir 	  = fuse_rmdir,
+		.unlink   = fuse_unlink,
 //*****************
 		.write    = fuse_write,
 		.create   = fuse_create,
 //		.creat    = fuse_create,
 		.truncate = fuse_truncate,
-		//.rename   = fuse_move,
+		.rename   = fuse_move,
 		.chmod    = fuse_chmod,
-		//.chown    = fuse_chmod,
+		.chown    = fuse_chmod,
 		.utime    = fuse_chmod,
 		.utimens  = fuse_utimens,
 		.flush    = fuse_chmod,
-		//.statfs   = fuse_chmod,
-		//.rename   = fuse_move,
+		.statfs   = fuse_chmod,
+		.rename   = fuse_move,
 };
 
 enum {

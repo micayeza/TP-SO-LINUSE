@@ -2,20 +2,24 @@
 
 
 //Hice esta función para que cada vez que tengamos que leer la config nos genere este struct y así actualizar los valores en el momento que los necesitamos.
-t_configSAC* getConfigSAC(char* path){
+void getConfigSAC(){
 
-	t_config* config = config_create(path);
-	t_configSAC* structConfig = malloc(sizeof(t_configSAC));
+	//Hago esto ya que la ubicacion del ejecutable es distinto si se debuggea o se ejecuta por consola
+	FILE* filePathConsola = fopen(pathConfigConsola, "r+");
+	if(filePathConsola != NULL){
+		fclose(filePathConsola);
+		config = config_create(pathConfigConsola);
+	}else{
+		config = config_create(pathConfigDebug);
+	}
 
-	structConfig->listenPort = config_get_int_value(config, "LISTEN_PORT"); //int
-	structConfig->pathFs = config_get_string_value(config, "PATH_FS");
+	configSac = malloc(sizeof(t_configSAC));
 
-	config_destroy(config);
+	configSac->listenPort = config_get_int_value(config, "LISTEN_PORT"); //int
 
-	return structConfig;
 }
 
 void freeConfig(t_configSAC* config){
-	//free(config->pathFs);
+	free(config->pathFs);
 	free(config);
 }

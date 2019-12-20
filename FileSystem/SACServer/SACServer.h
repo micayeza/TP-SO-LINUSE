@@ -37,16 +37,19 @@
 #define TAM_TABLA_NODOS 1024
 #define TAM_P_BLOQUE 4
 #define TAM_MAX_PUNT_IND 1000
+#define TAM_IDENTIFICADOR 4
 
-#define pathConfig "/home/utnso/workspace/tp-2019-2c-capitulo-2/configs/SAC.config"
+#define pathConfigDebug "../../configs/SAC.config"
+#define pathConfigConsola "../../../configs/SAC.config"
 
 typedef enum e_estado {BORRADO, OCUPADO, DIRECTORIO} e_estado;
 
-//char* configPath;
 t_log* log_resultados;
 t_log* log_interno;
 FILE* archivo_fs;
+t_config* config;
 
+pthread_mutex_t m_acceso_fs;
 
 typedef struct {
 	int listenPort; //Puerto TCP utilizado para recibir las conexiones de CPU y I/O.
@@ -60,7 +63,7 @@ typedef struct {
 
 typedef struct {
 	uint8_t estado;
-	unsigned char nombre_archivo[TAM_MAX_NOMBRE_ARCHIVO];
+	char* nombre_archivo;
 	uint32_t bloque_padre;
 	uint32_t tam_archivo;
 	struct timespec fecha_creacion;
@@ -87,10 +90,10 @@ typedef struct {
 
 t_log *SacServerLog;
 t_header* fs_header;
-t_configSAC* config;
+t_configSAC* configSac;
 
 //FUNCIONES CONFIG
-t_configSAC* getConfigSAC(char* configPath);
+void getConfigSAC();
 
 //FUNCIONES SAC SERVER
 t_cliente* create_cliente(int socket);
@@ -99,13 +102,18 @@ t_cliente* create_cliente(int socket);
 void atenderCliente(t_cliente* cliente);
 
 //FUNCIONES FILESYSTEM
+int estaFormateado();
 void abrirHeaderFS();
 t_nodo* crearNodoVacio();
 t_nodo* obtenerNodo(int numeroNodo);
 char* cortarPathPadre(char* path);
+int escribirArchivo(char* path, int offset, int tamanio, void* datos);
+t_nodo* obtenerNodoDePath(char* path);
+char* obtenerArchivosDeDirectorio(char* path);
+int leerArchivo(char* path, int offset, int tamanio, void* buf);
 
 //FUNCIONES FREE
-void freeonfig(t_configSAC* config);
+void freeConfig(t_configSAC* config);
 void free_nodo(t_nodo* nodo);
 void free_header();
 void free_char_as_as(char** array);
