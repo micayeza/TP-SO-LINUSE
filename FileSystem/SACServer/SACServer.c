@@ -6,6 +6,42 @@
  */
 #include "SACServer.h"
 
+int eliminarDirectorioArchivo(char* path, int esDirectorio){
+	int numNodo = existeArchivo(path);
+	if(numNodo == ERROR)
+		return EACCES;
+
+	if(esDirectorio == 1){
+		char* archivosDirectorio = obtenerArchivosDeDirectorio(path);
+		char* separador = malloc(2);
+		strcpy(separador,";");
+		char** archivosSeparados = string_split(archivosDirectorio, separador);
+		int tam = sizeArrayChar(archivosSeparados);
+		free(separador);
+		free(archivosDirectorio);
+		free_char_as_as(archivosSeparados);
+		if(tam > 2){
+			return ENOTEMPTY;
+		}
+	}
+
+	t_nodo* nodo = obtenerNodo(numNodo);
+	if(esDirectorio == 0){
+		for(int i = 0 ; i < TAM_MAX_PUNT_IND; i++){
+			int numBloque = nodo->p_indirectos[i];
+			if(numBloque != NULL){
+				desocuparBloqueBitmap(numBloque);
+			}
+		}
+	}
+	t_nodo* nodoNuevo = crearNodoVacio();
+	persistirNodo(numNodo, nodoNuevo);
+	free_nodo(nodo);
+	free_nodo(nodoNuevo);
+
+	return 0;
+}
+
 int cambiarUbicacion(char* path, char* newPath){
 	int numNodo = existeArchivo(path);
 	char* pathPadreNuevo = cortarPathPadre(newPath);
@@ -791,6 +827,8 @@ int main(int argc, char *argv[]){
 
 	//int res = cambiarUbicacion("/BBB/abb.txt","/AAA/CCC/aaa.rar");
 	//int res = cambiarUbicacion("/AAA/CCC/aaa.rar","/BBB/abb.txt");
+
+	//int res = eliminarDirectorioArchivo("/BBB", 1);
 
 	/*t_nodo* nodo = crearNodoVacio();
 	nodo->estado = 2;
