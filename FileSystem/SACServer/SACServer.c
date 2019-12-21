@@ -148,7 +148,10 @@ int escribirArchivo(char* path, int offset, int tamanio, void* datos){
 	//Ya que si el tamanio de lo q voy a escribir es menor no tengo que truncar el archivo
 	if(nuevoTamanio > nodo->tam_archivo){
 		free_nodo(nodo);
-		cambiarTamanioArchivo(path, nuevoTamanio);
+		int resCambiarTam = cambiarTamanioArchivo(path, nuevoTamanio);
+		if(resCambiarTam == ERROR){
+			return EDQUOT;
+		}
 		nodo = obtenerNodo(numNodo);
 	}
 

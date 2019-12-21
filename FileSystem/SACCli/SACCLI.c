@@ -248,6 +248,11 @@ static int fuse_write(const char *path, const char *buf, size_t size, off_t offs
 
 	res = recibirEntero(socketServidor, log_interno);
 
+	if(res == EDQUOT){
+		log_info(log_resultados, "***WRITE--> Path: %s. NO HAY ESPACIO EN EL ARCHIVO", path);
+		return -EDQUOT;
+	}
+
 	log_info(log_resultados, "***WRITE--> Path: %s.", path);
 	log_info(log_resultados, "      Datos: %s.", (char*)buf);
 	log_info(log_resultados, "      Size: %d.", res);
