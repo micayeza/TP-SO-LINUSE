@@ -157,7 +157,7 @@ int escribirArchivo(char* path, int offset, int tamanio, void* datos){
 	int offsetBloqueInicial = offset % TAM_BLOQUE;//Offset dentro bloque inicial
 
 	//Bloque final
-	int iBloqueFinal = (offset + tamanio) / TAM_BLOQUE;
+	int iBloqueFinal = (offset + tamanio - 1) / TAM_BLOQUE; //Resto un byte ya que empieza desde cero el offset
 	int finEscrituraBloqueFinal = (offset + tamanio) % TAM_BLOQUE;//Offset dentro bloque final
 
 	int cantidadBloques = iBloqueFinal - iBloqueInicial  + 1;
