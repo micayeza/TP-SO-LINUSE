@@ -23,19 +23,19 @@ static int fuse_getattr(const char *path, struct stat *stbuf) {
 			stbuf->st_size = size;
 			stbuf->st_ctim = timeCreacion;
 			stbuf->st_mtim = timeModificacion;
-			log_info(log_resultados, "***GETATTR--> Path: %s.", path);
-			log_info(log_resultados, "      Tipo: archivo.");
+			log_info(log_resultados, "***GETATTR--> Path: %s", path);
+			log_info(log_resultados, "      Tipo: archivo");
 			log_info(log_resultados, "      Size: %d.", size);
-			log_info(log_resultados, "      Time Creacion: %d.", timeCreacion);
-			log_info(log_resultados, "      Time Modificacion: %d.", timeModificacion);
+			log_info(log_resultados, "      Time Creacion: %d", timeCreacion);
+			log_info(log_resultados, "      Time Modificacion: %d", timeModificacion);
 		}else{
 			if(estado == 2){
 				stbuf->st_mode = S_IFDIR | 0755;
 				stbuf->st_nlink = 2;
-				log_info(log_resultados, "***GETATTR--> Path: %s.", path);
-				log_info(log_resultados, "      Tipo: directorio.");
+				log_info(log_resultados, "***GETATTR--> Path: %s", path);
+				log_info(log_resultados, "      Tipo: directorio");
 			}else{
-				log_info(log_resultados, "***GETATTR--> Path: %s. NO ENCONTRADO", path);
+				log_info(log_resultados, "***GETATTR--> Path: %s NO ENCONTRADO", path);
 				res = -ENOENT;
 			}
 
@@ -71,7 +71,7 @@ static int fuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off
 	char* nombresArchivos = recibirTexto(socketServidor, log_interno);
 	//El servidor retornará vacio cuando no existe el path
 	if(strcmp(nombresArchivos, "") == 1){
-		log_info(log_resultados, "***READDIR--> Path: %s. PATH INEXISTENTE", path);
+		log_info(log_resultados, "***READDIR--> Path: %s PATH INEXISTENTE", path);
 		free(nombresArchivos);
 		return -ENOENT;
 	}
@@ -83,8 +83,8 @@ static int fuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off
 	for(int i = 0; i < tam; i++){
 		filler(buf, archivos[i], NULL, 0);
 	}
-	log_info(log_resultados, "***READDIR--> Path: %s.", path);
-	log_info(log_resultados, "      Contenido: %d.", nombresArchivos);
+	log_info(log_resultados, "***READDIR--> Path: %s", path);
+	log_info(log_resultados, "      Contenido: %d", nombresArchivos);
 	free(nombresArchivos);
 	free_char_as_as(archivos);
 
@@ -96,7 +96,7 @@ int fuse_mkdir(const char *path, mode_t mode) {
 	int resEnvioOperacion = enviarEntero(socketServidor, SYS_MKDIR,  log_interno);
 	int resEnvioTexto = enviarTexto(socketServidor, path, log_interno);
 	int resultado = recibirEntero(socketServidor, log_interno);
-	log_info(log_resultados, "***MKDIR--> Path: %s.", path);
+	log_info(log_resultados, "***MKDIR--> Path: %s", path);
 	return resultado;
 }
 
@@ -108,23 +108,23 @@ static int fuse_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 	int res = recibirEntero(socketServidor, log_interno);
 	//Procesar respuesta
 	if(res == EEXIST){
-		log_info(log_resultados, "***CREATE--> Path: %s. ERROR", path);
+		log_info(log_resultados, "***CREATE--> Path: %s ERROR", path);
 		return -EEXIST;
 
 	}
 	if (res == ENAMETOOLONG){
-		log_info(log_resultados, "***CREATE--> Path: %s. NOMBRE DE ARCHIVO MUY LARGO", path);
+		log_info(log_resultados, "***CREATE--> Path: %s NOMBRE DE ARCHIVO MUY LARGO", path);
 		return -ENAMETOOLONG;
 	}
 	if(res == EDQUOT){
-		log_info(log_resultados, "***READDIR--> Path: %s. ERROR", path);
+		log_info(log_resultados, "***READDIR--> Path: %s ERROR", path);
 		return -EDQUOT;
 	}
 	if(res == EACCES){
-		log_info(log_resultados, "***CREATE--> Path: %s. INACCESIBLE", path);
+		log_info(log_resultados, "***CREATE--> Path: %s INACCESIBLE", path);
 		return -EACCES;
 	}
-	log_info(log_resultados, "***CREATE--> Path: %s.", path);
+	log_info(log_resultados, "***CREATE--> Path: %s", path);
 	return 0;
 
 }
@@ -136,9 +136,9 @@ static int fuse_utimens(const char *path, const struct timespec tv[2]) {
 	enviarTiempo(socketServidor, tv[0],  log_interno);
 	enviarTiempo(socketServidor, tv[1],  log_interno);
 	int res = recibirEntero(socketServidor,  log_info);
-	log_info(log_resultados, "***UTIMENS--> Path: %s.", path);
-	log_info(log_resultados, "      Time Creacion: %d.", tv[0]);
-	log_info(log_resultados, "      Time Modificacion: %d.", tv[1]);
+	log_info(log_resultados, "***UTIMENS--> Path: %s", path);
+	log_info(log_resultados, "      Time Creacion: %d", tv[0]);
+	log_info(log_resultados, "      Time Modificacion: %d", tv[1]);
 
 	return res;
 }
@@ -192,13 +192,13 @@ static int fuse_read(const char *path, char *buf, size_t size, off_t offset, str
 	res = enviarTexto(socketServidor, path, log_interno);
 	res = enviarEntero(socketServidor, offset,  log_interno);
 	res = enviarEntero(socketServidor, size,  log_interno);
-	res = enviarDatos(socketServidor, (void*) buf, size,  log_interno);
+	//res = enviarDatos(socketServidor, (void*) buf, size,  log_interno);
 
 	res = recibirDatos(socketServidor, buf,log_interno);
 	res = recibirEntero(socketServidor, log_interno);
-	log_info(log_resultados, "***READ--> Path: %s.", path);
-	log_info(log_resultados, "      Datos: %s.", (char*)buf);
-	log_info(log_resultados, "      Size: %d.", res);
+	log_info(log_resultados, "***READ--> Path: %s", path);
+	//log_info(log_resultados, "      Datos: %s.", (char*)buf);
+	log_info(log_resultados, "      Size: %d", res);
 
 	return res;
 }
@@ -210,11 +210,11 @@ int fuse_unlink(const char *path) {
 	res = recibirEntero(socketServidor, log_interno);
 
 	if(res == EACCES){
-		log_info(log_resultados, "***UNLINK--> Path: %s. INACCESIBLE", path);
+		log_info(log_resultados, "***UNLINK--> Path: %s INACCESIBLE", path);
 		return -EACCES;
 	}
 
-	log_info(log_resultados, "***UNLINK--> Path: %s.", path);
+	log_info(log_resultados, "***UNLINK--> Path: %s", path);
 	return 0;
 }
 
@@ -225,15 +225,15 @@ static int fuse_rmdir(const char *path) {
 	res = recibirEntero(socketServidor, log_interno);
 
 	if(res == ENOTEMPTY){
-		log_info(log_resultados, "***RMDIR--> Path: %s. NO VACIO", path);
+		log_info(log_resultados, "***RMDIR--> Path: %s NO VACIO", path);
 		return -ENOTEMPTY;
 	}
 	if(res == EACCES){
-		log_info(log_resultados, "***RMDIR--> Path: %s. INACCESIBLE", path);
+		log_info(log_resultados, "***RMDIR--> Path: %s INACCESIBLE", path);
 		return -EACCES;
 	}
 
-	log_info(log_resultados, "***RMDIR--> Path: %s.", path);
+	log_info(log_resultados, "***RMDIR--> Path: %s", path);
 	return 0;
 }
 
@@ -249,13 +249,13 @@ static int fuse_write(const char *path, const char *buf, size_t size, off_t offs
 	res = recibirEntero(socketServidor, log_interno);
 
 	if(res == EDQUOT){
-		log_info(log_resultados, "***WRITE--> Path: %s. NO HAY ESPACIO EN EL ARCHIVO", path);
+		log_info(log_resultados, "***WRITE--> Path: %s NO HAY ESPACIO EN EL ARCHIVO", path);
 		return -EDQUOT;
 	}
 
-	log_info(log_resultados, "***WRITE--> Path: %s.", path);
-	log_info(log_resultados, "      Datos: %s.", (char*)buf);
-	log_info(log_resultados, "      Size: %d.", res);
+	log_info(log_resultados, "***WRITE--> Path: %s", path);
+	//log_info(log_resultados, "      Datos: %s.", (char*)buf);
+	log_info(log_resultados, "      Size: %d", res);
 
 	return res;
 }
@@ -268,20 +268,20 @@ static int fuse_move(const char* path, const char *newPath) {
 	res = recibirEntero(socketServidor, log_interno);
 
 	if(res == EEXIST){
-		log_info(log_resultados, "***MOVE--> ERROR.");
+		log_info(log_resultados, "***MOVE--> ERROR");
 		return -EEXIST;
 	}
 	if (res == ENAMETOOLONG){
-		log_info(log_resultados, "***MOVE--> NOMBRE MUY LARGO.");
+		log_info(log_resultados, "***MOVE--> NOMBRE MUY LARGO");
 		return -ENAMETOOLONG;
 	}
 	if(res == EACCES){
-		log_info(log_resultados, "***MOVE--> PATH INACCESIBLE.");
+		log_info(log_resultados, "***MOVE--> PATH INACCESIBLE");
 		return -EACCES;
 	}
 
-	log_info(log_resultados, "***MOVE--> Path: %s.", path);
-	log_info(log_resultados, "      New Path: %s.", newPath);
+	log_info(log_resultados, "***MOVE--> Path: %s", path);
+	log_info(log_resultados, "      New Path: %s", newPath);
 	return 0;
 
 }
@@ -300,8 +300,8 @@ static int fuse_truncate(const char *path, off_t tamanio) {
 	res = enviarEntero(socketServidor, tamanio,  log_interno);
 	if(res >0){
 		res = recibirEntero(socketServidor, log_interno);
-		log_info(log_resultados, "***TRUNCATE--> Path: %s.", path);
-		log_info(log_resultados, "      Size: %d.", tamanio);
+		log_info(log_resultados, "***TRUNCATE--> Path: %s", path);
+		log_info(log_resultados, "      Size: %d", tamanio);
 	}
 	return res;
 

@@ -21,7 +21,7 @@ void atenderCliente(t_cliente* cliente){
 						enviarTiempo(cliente->socket, nodo->fecha_modificacion,  log_interno);
 					}
 				}
-				log_info(log_resultados, "***GETATTR--> Path: %s.", path);
+				log_info(log_resultados, "***GETATTR--> Path: %s", path);
 				free_nodo(nodo);
 				free(path);
 				break;
@@ -32,7 +32,7 @@ void atenderCliente(t_cliente* cliente){
 				pthread_mutex_lock(&m_acceso_fs);
 				int resEnvioTexto = enviarTexto(cliente->socket, nombresArchivos, log_interno);
 				pthread_mutex_unlock(&m_acceso_fs);
-				log_info(log_resultados, "***READDIR--> Path: %s.", path);
+				log_info(log_resultados, "***READDIR--> Path: %s", path);
 				free(path);
 				free(nombresArchivos);
 				break;
@@ -43,7 +43,7 @@ void atenderCliente(t_cliente* cliente){
 				int resultado = crearNodoDirectorioArchivo(path, 1);
 				pthread_mutex_unlock(&m_acceso_fs);
 				enviarEntero(cliente->socket, resultado,  log_interno);
-				log_info(log_resultados, "***MKDIR--> Path: %s.", path);
+				log_info(log_resultados, "***MKDIR--> Path: %s", path);
 				free(path);
 				break;
 			}
@@ -53,7 +53,7 @@ void atenderCliente(t_cliente* cliente){
 				int resultado = crearNodoDirectorioArchivo(path, 0);
 				pthread_mutex_unlock(&m_acceso_fs);
 				enviarEntero(cliente->socket, resultado,  log_interno);
-				log_info(log_resultados, "***CREATE--> Path: %s.", path);
+				log_info(log_resultados, "***CREATE--> Path: %s", path);
 				free(path);
 				break;
 			}
@@ -65,7 +65,7 @@ void atenderCliente(t_cliente* cliente){
 				int resultado = modificarFechas(path, tiempoCreacion, tiempoModificacion);
 				pthread_mutex_unlock(&m_acceso_fs);
 				enviarEntero(cliente->socket, resultado,  log_interno);
-				log_info(log_resultados, "***UTIMES--> Path: %s.", path);
+				log_info(log_resultados, "***UTIMES--> Path: %s", path);
 				free(path);
 				break;
 			}
@@ -76,7 +76,7 @@ void atenderCliente(t_cliente* cliente){
 				int resultado = cambiarTamanioArchivo(path, nuevoSize);
 				pthread_mutex_unlock(&m_acceso_fs);
 				enviarEntero(cliente->socket, resultado,  log_interno);
-				log_info(log_resultados, "***TRUNCATE--> Path: %s.", path);
+				log_info(log_resultados, "***TRUNCATE--> Path: %s", path);
 				free(path);
 				break;
 			}
@@ -90,8 +90,8 @@ void atenderCliente(t_cliente* cliente){
 				int resultado = escribirArchivo(path, offset, size, datos);
 				pthread_mutex_unlock(&m_acceso_fs);
 				enviarEntero(cliente->socket, resultado,  log_interno);
-				log_info(log_resultados, "***WRITE--> Path: %s.", path);
-				log_info(log_resultados, "      Datos: %s.", (char*)datos);
+				log_info(log_resultados, "***WRITE--> Path: %s", path);
+				//log_info(log_resultados, "      Datos: %s.", (char*)datos);
 				free(path);
 				free(datos);
 				break;
@@ -106,8 +106,8 @@ void atenderCliente(t_cliente* cliente){
 				pthread_mutex_unlock(&m_acceso_fs);
 				enviarDatos(cliente->socket, datos, size, log_interno);
 				enviarEntero(cliente->socket, resultado,  log_interno);
-				log_info(log_resultados, "***READ--> Path: %s.", path);
-				log_info(log_resultados, "      Datos: %s.", (char*)datos);
+				log_info(log_resultados, "***READ--> Path: %s", path);
+				//log_info(log_resultados, "      Datos: %s.", (char*)datos);
 				free(path);
 				free(datos);
 				break;
@@ -119,8 +119,8 @@ void atenderCliente(t_cliente* cliente){
 				int resultado = cambiarUbicacion(path,newPath);
 				pthread_mutex_unlock(&m_acceso_fs);
 				enviarEntero(cliente->socket, resultado,  log_interno);
-				log_info(log_resultados, "***MOVE--> Path: %s.", path);
-				log_info(log_resultados, "      New Path: %s.", newPath);
+				log_info(log_resultados, "***MOVE--> Path: %s", path);
+				log_info(log_resultados, "      New Path: %s", newPath);
 				break;
 			}
 			case SYS_RMDIR:{
@@ -129,7 +129,7 @@ void atenderCliente(t_cliente* cliente){
 				int resultado = eliminarDirectorioArchivo(path, 1);
 				pthread_mutex_unlock(&m_acceso_fs);
 				enviarEntero(cliente->socket, resultado,  log_interno);
-				log_info(log_resultados, "***RMDIR--> Path: %s.", path);
+				log_info(log_resultados, "***RMDIR--> Path: %s", path);
 				free(path);
 				break;
 			}
@@ -139,7 +139,7 @@ void atenderCliente(t_cliente* cliente){
 				int resultado = eliminarDirectorioArchivo(path, 0);
 				pthread_mutex_unlock(&m_acceso_fs);
 				enviarEntero(cliente->socket, resultado,  log_interno);
-				log_info(log_resultados, "***UNLINK--> Path: %s.", path);
+				log_info(log_resultados, "***UNLINK--> Path: %s", path);
 				free(path);
 				break;
 			}

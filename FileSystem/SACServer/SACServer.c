@@ -88,6 +88,9 @@ int leerArchivo(char* path, int offset, int tamanio, void* buf){
 	if(offset + tamanio > nodo->tam_archivo){
 		tamSobrante = offset + tamanio - nodo->tam_archivo;
 		tamanio = nodo->tam_archivo - offset;
+		if(tamanio <= 0){ //Me volvío a enviar lectura para completar pero de 0 bytes.
+			return 0;
+		}
 	}
 
 	//Bloque inicial
@@ -96,7 +99,7 @@ int leerArchivo(char* path, int offset, int tamanio, void* buf){
 
 	//Bloque final
 	int iBloqueFinal = (offset + tamanio - 1) / TAM_BLOQUE; //Resto un byte ya que empieza desde cero el offset
-	int finLecturaBloqueFinal = (offset + tamanio) % TAM_BLOQUE;//Offset dentro bloque final
+	int finLecturaBloqueFinal = (offset + tamanio - 1) % TAM_BLOQUE;//Offset dentro bloque final
 
 	int cantidadBloques = iBloqueFinal - iBloqueInicial  + 1;
 
@@ -121,7 +124,7 @@ int leerArchivo(char* path, int offset, int tamanio, void* buf){
 	//Leer bloque final
 	if(cantidadBloques > 1){
 		int numBloque = nodo->p_indirectos[iBloqueFinal];
-		tamLeido += leerBloqueDatos(numBloque, 0, finLecturaBloqueFinal, buf);
+		tamLeido += leerBloqueDatos(numBloque, 0, finLecturaBloqueFinal + 1, buf); //Sumo 1 ya que finLectura es hasta donde leer, y +1 es el tamanio
 		buf += finLecturaBloqueFinal;
 	}
 
@@ -606,8 +609,13 @@ int existeArchivo(char* path){
 }
 
 int chequearNombrePadre(char** pathSeparado, int i_path, int padre){
-	if(padre==0)
-		return 0;
+
+	if(padre==0 || i_path==0){ //Si llegué al final de alguno de los dos que comparo
+		if(padre==0 && i_path==0) //y son iguales en raiz -> Existe!
+			return 0;
+		else
+			return ERROR; //y son distintos -> No existe
+	}
 	t_nodo* nodo = obtenerNodo(padre);
 	i_path--;
 	if(nodo->estado != 0 && strcmp(pathSeparado[i_path], nodo->nombre_archivo) == 0){
