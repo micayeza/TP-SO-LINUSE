@@ -3112,11 +3112,10 @@ void* inicializarSwap(){
 			printf("Error al mapear el archivo %s . \n", config_muse->rutaSwap);
 			return NULL;
 		}
-    	char caracter = '\0';
-    	int i;
-    	for(i=0; i < config_muse->tamanio_swap; i++){
-    		write(fd_archivo, &caracter, 1);
-    	}
+
+    	char* barrasCeros = string_repeat('\0', config_muse->tamanio_swap);
+    	write(fd_archivo, barrasCeros, config_muse->tamanio_swap);
+		free(barrasCeros);
 
 		close(fd_archivo); // Cerramos el archivo pues ya lo tenemos mapeado en memoria, no es necesario mantenerlo abierto
 
